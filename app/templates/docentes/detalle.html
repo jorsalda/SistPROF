@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle: {{ docente.nombre }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .btn-volver {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #666;
+            text-decoration: none;
+        }
+        .btn-volver:hover { color: #333; }
+        .panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .panel h3 { margin-top: 0; }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .info-item label {
+            font-weight: bold;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .info-item span {
+            font-size: 16px;
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .acciones {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-editar { background: #ffc107; color: black; }
+        .btn-permiso { background: #28a745; color: white; }
+        .btn-volver2 { background: #6c757d; color: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th { background: #f5f5f5; }
+        .sin-permisos {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('docente.listar') }}" class="btn-volver">← Volver al listado</a>
+
+    <div class="panel">
+        <h3>Información del Docente</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Nombre completo</label>
+                <span>{{ docente.nombre }}</span>
+            </div>
+            <div class="info-item">
+                <label>Documento</label>
+                <span>{{ docente.documento or "No registrado" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Teléfono</label>
+                <span>{{ docente.telefono or "No registrado" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Email</label>
+                <span>{{ docente.email or "No registrado" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Estado</label>
+                <span>
+                    {% if docente.activo %}
+                        <span class="badge badge-success">● Activo</span>
+                    {% else %}
+                        <span class="badge badge-danger">● Inactivo</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <label>Fecha registro</label>
+                <span>{{ docente.fecha_creacion.strftime('%d/%m/%Y') if docente.fecha_creacion else "No registrada" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="acciones">
+        <a href="{{ url_for('docente.editar', id=docente.id) }}" class="btn btn-editar">
+            ✏️ Editar Docente
+        </a>
+        <a href="{{ url_for('permiso.formulario') }}?docente_id={{ docente.id }}" class="btn btn-permiso">
+            📝 Nuevo Permiso
+        </a>
+        <a href="{{ url_for('docente.listar') }}" class="btn btn-volver2">
+            ↩️ Volver
+        </a>
+    </div>
+
+    <h3>Permisos Registrados</h3>
+
+    {% if permisos %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+                <th>Días</th>
+                <th>Observación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for permiso in permisos %}
+            <tr>
+                <td>{{ permiso.tipo }}</td>
+                <td>{{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                <td>{{ permiso.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {% set dias = (permiso.fecha_fin - permiso.fecha_inicio).days + 1 %}
+                    {{ dias }} día{% if dias != 1 %}s{% endif %}
+                </td>
+                <td>{{ permiso.observacion or "-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p style="color: #666; margin-top: 10px;">
+        <strong>Total permisos:</strong> {{ permisos|length }}
+    </p>
+    {% else %}
+    <div class="sin-permisos">
+        Este docente no tiene permisos registrados.
+        <br>
+        <a href="{{ url_for('permiso.formulario') }}?docente_id={{ docente.id }}">
+            Crear primer permiso
+        </a>
+    </div>
+    {% endif %}
+</body>
+</html>

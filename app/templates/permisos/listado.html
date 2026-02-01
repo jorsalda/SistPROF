@@ -1,40 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Listado de Permisos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+        .btn-nuevo {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-nuevo:hover {
+            background: #218838;
+        }
+        .nav-menu {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .nav-menu a:hover {
+            background: #e9ecef;
+        }
+        .nav-menu a.active {
+            background: #007bff;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .acciones {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-accion {
+            padding: 5px 10px;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-editar { background: #ffc107; color: black; }
+        .btn-eliminar { background: #dc3545; color: white; }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+        .alert-warning { background: #fff3cd; color: #856404; }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER CON AMBOS BOTONES -->
+        <header>
+            <h1>📋 Listado de Permisos</h1>
+            <div style="display: flex; gap: 10px;">
+                {% if current_user.rol == 'admin' %}
+                <a href="{{ url_for('docente.nuevo') }}" style="
+                    background: #17a2b8;
+                    color: white;
+                    padding: 10px 15px;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                ">
+                    👨‍🏫 Nuevo Docente
+                </a>
+                {% endif %}
+                <a href="{{ url_for('permiso.formulario') }}" class="btn-nuevo">
+                    ➕ Nuevo Permiso
+                </a>
+            </div>
+        </header>
 
+        <!-- Menú de navegación -->
+        <div class="nav-menu">
+            <a href="{{ url_for('permiso.listado') }}" class="active">📋 Permisos</a>
+            {% if current_user.rol == 'admin' %}
+            <a href="{{ url_for('docente.listar') }}">👨‍🏫 Docentes</a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}">🚪 Salir</a>
+        </div>
 
-<!-- ⭐⭐ NAVEGACIÓN SEGÚN ROL ⭐⭐ -->
-<h2>Listado de Permisos</h2>
-<nav>
-<a href="{{ url_for('docente.listar') }}">👨‍🏫 Docentes</a> |
-<a href="{{ url_for('permiso.listado') }}">📋 Permisos</a> |
-<a href="{{ url_for('auth.logout') }}">🚪 Salir</a>
-</nav>
+        <!-- Mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-<table border="1" cellpadding="5">
-    <thead>
-        <tr>
-            <th>Docente</th>
-            <th>Tipo</th>
-            <th>Desde</th>
-            <th>Hasta</th>
-            <th>Observación</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for permiso in permisos %}
-        <tr>
-            <td>{{ permiso.docente.nombre }}</td>
-            <td>{{ permiso.tipo }}</td>
-            <td>{{ permiso.fecha_inicio }}</td>
-            <td>{{ permiso.fecha_fin }}</td>
-            <td>{{ permiso.observacion or "-" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <!-- Estadísticas -->
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ permisos|length }}</div>
+                <div class="stat-label">Total Permisos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">
+                    {% set activos = permisos|selectattr('fecha_fin', '>=', hoy)|list|length %}
+                    {{ activos }}
+                </div>
+                <div class="stat-label">Permisos Activos</div>
+            </div>
+        </div>
 
-<!-- ⭐⭐ BOTÓN NUEVO PERMISO (SOLO PARA ADMINS) ⭐⭐ -->
-{% if current_user.rol == 'admin' %}
-    <br>
-    <a href="{{ url_for('permiso.formulario') }}" style="display: inline-block; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;">
-        ➕ Nuevo Permiso
-    </a>
-{% endif %}
+        <!-- Tabla de permisos -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Docente</th>
+                    <th>Tipo</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th>Días</th>
+                    <th>Observación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for permiso in permisos %}
+                <tr>
+                    <td><strong>{{ permiso.docente.nombre }}</strong></td>
+                    <td>
+                        {% if permiso.tipo == 'Vacaciones' %}🏖️
+                        {% elif permiso.tipo == 'Enfermedad' %}🤒
+                        {% elif permiso.tipo == 'Capacitación' %}📚
+                        {% elif permiso.tipo == 'Permiso Personal' %}👤
+                        {% elif permiso.tipo == 'Licencia' %}📄
+                        {% else %}❓{% endif %}
+                        {{ permiso.tipo }}
+                    </td>
+                    <td>{{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ permiso.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {% set dias = (permiso.fecha_fin - permiso.fecha_inicio).days + 1 %}
+                        {% if dias > 10 %}
+                        <span class="badge badge-warning">{{ dias }} días</span>
+                        {% elif dias > 5 %}
+                        <span class="badge badge-success">{{ dias }} días</span>
+                        {% else %}
+                        <span class="badge">{{ dias }} días</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ permiso.observacion or "-" }}</td>
+                    <td>
+                        <div class="acciones">
+                            <form action="{{ url_for('permiso.eliminar', id=permiso.id) }}"
+                                  method="post"
+                                  style="display: inline;"
+                                  onsubmit="return confirm('¿Eliminar este permiso?')">
+                                <button type="submit" class="btn-accion btn-eliminar" title="Eliminar">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">
+                        No hay permisos registrados.
+                        <br>
+                        <a href="{{ url_for('permiso.formulario') }}">Crear primer permiso</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Información adicional -->
+        <div style="margin-top: 20px; color: #666; font-size: 14px;">
+            <p><strong>Nota:</strong> Los permisos se filtran automáticamente por tu colegio.</p>
+            <p>Los permisos con más de 10 días se marcan en amarillo.</p>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar confirmación al eliminar
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteForms = document.querySelectorAll('form[action*="eliminar"]');
+            deleteForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('¿Estás seguro de eliminar este permiso?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

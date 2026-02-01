@@ -37,7 +37,7 @@ def create_app():
     @app.route("/")
     def index():
         if current_user.is_authenticated:
-            return redirect(url_for("permiso.formulario"))
+            return redirect(url_for("permiso.listado"))  # ← AQUÍ
         return redirect(url_for("auth.login"))
 
     # Crear tablas

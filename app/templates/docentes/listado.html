@@ -2,42 +2,164 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Docentes</title>
+    <title>Docentes del Colegio</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .nav {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: flex;
+            gap: 20px;
+        }
+        .nav a {
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav a:hover { color: #007bff; }
+        .btn-nuevo {
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        tr:hover { background: #f9f9f9; }
+        .activo { color: #28a745; }
+        .inactivo { color: #dc3545; font-style: italic; }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .acciones { display: flex; gap: 5px; }
+        .btn-accion {
+            padding: 5px 10px;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .btn-ver { background: #17a2b8; color: white; }
+        .btn-editar { background: #ffc107; color: black; }
+        .btn-permiso { background: #6f42c1; color: white; }
+    </style>
 </head>
 <body>
+    <div class="nav">
+        <a href="{{ url_for('permiso.listado') }}">📋 Permisos</a>
+        <a href="{{ url_for('docente.listar') }}">👨‍🏫 Docentes</a>
+        <a href="{{ url_for('auth.logout') }}">🚪 Salir</a>
+    </div>
+
     <h2>Docentes del Colegio</h2>
 
+    <!-- Mensajes flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <div style="color: {% if category == 'danger' %}red{% elif category == 'success' %}green{% else %}orange{% endif %};
-                        padding: 10px;
-                        border: 1px solid {% if category == 'danger' %}red{% elif category == 'success' %}green{% else %}orange{% endif %};
-                        margin: 10px 0;">
-                {{ message }}
-            </div>
-        {% endfor %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" style="
+                    padding: 10px;
+                    margin: 10px 0;
+                    border-radius: 4px;
+                    background: {% if category == 'success' %}#d4edda{% elif category == 'danger' %}#f8d7da{% else %}#fff3cd{% endif %};
+                    color: {% if category == 'success' %}#155724{% elif category == 'danger' %}#721c24{% else %}#856404{% endif %};
+                    border: 1px solid {% if category == 'success' %}#c3e6cb{% elif category == 'danger' %}#f5c6cb{% else %}#ffeaa7{% endif %};
+                ">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
     {% endwith %}
 
-    <table border="1" cellpadding="5">
+    <a href="{{ url_for('docente.nuevo') }}" class="btn-nuevo">
+        ➕ Nuevo Docente
+    </a>
+
+    <table>
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Nombre</th>
+                <th>Documento</th>
+                <th>Contacto</th>
+                <th>Estado</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for docente in docentes %}
             <tr>
                 <td>{{ docente.id }}</td>
-                <td>{{ docente.nombre }}</td>
+                <td>
+                    <strong>{{ docente.nombre }}</strong>
+                    {% if not docente.activo %}
+                    <br><small class="inactivo">(Inactivo)</small>
+                    {% endif %}
+                </td>
+                <td>{{ docente.documento or "-" }}</td>
+                <td>
+                    {% if docente.telefono %}{{ docente.telefono }}<br>{% endif %}
+                    {% if docente.email %}{{ docente.email }}{% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if docente.activo %}
+                        <span class="badge badge-success">● Activo</span>
+                    {% else %}
+                        <span class="badge badge-danger">● Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="acciones">
+                        <a href="{{ url_for('docente.ver', id=docente.id) }}"
+                           class="btn-accion btn-ver" title="Ver detalle">
+                            👁️
+                        </a>
+                        <a href="{{ url_for('docente.editar', id=docente.id) }}"
+                           class="btn-accion btn-editar" title="Editar">
+                            ✏️
+                        </a>
+                        {% if docente.activo %}
+                        <a href="{{ url_for('permiso.formulario') }}?docente_id={{ docente.id }}"
+                           class="btn-accion btn-permiso" title="Nuevo permiso">
+                            📝
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px;">
+                    No hay docentes registrados.
+                    <a href="{{ url_for('docente.nuevo') }}">Agrega el primero</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <br>
-    <a href="{{ url_for('docente.nuevo') }}">➕ Registrar nuevo docente</a>
-    <br><br>
-    <a href="{{ url_for('permiso.listado') }}">📋 Ver permisos</a>
+    <p style="color: #666; margin-top: 20px;">
+        <strong>Total:</strong> {{ docentes|length }} docente(s)
+    </p>
 </body>
 </html>
