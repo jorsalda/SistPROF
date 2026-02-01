@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SistPRO - Gestión de Permisos{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <!-- CSS Global -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <!-- CSS específico por página -->
+    {% block css %}{% endblock %}
+
+    <!-- Meta tags -->
+    <meta name="description" content="Sistema de gestión de permisos para docentes">
+    <meta name="author" content="SistPRO">
+</head>
+<body>
+    <!-- Header/Navbar -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>📋 SistPRO</h1>
+                <p class="subtitle">Gestión de Permisos Escolares</p>
+            </div>
+
+            <nav class="nav-main">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('permiso.listado') }}"
+                       class="nav-link {% if request.endpoint == 'permiso.listado' %}active{% endif %}">
+                        📋 Permisos
+                    </a>
+
+                    {% if current_user.rol == 'admin' %}
+                    <a href="{{ url_for('docente.listar') }}"
+                       class="nav-link {% if request.endpoint == 'docente.listar' %}active{% endif %}">
+                        👨‍🏫 Docentes
+                    </a>
+                    {% endif %}
+
+                    <div class="user-menu">
+                        <span class="user-info">
+                            👤 {{ current_user.email }}
+                            <small>({{ current_user.rol }})</small>
+                        </span>
+                        <a href="{{ url_for('auth.logout') }}" class="btn-logout">🚪 Salir</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mensajes Flash -->
+    <div class="flash-messages">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                            <button class="alert-close">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>© 2024 SistPRO - Sistema de Gestión de Permisos Escolares</p>
+            <p class="footer-links">
+                <a href="#">Términos</a> |
+                <a href="#">Privacidad</a> |
+                <a href="#">Ayuda</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Global -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- JavaScript específico por página -->
+    {% block js %}{% endblock %}
+</body>
+</html>

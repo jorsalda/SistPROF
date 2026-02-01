@@ -55,3 +55,7 @@ def register():
         flash(mensaje, 'danger')
 
     return render_template('auth/register.html')
+
+@auth_bp.route('/test')
+def test():
+    return render_template('test.html')

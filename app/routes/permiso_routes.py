@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
 from app.extensions import db
@@ -7,9 +7,6 @@ from app.models.docente import Docente
 from datetime import datetime
 
 permiso_bp = Blueprint("permiso", __name__, url_prefix="/permisos")
-
-
-
 
 @permiso_bp.route("/")
 @login_required
@@ -67,5 +64,40 @@ def eliminar(id):
     flash(f"Permiso de {docente_nombre} eliminado correctamente", "success")
     return redirect(url_for("permiso.listado"))
 
+
+# AGREGAR ESTA NUEVA RUTA
+@permiso_bp.route("/api/permisos-docente/<int:docente_id>")
+@login_required
+def permisos_por_docente(docente_id):
+    """API para obtener permisos de un docente específico"""
+    # Verificar que el docente pertenece al colegio del usuario
+    docente = Docente.query.filter_by(
+        id=docente_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    permisos = Permiso.query.filter_by(
+        docente_id=docente_id,
+        colegio_id=current_user.colegio_id
+    ).order_by(Permiso.fecha_inicio.desc()).all()
+
+    # Convertir a formato JSON
+    permisos_json = []
+    for permiso in permisos:
+        permisos_json.append({
+            'id': permiso.id,
+            'tipo': permiso.tipo,
+            'fecha_inicio': permiso.fecha_inicio.strftime('%d/%m/%Y'),
+            'fecha_fin': permiso.fecha_fin.strftime('%d/%m/%Y'),
+            'observacion': permiso.observacion or '',
+            'dias': (permiso.fecha_fin - permiso.fecha_inicio).days + 1
+        })
+
+    return jsonify({
+        'success': True,
+        'docente': docente.nombre,
+        'permisos': permisos_json,
+        'total': len(permisos_json)
+    })
 
 
