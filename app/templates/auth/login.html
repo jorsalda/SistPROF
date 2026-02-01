@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+    <h2>Login</h2>
+
+    <!-- Mostrar mensajes de error/éxito -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div style="color: {% if category == 'danger' %}red{% else %}green{% endif %}; padding: 10px; border: 1px solid {% if category == 'danger' %}red{% else %}green{% endif %}; margin: 10px 0;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('auth.login') }}">
+        <label>Email:</label>
+        <input type="email" name="email" required><br><br>
+
+        <label>Contraseña:</label>
+        <input type="password" name="password" required><br><br>
+
+        <button type="submit">Ingresar</button>
+    </form>
+
+    <br>
+    <a href="{{ url_for('auth.register') }}">Registrarse</a>
+</body>
+</html>

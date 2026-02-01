@@ -1,0 +1,40 @@
+
+
+<!-- ⭐⭐ NAVEGACIÓN SEGÚN ROL ⭐⭐ -->
+<h2>Listado de Permisos</h2>
+<nav>
+<a href="{{ url_for('docente.listar') }}">👨‍🏫 Docentes</a> |
+<a href="{{ url_for('permiso.listado') }}">📋 Permisos</a> |
+<a href="{{ url_for('auth.logout') }}">🚪 Salir</a>
+</nav>
+
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>Docente</th>
+            <th>Tipo</th>
+            <th>Desde</th>
+            <th>Hasta</th>
+            <th>Observación</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for permiso in permisos %}
+        <tr>
+            <td>{{ permiso.docente.nombre }}</td>
+            <td>{{ permiso.tipo }}</td>
+            <td>{{ permiso.fecha_inicio }}</td>
+            <td>{{ permiso.fecha_fin }}</td>
+            <td>{{ permiso.observacion or "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- ⭐⭐ BOTÓN NUEVO PERMISO (SOLO PARA ADMINS) ⭐⭐ -->
+{% if current_user.rol == 'admin' %}
+    <br>
+    <a href="{{ url_for('permiso.formulario') }}" style="display: inline-block; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;">
+        ➕ Nuevo Permiso
+    </a>
+{% endif %}

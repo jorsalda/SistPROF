@@ -1,0 +1,33 @@
+<h2>Nuevo Permiso</h2>
+
+<form method="post">
+    <label>Docente:</label>
+    <select name="docente_id" required>
+        {% for docente in docentes %}
+        <option value="{{ docente.id }}">
+            {{ docente.nombre }}
+        </option>
+        {% endfor %}
+    </select>
+    <br><br>
+
+    <label>Tipo:</label>
+    <input type="text" name="tipo" required>
+    <br><br>
+
+    <label>Fecha inicio:</label>
+    <input type="date" name="fecha_inicio" required>
+    <br><br>
+
+    <label>Fecha fin:</label>
+    <input type="date" name="fecha_fin" required>
+    <br><br>
+
+    <label>Observación:</label>
+    <textarea name="observacion"></textarea>
+    <br><br>
+
+    <button type="submit">Guardar</button>
+</form>
+
+<a href="{{ url_for('permiso.listado') }}">Volver</a>
