@@ -11,7 +11,7 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/')
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('permiso.listado'))  # ✅ CORREGIDO: "listado"
+        return redirect(url_for('docente.listar'))  # ✅ CORREGIDO: "listado"
     return redirect(url_for('auth.login'))
 
 
@@ -25,7 +25,7 @@ def login():
 
         if ok:
             login_user(resultado)
-            return redirect(url_for('permiso.listado'))  # ✅ CORREGIDO: ir a LISTA, no formulario
+            return redirect(url_for('docente.listar'))  # ✅ CORREGIDO: ir a LISTA, no formulario
 
         flash(resultado, 'danger')
 

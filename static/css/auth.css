@@ -1,14 +1,33 @@
 /* ===== PÁGINAS DE AUTENTICACIÓN ===== */
+
+.auth-body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
 .auth-container {
-    max-width: 400px;
-    margin: 50px auto;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 450px;
 }
 
 .auth-card {
+    width: 100%;
     background: white;
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 40px 30px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
 }
 
 .auth-header {
@@ -17,22 +36,42 @@
 }
 
 .auth-header h2 {
-    color: var(--primary-color);
-    margin-bottom: 10px;
+    color: var(--dark-color);
+    margin-bottom: 8px;
+    font-size: 26px;
+    font-weight: 700;
 }
 
 .auth-header p {
     color: var(--secondary-color);
-    font-size: 14px;
+    font-size: 15px;
+    margin-bottom: 0;
+}
+
+.login-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+    color: var(--primary-color);
 }
 
 .auth-form .form-group:last-child {
     margin-bottom: 0;
 }
 
+.auth-form .form-group {
+    margin-bottom: 20px;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    justify-content: center;
+}
+
 .auth-links {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 25px;
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
 }
@@ -40,16 +79,26 @@
 .auth-links a {
     color: var(--primary-color);
     text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
 }
 
 .auth-links a:hover {
+    color: var(--dark-color);
     text-decoration: underline;
 }
 
-/* Login específico */
-.login-icon {
-    font-size: 48px;
-    text-align: center;
-    margin-bottom: 20px;
-    color: var(--primary-color);
+/* Responsive */
+@media (max-width: 480px) {
+    .auth-card {
+        padding: 30px 20px;
+    }
+
+    .auth-header h2 {
+        font-size: 24px;
+    }
+
+    .login-icon {
+        font-size: 48px;
+    }
 }
