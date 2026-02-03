@@ -164,3 +164,151 @@
     border-top-color: var(--dark-color);
     z-index: 1001;
 }
+
+/* ============================================
+   ESTILOS ESPECÍFICOS PARA FORMULARIO DE PERMISOS
+   ============================================ */
+
+/* Historial de permisos */
+#historial-permisos {
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+/* Estados de carga del historial */
+.historial-loading {
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #007bff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.loading-text {
+    color: #007bff;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+/* Encabezado del historial */
+.historial-header {
+    background: #343a40;
+    color: white;
+    padding: 12px 15px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 6px 6px 0 0;
+}
+
+.historial-badge {
+    background: #007bff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.9em;
+}
+
+/* Contenedor de la tabla */
+.historial-table-container {
+    padding: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+}
+
+/* Tabla del historial */
+.historial-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+}
+
+.historial-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.historial-table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: bold;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.historial-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+
+.historial-table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Badges para tipos de permiso */
+.tipo-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-align: center;
+    min-width: 80px;
+}
+
+/* Colores específicos por tipo de permiso */
+.tipo-vacaciones { background-color: #28a745; }
+.tipo-enfermedad { background-color: #dc3545; }
+.tipo-capacitacion { background-color: #17a2b8; }
+.tipo-personal { background-color: #ffc107; color: #212529; }
+.tipo-licencia { background-color: #6f42c1; }
+.tipo-otro { background-color: #6c757d; }
+
+/* Animación para el spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive para la tabla */
+@media (max-width: 768px) {
+    .historial-table-container {
+        max-height: 250px;
+    }
+
+    .historial-table {
+        font-size: 0.8em;
+    }
+
+    .historial-table th,
+    .historial-table td {
+        padding: 6px 8px;
+    }
+
+    .tipo-badge {
+        min-width: 70px;
+        font-size: 0.75em;
+        padding: 2px 6px;
+    }
+}
