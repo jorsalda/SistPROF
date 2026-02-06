@@ -47,3 +47,5 @@ Thumbs.db
 # Configuraciones sensibles
 .env
 .secrets
+
+.idea/

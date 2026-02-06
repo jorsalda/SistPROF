@@ -1,9 +1,18 @@
 from flask import Flask
+import os
 from app.extensions import db, login_manager
 
 
 def create_app():
-    app = Flask(__name__, template_folder="templates", static_folder="../static")
+    # ✅ Configurar rutas absolutas para static_folder
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    static_dir = os.path.join(base_dir, '..', 'static')
+
+    app = Flask(__name__,
+                template_folder="templates",
+                static_folder=static_dir,
+                static_url_path='/static')
+
     app.config.from_object('config.Config')
 
     # Inicializar extensiones

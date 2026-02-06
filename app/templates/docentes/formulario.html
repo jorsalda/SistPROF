@@ -1,121 +1,87 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ titulo }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 600px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"],
-        input[type="email"],
-        input[type="tel"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .checkbox { display: flex; align-items: center; }
-        .checkbox input { width: auto; margin-right: 10px; }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin-right: 10px;
-        }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .alert {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>{{ titulo }}</h2>
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
 
-        <!-- Mensajes flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
 
-        <form method="post">
-            <div class="form-group">
-                <label for="nombre">Nombre completo *</label>
-                <input type="text" id="nombre" name="nombre"
-                       value="{{ docente.nombre if docente else '' }}"
-                       required autofocus>
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ titulo }}</h5>
+                </div>
+
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo *</label>
+                            <input
+                                type="text"
+                                name="nombre"
+                                class="form-control"
+                                required
+                                value="{{ docente.nombre if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Documento de identidad</label>
+                            <input
+                                type="text"
+                                name="documento"
+                                class="form-control"
+                                value="{{ docente.documento if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input
+                                type="tel"
+                                name="telefono"
+                                class="form-control"
+                                value="{{ docente.telefono if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input
+                                type="email"
+                                name="email"
+                                class="form-control"
+                                value="{{ docente.email if docente else '' }}"
+                            >
+                        </div>
+
+                        {% if docente %}
+                        <div class="form-check mb-3">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="activo"
+                                id="activo"
+                                {% if docente.activo %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="activo">
+                                Docente activo
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('docente.listar') }}" class="btn btn-secondary">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="documento">Documento de identidad</label>
-                <input type="text" id="documento" name="documento"
-                       value="{{ docente.documento if docente else '' }}">
-            </div>
-
-            <div class="form-group">
-                <label for="telefono">Teléfono</label>
-                <input type="tel" id="telefono" name="telefono"
-                       value="{{ docente.telefono if docente else '' }}">
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email"
-                       value="{{ docente.email if docente else '' }}">
-            </div>
-
-            {% if docente %}
-            <div class="form-group checkbox">
-                <input type="checkbox" id="activo" name="activo"
-                       {% if docente.activo %}checked{% endif %}>
-                <label for="activo">Activo</label>
-            </div>
-            {% endif %}
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">
-                    {% if docente %}Actualizar{% else %}Registrar{% endif %}
-                </button>
-                <a href="{{ url_for('docente.listar') }}" class="btn btn-secondary">Cancelar</a>
-
-                {% if docente %}
-                <button type="button" class="btn btn-danger" onclick="confirmarEliminacion()">
-                    Eliminar
-                </button>
-                {% endif %}
-            </div>
-        </form>
+        </div>
     </div>
-
-    {% if docente %}
-    <script>
-    function confirmarEliminacion() {
-        if (confirm('¿Estás seguro de eliminar este docente?\n\nSi el docente tiene permisos registrados, será desactivado en lugar de eliminado.')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ url_for("docente.eliminar", id=docente.id) }}';
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
-    </script>
-    {% endif %}
-</body>
-</html>
+</div>
+{% endblock %}

@@ -3,185 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuevo Permiso - SistPRO</title>
+    <title>{{ titulo }}</title>
 
     <!-- CSS Principal -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <!-- CSS de Docentes -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/docentes.css') }}">
 
-    <!-- CSS específico para permisos -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/permisos.css') }}">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .checkbox { display: flex; align-items: center; }
+        .checkbox input { width: auto; margin-right: 10px; }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="main-header">
-        <div class="container">
-            <nav class="header-nav">
-                <a href="{{ url_for('permiso.listado') }}" class="btn-back">
-                    <span class="icon">←</span> Volver a Permisos
-                </a>
+    <div class="container">
+        <h2>{{ titulo }}</h2>
 
-                <div class="header-actions">
-                    {% if current_user.rol == 'admin' %}
-                    <a href="{{ url_for('docente.nuevo') }}" class="btn btn-outline">
-                        <span class="icon">👨‍🏫</span> Nuevo Docente
-                    </a>
-                    {% endif %}
+        <!-- Mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
-                        <span class="icon">🚪</span> Salir
-                    </a>
-                </div>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Contenido principal -->
-    <main class="main-content">
-        <div class="container">
-            <div class="page-header">
-                <h1 class="page-title">
-                    <span class="icon">➕</span> Nuevo Permiso
-                </h1>
-                <p class="page-subtitle">Registra un nuevo permiso para un docente</p>
+        <form method="post">
+            <div class="form-group">
+                <label for="nombre">Nombre completo *</label>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ docente.nombre if docente else '' }}"
+                       required autofocus>
             </div>
 
-            <!-- Mensajes Flash -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-messages">
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    </div>
+            <div class="form-group">
+                <label for="documento">Documento de identidad</label>
+                <input type="text" id="documento" name="documento"
+                       value="{{ docente.documento if docente else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono"
+                       value="{{ docente.telefono if docente else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email"
+                       value="{{ docente.email if docente else '' }}">
+            </div>
+
+            {% if docente %}
+            <div class="form-group checkbox">
+                <input type="checkbox" id="activo" name="activo"
+                       {% if docente.activo %}checked{% endif %}>
+                <label for="activo">Activo</label>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">
+                    {% if docente %}Actualizar{% else %}Registrar{% endif %}
+                </button>
+                <a href="{{ url_for('docente.listar') }}" class="btn btn-secondary">Cancelar</a>
+
+                {% if docente %}
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminacion()">
+                    Eliminar
+                </button>
                 {% endif %}
-            {% endwith %}
-
-            <!-- Formulario -->
-            <div class="card">
-                <!-- CORREGIDO: endpoint correcto -->
-                <form method="POST" action="{{ url_for('permiso.formulario') }}" id="permiso-form" class="permiso-form">
-                    <!-- Sección: Docente -->
-                    <section class="form-section">
-                        <h2 class="form-section-title">
-                            <span class="icon">👨‍🏫</span> Docente
-                        </h2>
-
-                        <div class="form-group">
-                            <label for="docente_id" class="form-label required">
-                                Seleccionar docente
-                            </label>
-
-                            <!-- CORREGIDO: sintaxis Jinja2 válida -->
-                            {% set docente_seleccionado = request.args.get('docente_id', 0)|int %}
-
-                            <select name="docente_id" id="docente_id" class="form-select" required>
-                                <option value="">-- Seleccione un docente --</option>
-                                {% for docente in docentes %}
-                                <option value="{{ docente.id }}"
-                                        {% if docente_seleccionado == docente.id %}selected{% endif %}>
-                                    {{ docente.nombre }} {{ docente.apellido }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <small class="form-text">
-                                ¿No encuentras al docente?
-                                <a href="{{ url_for('docente.nuevo') }}" class="text-link">
-                                    Crear nuevo docente
-                                </a>
-                            </small>
-                        </div>
-
-                        <!-- Historial de permisos (se carga dinámicamente) -->
-                        <div id="historial-permisos" class="historial-section"></div>
-                    </section>
-
-                    <!-- Sección: Detalles del permiso -->
-                    <section class="form-section">
-                        <h2 class="form-section-title">
-                            <span class="icon">📋</span> Detalles del permiso
-                        </h2>
-
-                        <div class="form-group">
-                            <label for="tipo" class="form-label required">Tipo de permiso</label>
-                            <select name="tipo" id="tipo" class="form-select" required>
-                                <option value="">-- Seleccione el tipo --</option>
-                                <option value="Vacaciones">🏖️ Vacaciones</option>
-                                <option value="Enfermedad">🤒 Enfermedad</option>
-                                <option value="Capacitación">📚 Capacitación</option>
-                                <option value="Permiso Personal">👤 Permiso Personal</option>
-                                <option value="Licencia">📄 Licencia</option>
-                                <option value="Otro">❓ Otro</option>
-                            </select>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-col">
-                                <div class="form-group">
-                                    <label for="fecha_inicio" class="form-label required">Fecha de inicio</label>
-                                    <input type="date" name="fecha_inicio" id="fecha_inicio"
-                                           class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="form-col">
-                                <div class="form-group">
-                                    <label for="fecha_fin" class="form-label required">Fecha de fin</label>
-                                    <input type="date" name="fecha_fin" id="fecha_fin"
-                                           class="form-control" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="observacion" class="form-label">Observaciones</label>
-                            <textarea name="observacion" id="observacion"
-                                      class="form-control" rows="4"
-                                      placeholder="Describe el motivo del permiso, detalles importantes, etc."></textarea>
-                            <small class="form-text">
-                                Esta información será visible para los administradores.
-                            </small>
-                        </div>
-                    </section>
-
-                    <!-- Sección: Acciones -->
-                    <section class="form-actions">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <span class="icon">💾</span> Guardar permiso
-                        </button>
-                        <a href="{{ url_for('permiso.listado') }}" class="btn btn-secondary">
-                            <span class="icon">↩️</span> Cancelar
-                        </a>
-                    </section>
-                </form>
             </div>
+        </form>
+    </div>
 
-            <!-- Información importante -->
-            <aside class="info-card">
-                <h3 class="info-card-title">
-                    <span class="icon">📝</span> Notas importantes
-                </h3>
-                <ul class="info-list">
-                    <li>Los campos marcados con <span class="required">*</span> son obligatorios.</li>
-                    <li>El permiso se registrará automáticamente para tu colegio.</li>
-                    <li>Puedes crear nuevos docentes desde el botón "Nuevo Docente".</li>
-                    <li>Verifica que las fechas sean correctas antes de guardar.</li>
-                    <li>Los permisos aprobados no pueden ser modificados posteriormente.</li>
-                </ul>
-            </aside>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="container">
-            <p class="footer-text">
-                SistPRO © 2024 - Sistema de Gestión de Permisos Escolares
-            </p>
-        </div>
-    </footer>
-
-    <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='js/formulario-permiso.js') }}"></script>
+    {% if docente %}
+    <script>
+    function confirmarEliminacion() {
+        if (confirm('¿Estás seguro de eliminar este docente?\n\nSi el docente tiene permisos registrados, será desactivado en lugar de eliminado.')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("docente.eliminar", id=docente.id) }}';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    </script>
+    {% endif %}
 </body>
 </html>
