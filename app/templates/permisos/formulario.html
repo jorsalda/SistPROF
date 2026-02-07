@@ -1,4 +1,3 @@
-<!-- templates/permisos/formulario.html -->
 {% extends "base.html" %}
 
 {% block title %}Nuevo Permiso{% endblock %}
@@ -19,96 +18,258 @@
     {% endif %}
 {% endwith %}
 
-<div class="card">
-    <div class="card-body">
-        <form method="POST">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="docente_id" class="form-label">Docente *</label>
-                    <select name="docente_id" id="docente_id" class="form-select" required>
-                        <option value="">Seleccione un docente...</option>
-                        {% for docente in docentes %}
-                            <option value="{{ docente.id }}">
-                                {{ docente.nombre }}
-                                {% if docente.documento %}({{ docente.documento }}){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
+<div class="row">
+    <!-- FORMULARIO A LA IZQUIERDA -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="form-permiso">
+                    <div class="mb-3">
+                        <label for="docente_id" class="form-label">Docente *</label>
+                        <select name="docente_id" id="docente_id" class="form-select" required
+                                onchange="cargarPermisosDocente(this.value)">
+                            <option value="">Seleccione un docente...</option>
+                            {% for docente in docentes %}
+                                <option value="{{ docente.id }}">
+                                    {{ docente.nombre }}
+                                    {% if docente.documento %}({{ docente.documento }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tipo" class="form-label">Tipo de Permiso *</label>
+                        <select name="tipo" id="tipo" class="form-select" required>
+                            <option value="">Seleccione tipo...</option>
+                            <option value="Vacaciones">Vacaciones</option>
+                            <option value="Enfermedad">Enfermedad</option>
+                            <option value="Capacitación">Capacitación</option>
+                            <option value="Permiso Personal">Permiso Personal</option>
+                            <option value="Licencia">Licencia</option>
+                            <option value="Tiquetera de la felicidad">Tiquetera de la felicidad</option>
+                            <option value="Cumpleaños">Cumpleaños</option>
+                            <option value="Jurado de votación">Jurado de votación</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                            <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
+                            <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observacion" class="form-label">Observación</label>
+                        <input type="text" name="observacion" id="observacion" class="form-control"
+                               placeholder="Opcional">
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('permiso.listado') }}" class="btn btn-secondary">
+                            ⬅️ Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            💾 Registrar Permiso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORIAL DE PERMISOS A LA DERECHA -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📋 Historial de Permisos del Docente</h5>
+            </div>
+            <div class="card-body">
+                <div id="mensaje-seleccion" class="alert alert-info">
+                    👈 Seleccione un docente para ver su historial de permisos
                 </div>
 
-                <div class="col-md-6">
-                    <label for="tipo" class="form-label">Tipo de Permiso *</label>
-                    <select name="tipo" id="tipo" class="form-select" required>
-                        <option value="">Seleccione tipo...</option>
-                        <option value="Vacaciones">Vacaciones</option>
-                        <option value="Enfermedad">Enfermedad</option>
-                        <option value="Capacitación">Capacitación</option>
-                        <option value="Permiso Personal">Permiso Personal</option>
-                        <option value="Licencia">Licencia</option>
-                        <option value="Tiquetera de la felicidad">Tiquetera de la felicidad</option>
-                        <option value="Cumpleaños">Cumpleaños</option>
-                        <option value="Jurado de votación">Jurado de votación</option>
-                    </select>
+                <div id="loading" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p>Cargando permisos...</p>
+                </div>
+
+                <div id="contenedor-permisos" class="d-none">
+                    <h6 id="titulo-docente" class="mb-3"></h6>
+                    <div id="lista-permisos" class="list-group"></div>
+                    <div id="sin-permisos" class="alert alert-warning d-none">
+                        Este docente no tiene permisos registrados
+                    </div>
                 </div>
             </div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
-                    <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" required>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
-                    <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" required>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="observacion" class="form-label">Observación</label>
-                    <input type="text" name="observacion" id="observacion" class="form-control"
-                           placeholder="Opcional">
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-end gap-2">
-                <a href="{{ url_for('permiso.listado') }}" class="btn btn-secondary">
-                    ⬅️ Cancelar
-                </a>
-                <button type="submit" class="btn btn-success">
-                    💾 Registrar Permiso
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Establecer fecha mínima como hoy
-        const hoy = new Date().toISOString().split('T')[0];
-        const fechaInicio = document.getElementById('fecha_inicio');
-        const fechaFin = document.getElementById('fecha_fin');
+// Variable global para almacenar permisos
+let permisosDocente = [];
 
-        fechaInicio.min = hoy;
+// Función para cargar permisos cuando se selecciona un docente
+function cargarPermisosDocente(docenteId) {
+    const mensajeSeleccion = document.getElementById('mensaje-seleccion');
+    const loading = document.getElementById('loading');
+    const contenedorPermisos = document.getElementById('contenedor-permisos');
+    const listaPermisos = document.getElementById('lista-permisos');
+    const sinPermisos = document.getElementById('sin-permisos');
+    const tituloDocente = document.getElementById('titulo-docente');
 
-        // Cuando cambia la fecha de inicio, actualizar mínima de fin
-        fechaInicio.addEventListener('change', function() {
-            fechaFin.min = this.value;
-        });
+    if (!docenteId) {
+        // Si no hay docente seleccionado, mostrar mensaje inicial
+        mensajeSeleccion.classList.remove('d-none');
+        loading.classList.add('d-none');
+        contenedorPermisos.classList.add('d-none');
+        return;
+    }
 
-        // Establecer fecha por defecto
-        fechaInicio.value = hoy;
-        fechaFin.value = hoy;
+    // Ocultar mensaje inicial, mostrar loading
+    mensajeSeleccion.classList.add('d-none');
+    loading.classList.remove('d-none');
+    contenedorPermisos.classList.add('d-none');
+    sinPermisos.classList.add('d-none');
 
-        // Validación: fecha fin no puede ser anterior a fecha inicio
-        document.querySelector('form').addEventListener('submit', function(e) {
-            if (new Date(fechaFin.value) < new Date(fechaInicio.value)) {
-                e.preventDefault();
-                alert('Error: La fecha de fin no puede ser anterior a la fecha de inicio');
-                fechaFin.focus();
+    // Obtener el nombre del docente seleccionado
+    const selectDocente = document.getElementById('docente_id');
+    const docenteNombre = selectDocente.options[selectDocente.selectedIndex].text;
+
+    // Hacer petición a la API
+    fetch(`/permisos/api/permisos-docente/${docenteId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Ocultar loading
+            loading.classList.add('d-none');
+
+            if (data.success) {
+                // Actualizar título
+                tituloDocente.textContent = `Docente: ${data.docente}`;
+
+                // Mostrar contenedor
+                contenedorPermisos.classList.remove('d-none');
+
+                // Limpiar lista anterior
+                listaPermisos.innerHTML = '';
+                permisosDocente = data.permisos;
+
+                if (data.total > 0) {
+                    // Mostrar cada permiso
+                    data.permisos.forEach(permiso => {
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item';
+
+                        // Determinar color según tipo
+                        let badgeClass = 'bg-secondary';
+                        if (permiso.tipo.includes('Vacaciones')) badgeClass = 'bg-info';
+                        else if (permiso.tipo.includes('Enfermedad')) badgeClass = 'bg-danger';
+                        else if (permiso.tipo.includes('Capacitación')) badgeClass = 'bg-primary';
+
+                        item.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge ${badgeClass}">${permiso.tipo}</span>
+                                    <small class="text-muted">${permiso.fecha_inicio} al ${permiso.fecha_fin}</small>
+                                    <br>
+                                    <small>${permiso.dias} días</small>
+                                </div>
+                                <div>
+                                    ${permiso.observacion ? `<small>${permiso.observacion}</small>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        listaPermisos.appendChild(item);
+                    });
+                } else {
+                    // Mostrar mensaje de "sin permisos"
+                    sinPermisos.classList.remove('d-none');
+                }
+            } else {
+                // Mostrar error
+                mensajeSeleccion.textContent = 'Error al cargar los permisos';
+                mensajeSeleccion.className = 'alert alert-danger';
+                mensajeSeleccion.classList.remove('d-none');
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loading.classList.add('d-none');
+            mensajeSeleccion.textContent = 'Error al conectar con el servidor';
+            mensajeSeleccion.className = 'alert alert-danger';
+            mensajeSeleccion.classList.remove('d-none');
         });
-    });
-</script>
+}
 
+// Función para validar que no se solapen permisos
+function validarSolapamientoPermisos(fechaInicio, fechaFin, docenteId) {
+    const nuevaInicio = new Date(fechaInicio);
+    const nuevaFin = new Date(fechaFin);
+
+    for (const permiso of permisosDocente) {
+        const existenteInicio = new Date(permiso.fecha_inicio.split('/').reverse().join('-'));
+        const existenteFin = new Date(permiso.fecha_fin.split('/').reverse().join('-'));
+
+        // Verificar solapamiento
+        if ((nuevaInicio <= existenteFin && nuevaFin >= existenteInicio)) {
+            return `⚠️ ADVERTENCIA: Este permiso se solapa con uno existente:
+                    ${permiso.tipo} (${permiso.fecha_inicio} al ${permiso.fecha_fin})`;
+        }
+    }
+    return null;
+}
+
+// Validación del formulario
+document.getElementById('form-permiso').addEventListener('submit', function(e) {
+    const docenteId = document.getElementById('docente_id').value;
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+
+    if (docenteId && fechaInicio && fechaFin && permisosDocente.length > 0) {
+        const advertencia = validarSolapamientoPermisos(fechaInicio, fechaFin, docenteId);
+        if (advertencia && !confirm(advertencia + "\n\n¿Desea continuar de todos modos?")) {
+            e.preventDefault();
+        }
+    }
+});
+
+// Configurar fechas por defecto
+document.addEventListener('DOMContentLoaded', function() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaFin = document.getElementById('fecha_fin');
+
+    fechaInicio.min = hoy;
+    fechaInicio.value = hoy;
+    fechaFin.value = hoy;
+
+    // Validación de fechas
+    fechaInicio.addEventListener('change', function() {
+        fechaFin.min = this.value;
+        if (fechaFin.value < this.value) {
+            fechaFin.value = this.value;
+        }
+    });
+
+    // Validación de fecha fin
+    fechaFin.addEventListener('change', function() {
+        if (this.value < fechaInicio.value) {
+            alert('La fecha de fin no puede ser anterior a la fecha de inicio');
+            this.value = fechaInicio.value;
+        }
+    });
+});
+</script>
 {% endblock %}

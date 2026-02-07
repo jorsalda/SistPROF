@@ -1,6 +1,6 @@
-# app/routes/permiso_routes.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+
 from app.extensions import db
 from app.models.permiso import Permiso
 from app.models.docente import Docente
@@ -15,16 +15,17 @@ def listado():
         colegio_id=current_user.colegio_id
     ).order_by(Permiso.fecha_inicio.desc()).all()
 
+    # Pasar la fecha actual para calcular permisos activos
     hoy = datetime.now().date()
 
     return render_template("permisos/listado.html",
                            permisos=permisos,
-                           hoy=hoy)
+                           hoy=hoy)  # ← Agregar hoy
 
-# ✅ CAMBIO IMPORTANTE: Cambiar nombre de función "formulario" a "nuevo"
+
 @permiso_bp.route("/nuevo", methods=["GET", "POST"])
 @login_required
-def nuevo():  # ← Cambiado de "formulario" a "nuevo"
+def nuevo():
     docentes = Docente.query.filter_by(
         colegio_id=current_user.colegio_id
     ).all()
@@ -64,9 +65,12 @@ def eliminar(id):
     return redirect(url_for("permiso.listado"))
 
 
+# AGREGAR ESTA NUEVA RUTA
 @permiso_bp.route("/api/permisos-docente/<int:docente_id>")
 @login_required
 def permisos_por_docente(docente_id):
+    """API para obtener permisos de un docente específico"""
+    # Verificar que el docente pertenece al colegio del usuario
     docente = Docente.query.filter_by(
         id=docente_id,
         colegio_id=current_user.colegio_id
@@ -77,6 +81,7 @@ def permisos_por_docente(docente_id):
         colegio_id=current_user.colegio_id
     ).order_by(Permiso.fecha_inicio.desc()).all()
 
+    # Convertir a formato JSON
     permisos_json = []
     for permiso in permisos:
         permisos_json.append({
