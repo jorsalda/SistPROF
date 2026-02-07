@@ -1,53 +1,83 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listado de Permisos</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .header { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .btn-custom { margin: 5px; }
+        .table-container { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
 
-{% block title %}Permisos{% endblock %}
-
-{% block content %}
-
-<h4 class="mb-3">📋 Listado de Permisos</h4>
-
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div></div>
-    <div class="d-flex gap-2">
-        {% if current_user.rol == 'admin' %}
-        <a href="{{ url_for('docente.nuevo') }}" class="btn btn-info">
-            👨‍🏫 Nuevo Docente
-        </a>
-        {% endif %}
-        <a href="{{ url_for('permiso.formulario') }}" class="btn btn-success">
-            ➕ Nuevo Permiso
-        </a>
-    </div>
-</div>
-
-<!-- Estadísticas -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h3>{{ permisos|length }}</h3>
-                <small class="text-muted">Total Permisos</small>
+    <!-- HEADER CON BOTONES -->
+    <div class="header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>📋 Listado de Permisos</h1>
+            <div>
+                <span class="me-3">Usuario: {{ current_user.email }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-light btn-sm">🚪 Salir</a>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                {% set activos = permisos|selectattr('fecha_fin', '>=', hoy)|list|length %}
-                <h3>{{ activos }}</h3>
-                <small class="text-muted">Permisos Activos</small>
+    <!-- BARRA DE BOTONES DE ACCIÓN -->
+    <div class="d-flex justify-content-between mb-4">
+        <div>
+            <!-- BOTÓN PARA IR A DOCENTES -->
+            <a href="{{ url_for('docente.listar') }}" class="btn btn-primary">
+                👨‍🏫 Lista de Docentes
+            </a>
+            
+            <!-- BOTÓN PARA NUEVO PERMISO -->
+            <a href="{{ url_for('permiso.nuevo') }}" class="btn btn-success">
+                ➕ Nuevo Permiso
+            </a>
+        </div>
+        
+
+    </div>
+
+    <!-- ESTADÍSTICAS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3>{{ permisos|length }}</h3>
+                    <small class="text-muted">Total Permisos</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    {% set activos = permisos|selectattr('fecha_fin', '>=', hoy)|list|length %}
+                    <h3>{{ activos }}</h3>
+                    <small class="text-muted">Permisos Activos</small>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Tabla -->
-<div class="card">
-    <div class="card-body p-0">
+    <!-- TABLA DE PERMISOS -->
+    <div class="table-container">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-primary">
+            <table class="table table-hover">
+                <thead class="table-dark">
                     <tr>
                         <th>Docente</th>
                         <th>Tipo</th>
@@ -55,33 +85,25 @@
                         <th>Hasta</th>
                         <th>Días</th>
                         <th>Observación</th>
-                        <th class="text-end">Acciones</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for permiso in permisos %}
                     <tr>
-                        <td><strong>{{ permiso.docente.nombre }}</strong></td>
+                        <td>
+                            <strong>{{ permiso.docente.nombre }}</strong>
+                        </td>
 
                         <td>
                             {% if permiso.tipo == 'Vacaciones' %}
-                                <span class="badge bg-info">🏖️ Vacaciones</span>
+                                <span class="badge bg-info">🏖️ {{ permiso.tipo }}</span>
                             {% elif permiso.tipo == 'Enfermedad' %}
-                                <span class="badge bg-danger">🤒 Enfermedad</span>
+                                <span class="badge bg-danger">🤒 {{ permiso.tipo }}</span>
                             {% elif permiso.tipo == 'Capacitación' %}
-                                <span class="badge bg-primary">📚 Capacitación</span>
-                            {% elif permiso.tipo == 'Permiso Personal' %}
-                                <span class="badge bg-warning text-dark">👤 Permiso Personal</span>
-                            {% elif permiso.tipo == 'Licencia' %}
-                                <span class="badge bg-secondary">📄 Licencia</span>
-                            {% elif permiso.tipo == 'Tiquetera de la felicidad' %}
-                                <span class="badge bg-success">🎉 Tiquetera de la felicidad</span>
-                            {% elif permiso.tipo == 'Cumpleaños' %}
-                                <span class="badge bg-warning text-dark">🎂 Cumpleaños</span>
-                            {% elif permiso.tipo == 'Jurado de votación' %}
-                                <span class="badge bg-dark">🗳️ Jurado de votación</span>
+                                <span class="badge bg-primary">📚 {{ permiso.tipo }}</span>
                             {% else %}
-                                <span class="badge bg-secondary">❓ {{ permiso.tipo }}</span>
+                                <span class="badge bg-secondary">{{ permiso.tipo }}</span>
                             {% endif %}
                         </td>
 
@@ -90,32 +112,21 @@
 
                         <td>
                             {% set dias = (permiso.fecha_fin - permiso.fecha_inicio).days + 1 %}
-                            {% if dias > 10 %}
-                                <span class="badge bg-danger">{{ dias }} días</span>
-                            {% elif dias > 5 %}
-                                <span class="badge bg-warning text-dark">{{ dias }} días</span>
-                            {% else %}
-                                <span class="badge bg-success">{{ dias }} días</span>
-                            {% endif %}
+                            <span class="badge bg-secondary">{{ dias }} días</span>
                         </td>
 
                         <td>{{ permiso.observacion or "-" }}</td>
 
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a href="{{ url_for('permiso.editar', id=permiso.id) }}"
-                                   class="btn btn-outline-primary">
-                                    ✏️
-                                </a>
-
-                                <form action="{{ url_for('permiso.eliminar', id=permiso.id) }}"
-                                      method="post"
-                                      onsubmit="return confirm('¿Eliminar este permiso?')">
-                                    <button type="submit" class="btn btn-outline-danger">
-                                        🗑️
-                                    </button>
-                                </form>
-                            </div>
+                        <td>
+                            <a href="{{ url_for('permiso.editar', id=permiso.id) }}" 
+                               class="btn btn-sm btn-warning">✏️ Editar</a>
+                            <form action="{{ url_for('permiso.eliminar', id=permiso.id) }}" 
+                                  method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" 
+                                        onclick="return confirm('¿Eliminar este permiso?')">
+                                    🗑️ Eliminar
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% else %}
@@ -129,6 +140,20 @@
             </table>
         </div>
     </div>
-</div>
 
-{% endblock %}
+    <!-- BOTONES INFERIORES -->
+    <div class="mt-4 d-flex justify-content-between">
+
+        
+        <div>
+            <a href="{{ url_for('permiso.nuevo') }}" class="btn btn-success">
+                ➕ Agregar Otro Permiso
+            </a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>{% block title %}SistPRO{% endblock %}</title>
 
     <!-- BOOTSTRAP CSS -->
@@ -26,12 +25,14 @@
 
             <nav class="nav-main">
                 {% if current_user.is_authenticated %}
+                    <!-- VÍNCULO A LISTA DE PERMISOS -->
                     <a href="{{ url_for('permiso.listado') }}"
                        class="nav-link {% if request.endpoint == 'permiso.listado' %}active{% endif %}">
                         📋 Permisos
                     </a>
 
                     {% if current_user.rol == 'admin' %}
+                    <!-- VÍNCULO A LISTA DE DOCENTES -->
                     <a href="{{ url_for('docente.listar') }}"
                        class="nav-link {% if request.endpoint == 'docente.listar' %}active{% endif %}">
                         👨‍🏫 Docentes
@@ -43,6 +44,7 @@
                             👤 {{ current_user.email }}
                             <small>({{ current_user.rol }})</small>
                         </span>
+                        <!-- VÍNCULO PARA SALIR -->
                         <a href="{{ url_for('auth.logout') }}" class="btn-logout">🚪 Salir</a>
                     </div>
                 {% endif %}
@@ -86,7 +88,7 @@
     <!-- JS global -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
-    <!-- JS por página (UNA SOLA VEZ) -->
+    <!-- JS por página -->
     {% block js %}{% endblock %}
 </body>
 </html>
