@@ -52,4 +52,7 @@ def create_app():
     def index():
         return "SistPROF funcionando en Render 🚀"
 
+    @app.route("/__ping")
+    def ping():
+        return "APP OK"
     return app
