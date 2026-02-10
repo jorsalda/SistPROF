@@ -1,9 +1,7 @@
-﻿import sys
-import os
+﻿from flask import Flask
 
-# Añadir la ruta del proyecto al path
-sys.path.insert(0, os.path.dirname(__file__))
+app = Flask(__name__)
 
-from app import create_app
-
-app = create_app()
+@app.route("/__ping")
+def ping():
+    return "PING DESDE WSGI"
