@@ -50,8 +50,6 @@ def create_app():
     # Ruta raíz
     @app.route("/")
     def index():
-        if current_user.is_authenticated:
-            return redirect(url_for("permiso.listado"))
-        return redirect(url_for("auth.login"))
+        return "SistPROF funcionando en Render 🚀"
 
     return app
