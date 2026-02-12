@@ -1,0 +1,80 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Dashboard del Colegio{% endblock %}
+
+{% block colegio_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard del Colegio</h2>
+    <div class="text-muted">
+        <i class="bi bi-calendar"></i> {{ hoy.strftime('%d/%m/%Y') }}
+    </div>
+</div>
+
+<!-- Estadísticas del Colegio -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3><i class="bi bi-person"></i> Total de Docentes</h3>
+        <div class="stat-value">{{ total_docentes }}</div>
+        <p class="stat-description">Docentes registrados en el colegio</p>
+    </div>
+
+    <div class="stat-card">
+        <h3><i class="bi bi-clipboard-check"></i> Total de Permisos</h3>
+        <div class="stat-value">{{ total_permisos }}</div>
+        <p class="stat-description">Permisos registrados en el colegio</p>
+    </div>
+
+    <div class="stat-card">
+        <h3><i class="bi bi-check-circle"></i> Permisos Activos</h3>
+        <div class="stat-value">{{ permisos_activos }}</div>
+        <p class="stat-description">Permisos vigentes actualmente</p>
+    </div>
+
+    <div class="stat-card">
+        <h3><i class="bi bi-hourglass-half"></i> Permisos Pendientes</h3>
+        <div class="stat-value">{{ permisos_pendientes }}</div>
+        <p class="stat-description">Permisos por comenzar</p>
+    </div>
+</div>
+
+<!-- Últimos Permisos -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-primary bg-opacity-10">
+        <h5 class="mb-0">📋 Últimos Permisos Registrados</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Docente</th>
+                        <th>Tipo</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for permiso in ultimos_permisos %}
+                    <tr>
+                        <td>{{ permiso.docente.nombre }}</td>
+                        <td>{{ permiso.tipo }}</td>
+                        <td>{{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ permiso.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if permiso.fecha_inicio <= hoy and permiso.fecha_fin >= hoy %}
+                                <span class="badge bg-success">Activo</span>
+                            {% elif permiso.fecha_inicio > hoy %}
+                                <span class="badge bg-info">Pendiente</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Finalizado</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Nuevo Permiso{% endblock %}
+
+{% block colegio_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clipboard-check"></i> Nuevo Permiso</h2>
+    <a href="{{ url_for('colegio.lista_permisos') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4">
+    <!-- Formulario de Permiso -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="mb-0">Datos del Permiso</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3" id="permisoForm">
+                    <div class="col-md-12">
+                        <label for="docente_id" class="form-label">Docente *</label>
+                        <select class="form-select" id="docente_id" name="docente_id" required onchange="mostrarHistorialPermisos()">
+                            <option value="">Seleccionar docente</option>
+                            {% for docente in docentes %}
+                                <option value="{{ docente.id }}">{{ docente.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="tipo" class="form-label">Tipo de Permiso *</label>
+                        <select class="form-select" id="tipo" name="tipo" required>
+                            <option value="">Seleccionar tipo</option>
+                            <option value="Licencia">Licencia</option>
+                            <option value="Permiso">Permiso</option>
+                            <option value="Vacaciones">Vacaciones</option>
+                            <option value="Enfermedad">Enfermedad</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="fecha_inicio" class="form-label">Fecha Inicio *</label>
+                        <input type="date"
+                               class="form-control"
+                               id="fecha_inicio"
+                               name="fecha_inicio"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="fecha_fin" class="form-label">Fecha Fin *</label>
+                        <input type="date"
+                               class="form-control"
+                               id="fecha_fin"
+                               name="fecha_fin"
+                               required>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="observacion" class="form-label">Observación</label>
+                        <textarea class="form-control"
+                                  id="observacion"
+                                  name="observacion"
+                                  rows="3"></textarea>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Guardar Permiso
+                        </button>
+                        <a href="{{ url_for('colegio.lista_permisos') }}" class="btn btn-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Permisos del Docente -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-info bg-opacity-10">
+                <h5 class="mb-0">📋 Historial de Permisos</h5>
+            </div>
+            <div class="card-body" id="historialPermisos">
+                <div class="text-center py-5">
+                    <i class="bi bi-info-circle fs-1 text-muted mb-3"></i>
+                    <p class="text-muted">Selecciona un docente para ver su historial de permisos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para mostrar historial de permisos -->
+<script>
+function mostrarHistorialPermisos() {
+    const docenteId = document.getElementById('docente_id').value;
+    const historialDiv = document.getElementById('historialPermisos');
+
+    if (!docenteId) {
+        historialDiv.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-info-circle fs-1 text-muted mb-3"></i>
+                <p class="text-muted">Selecciona un docente para ver su historial de permisos</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Obtener permisos del docente seleccionado
+    const todosPermisos = {{ todos_permisos|tojson }};
+    const hoy = new Date('{{ hoy.strftime('%Y-%m-%d') }}');
+    const permisosDocente = todosPermisos.filter(p => p.docente_id == docenteId);
+
+    if (permisosDocente.length === 0) {
+        historialDiv.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-clipboard-check fs-1 text-muted mb-3"></i>
+                <p class="text-muted">Este docente no tiene permisos previos</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Construir tabla de historial
+    let html = `
+        <div class="mb-3">
+            <span class="badge bg-info">${permisosDocente.length} permisos registrados</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    permisosDocente.forEach(permiso => {
+        const fechaInicio = new Date(permiso.fecha_inicio);
+        const fechaFin = new Date(permiso.fecha_fin);
+
+        let estado = 'Finalizado';
+        let badgeClass = 'bg-secondary';
+
+        if (fechaInicio <= hoy && fechaFin >= hoy) {
+            estado = 'Activo';
+            badgeClass = 'bg-success';
+        } else if (fechaInicio > hoy) {
+            estado = 'Pendiente';
+            badgeClass = 'bg-info';
+        }
+
+        html += `
+            <tr>
+                <td><span class="badge ${badgeClass}">${permiso.tipo}</span></td>
+                <td>${formatDate(fechaInicio)}</td>
+                <td>${formatDate(fechaFin)}</td>
+                <td><span class="badge ${badgeClass}">${estado}</span></td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    historialDiv.innerHTML = html;
+}
+
+function formatDate(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+</script>
+{% endblock %}

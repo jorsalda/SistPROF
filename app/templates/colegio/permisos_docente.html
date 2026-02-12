@@ -1,0 +1,145 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Permisos de {{ docente.nombre }}{% endblock %}
+
+{% block colegio_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-clipboard-check"></i> Permisos de {{ docente.nombre }}</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-person"></i> {{ docente.nombre }} | 
+            {% if docente.documento %}<i class="bi bi-card-text"></i> {{ docente.documento }} | {% endif %}
+            {% if docente.telefono %}<i class="bi bi-telephone"></i> {{ docente.telefono }}{% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('colegio.lista_docentes') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Volver a Docentes
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4">
+    <!-- Información del Docente -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="mb-0">Información del Docente</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre</label>
+                    <p class="mb-0">{{ docente.nombre }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Documento</label>
+                    <p class="mb-0">{{ docente.documento|default('No registrado') }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Teléfono</label>
+                    <p class="mb-0">{{ docente.telefono|default('No registrado') }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email</label>
+                    <p class="mb-0">{{ docente.email|default('No registrado') }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Estado</label>
+                    <p class="mb-0">
+                        {% if docente.activo %}
+                            <span class="badge bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="mt-4">
+                    <a href="{{ url_for('colegio.editar_docente', id=docente.id) }}" 
+                       class="btn btn-outline-primary w-100 mb-2">
+                        <i class="bi bi-pencil"></i> Editar Docente
+                    </a>
+                    <a href="{{ url_for('colegio.nuevo_permiso') }}" 
+                       class="btn btn-outline-success w-100">
+                        <i class="bi bi-plus-circle"></i> Nuevo Permiso
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Permisos -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Historial de Permisos</h5>
+                <span class="badge bg-primary">{{ permisos|length }} permisos</span>
+            </div>
+            <div class="card-body">
+                {% if permisos|length == 0 %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-clipboard-check fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">Este docente no tiene permisos registrados</p>
+                        <a href="{{ url_for('colegio.nuevo_permiso') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Registrar Primer Permiso
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Fecha Inicio</th>
+                                    <th>Fecha Fin</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for permiso in permisos %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">{{ permiso.tipo }}</span>
+                                    </td>
+                                    <td>{{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ permiso.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% if permiso.fecha_inicio <= hoy and permiso.fecha_fin >= hoy %}
+                                            <span class="badge bg-success">Activo</span>
+                                        {% elif permiso.fecha_inicio > hoy %}
+                                            <span class="badge bg-info">Pendiente</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Finalizado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('colegio.eliminar_permiso', id=permiso.id) }}" 
+                                              method="POST" 
+                                              class="d-inline">
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Estás seguro de eliminar este permiso?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

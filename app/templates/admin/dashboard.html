@@ -1,0 +1,182 @@
+{% extends "admin/admin_base.html" %}
+
+{% block page_title %}Panel de Administración{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-0">📊 Panel de Administración</h1>
+            <p class="text-muted">Controla y gestiona todos los aspectos del sistema</p>
+        </div>
+    </div>
+
+    <!-- Estadísticas Generales -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-muted">👥 Total de Usuarios</h5>
+                            <p class="text-muted mb-0">Usuarios registrados en el sistema</p>
+                        </div>
+                        <div class="bg-primary text-white rounded-circle p-3">
+                            <i class="bi bi-people fs-3"></i>
+                        </div>
+                    </div>
+                    <h2 class="mt-3 mb-0">{{ total_usuarios }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-muted">👑 Superadministradores</h5>
+                            <p class="text-muted mb-0">Usuarios con acceso total</p>
+                        </div>
+                        <div class="bg-warning text-white rounded-circle p-3">
+                            <i class="bi bi-shield-lock fs-3"></i>
+                        </div>
+                    </div>
+                    <h2 class="mt-3 mb-0">{{ superadmins }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-muted">✅ Usuarios Aprobados</h5>
+                            <p class="text-muted mb-0">Acceso permanente</p>
+                        </div>
+                        <div class="bg-success text-white rounded-circle p-3">
+                            <i class="bi bi-check-circle fs-3"></i>
+                        </div>
+                    </div>
+                    <h2 class="mt-3 mb-0">{{ usuarios_aprobados }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-muted">⏳ En Prueba</h5>
+                            <p class="text-muted mb-0">Dentro del periodo de prueba</p>
+                        </div>
+                        <div class="bg-info text-white rounded-circle p-3">
+                            <i class="bi bi-hourglass-half fs-3"></i>
+                        </div>
+                    </div>
+                    <h2 class="mt-3 mb-0">{{ usuarios_pendientes }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usuarios Próximos a Vencer -->
+    {% if proximos_vencer|length > 0 %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h5 class="mb-0">⚠️ Usuarios Próximos a Vencer (3 días o menos)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Email</th>
+                            <th>Días Restantes</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in proximos_vencer %}
+                        <tr>
+                            <td>{{ item.usuario.nombre|default('Sin nombre') }}</td>
+                            <td>{{ item.usuario.email }}</td>
+                            <td class="text-danger fw-bold">{{ item.dias }} días</td>
+                            <td>
+                                <a href="{{ url_for('admin.detalle_usuario', usuario_id=item.usuario.id) }}"
+                                   class="btn btn-sm btn-primary">Ver detalle</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas Adicionales -->
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">🏫 Total de Colegios</h5>
+                    <div class="d-flex align-items-center mt-2">
+                        <div class="bg-primary text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-building fs-4"></i>
+                        </div>
+                        <h2 class="mb-0">{{ total_colegios }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">👨‍🏫 Total de Docentes</h5>
+                    <div class="d-flex align-items-center mt-2">
+                        <div class="bg-success text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-person fs-4"></i>
+                        </div>
+                        <h2 class="mb-0">{{ total_docentes }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">📋 Total de Permisos</h5>
+                    <div class="d-flex align-items-center mt-2">
+                        <div class="bg-info text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-clipboard-check fs-4"></i>
+                        </div>
+                        <h2 class="mb-0">{{ total_permisos }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">🆕 Nuevos Usuarios (7 días)</h5>
+                    <div class="d-flex align-items-center mt-2">
+                        <div class="bg-warning text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-person-plus fs-4"></i>
+                        </div>
+                        <h2 class="mb-0">{{ nuevos_usuarios }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

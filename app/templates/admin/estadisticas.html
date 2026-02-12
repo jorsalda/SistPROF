@@ -1,0 +1,137 @@
+{% extends "admin/admin_base.html" %}
+
+{% block admin_page_title %}Estadísticas del Sistema{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up"></i> Estadísticas del Sistema</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.estadisticas') }}" 
+           class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Usuarios por Estado</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2">Total Usuarios</h6>
+                                <h2 class="card-title">{{ usuarios_activos + usuarios_bloqueados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-success text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2">Aprobados</h6>
+                                <h2 class="card-title">{{ usuarios_aprobados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-3">
+                    <div class="col-md-6">
+                        <div class="card bg-info text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2">En Prueba</h6>
+                                <h2 class="card-title">{{ usuarios_pendientes }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-danger text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2">Bloqueados</h6>
+                                <h2 class="card-title">{{ usuarios_bloqueados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Colegios con Más Docentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nombre del Colegio</th>
+                                <th>Docentes</th>
+                                <th>Usuarios</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for colegio in colegios_data %}
+                            <tr>
+                                <td>{{ colegio.nombre }}</td>
+                                <td>{{ colegio.docentes }}</td>
+                                <td>{{ colegio.usuarios }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom">
+        <h5 class="mb-0">Distribución de Usuarios por Colegio</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for colegio in colegios_data[:4] %}
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ colegio.nombre }}</h6>
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <small>Docentes</small>
+                                <div class="fw-bold">{{ colegio.docentes }}</div>
+                            </div>
+                            <div>
+                                <small>Usuarios</small>
+                                <div class="fw-bold">{{ colegio.usuarios }}</div>
+                            </div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-primary" 
+                                 style="width: {{ colegio.docentes|default(0) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

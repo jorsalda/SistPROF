@@ -12,7 +12,11 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/')
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('docente.listar'))  # ✅ CORREGIDO: "listado"
+        # ✅ REDIRECCIÓN INTELIGENTE
+        if current_user.is_superadmin:
+            return redirect(url_for('admin.dashboard'))  # 👑 A dashboard de admin
+        else:
+            return redirect(url_for('docente.listar'))  # 👨‍🏫 A lista de docentes
     return redirect(url_for('auth.login'))
 
 
@@ -26,11 +30,18 @@ def login():
 
         if ok:
             login_user(resultado)
-            return redirect(url_for('docente.listar'))  # ✅ CORREGIDO: ir a LISTA, no formulario
+            # ✅ REDIRECCIÓN INTELIGENTE DESPUÉS DEL LOGIN
+            # Usar 'resultado' en lugar de 'current_user' (más seguro inmediatamente después del login)
+            if resultado.is_superadmin:
+                return redirect(url_for('admin.dashboard'))  # 👑 A dashboard de admin
+            else:
+                return redirect(url_for('colegio.dashboard'))  # 👨‍🏫 A DASHBOARD DEL COLEGIO
 
-        flash(resultado, 'danger')
+        else:
+            flash(resultado, 'danger')
+            return render_template('auth/login.html')  # ✅ RETURN EXPLÍCITO PARA LOGIN FALLIDO
 
-    return render_template('auth/login.html')
+    return render_template('auth/login.html')  # ✅ GET request
 
 
 @auth_bp.route('/logout')

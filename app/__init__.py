@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask
 import os
 from flask_login import current_user
 from .extensions import db, login_manager
@@ -44,19 +44,13 @@ def create_app():
     from .routes.auth_routes import auth_bp
     from .routes.permiso_routes import permiso_bp
     from .routes.docente_routes import docente_bp
+    from .routes.admin_routes import admin_bp
+    from .routes.colegio_routes import colegio_bp  # ← AGREGAR ESTA LÍNEA
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(permiso_bp)
     app.register_blueprint(docente_bp)
-
-    # 🔹 Ruta raíz simple
-    @app.route("/")
-    def index():
-        return "SistPROF funcionando en Render 🚀"
-
-    # 🔹 Ping de diagnóstico
-    @app.route("/__ping")
-    def ping():
-        return "APP OK"
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(colegio_bp)  # ← AGREGAR ESTA LÍNEA
 
     return app

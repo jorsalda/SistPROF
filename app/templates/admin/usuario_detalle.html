@@ -1,0 +1,130 @@
+{% extends "admin/admin_base.html" %}
+
+{% block admin_page_title %}Detalle de Usuario - {{ usuario.email }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person"></i> Detalle de Usuario</h2>
+    <a href="{{ url_for('admin.lista_usuarios') }}" 
+       class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver a lista
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4">
+    <!-- Información Principal -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Información del Usuario</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="text" class="form-control" value="{{ usuario.email }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" value="{{ usuario.nombre|default('Sin nombre') }}" readonly>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de Registro</label>
+                        <input type="text" class="form-control" value="{{ usuario.fecha_registro.strftime('%d/%m/%Y %H:%M') }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado Actual</label>
+                        <input type="text" class="form-control" 
+                               value="{{ usuario.estado_detallado()|safe }}" 
+                               readonly>
+                    </div>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Colegio</label>
+                        <input type="text" class="form-control" 
+                               value="{{ usuario.colegio.nombre|default('Sin colegio') }}" 
+                               readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Acciones</h5>
+            </div>
+            <div class="card-body">
+                {% if not usuario.is_superadmin %}
+                    {% if usuario.is_approved %}
+                        <form action="{{ url_for('admin.bloquear_usuario', usuario_id=usuario.id) }}" 
+                              method="POST" 
+                              class="mb-3">
+                            <button type="submit" 
+                                    class="btn btn-danger w-100">
+                                <i class="bi bi-lock"></i> Bloquear Usuario
+                            </button>
+                        </form>
+                    {% else %}
+                        <form action="{{ url_for('admin.aprobar_usuario', usuario_id=usuario.id) }}" 
+                              method="POST" 
+                              class="mb-3">
+                            <button type="submit" 
+                                    class="btn btn-success w-100">
+                                <i class="bi bi-check-circle"></i> Aprobar Usuario
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    <form action="{{ url_for('admin.modificar_dias_prueba', usuario_id=usuario.id) }}" 
+                          method="POST" 
+                          class="mb-3">
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="dias_prueba" 
+                                   value="{{ usuario.dias_prueba }}"
+                                   min="0">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-pencil"></i> Modificar
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+                
+                <form action="{{ url_for('admin.activar_usuario', usuario_id=usuario.id) }}" 
+                      method="POST" 
+                      class="mb-3">
+                    <button type="submit" 
+                            class="btn btn-warning w-100">
+                        <i class="bi bi-unlock"></i> Activar Usuario
+                    </button>
+                </form>
+                
+                <a href="{{ url_for('auth.logout') }}" 
+                   class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

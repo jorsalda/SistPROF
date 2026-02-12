@@ -1,0 +1,90 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}{{ titulo }}{% endblock %}
+
+{% block colegio_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person"></i> {{ titulo }}</h2>
+    <a href="{{ url_for('colegio.lista_docentes') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="POST" class="row g-3">
+            <div class="col-md-6">
+                <label for="nombre" class="form-label">Nombre *</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="nombre" 
+                       name="nombre" 
+                       value="{{ docente.nombre if docente else '' }}" 
+                       required>
+            </div>
+
+            <div class="col-md-6">
+                <label for="documento" class="form-label">Documento</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="documento" 
+                       name="documento" 
+                       value="{{ docente.documento if docente else '' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label for="telefono" class="form-label">Teléfono</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="telefono" 
+                       name="telefono" 
+                       value="{{ docente.telefono if docente else '' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" 
+                       class="form-control" 
+                       id="email" 
+                       name="email" 
+                       value="{{ docente.email if docente else '' }}">
+            </div>
+
+            {% if docente %}
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           id="activo" 
+                           name="activo" 
+                           {% if docente.activo %}checked{% endif %}>
+                    <label class="form-check-label" for="activo">
+                        Activo
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar
+                </button>
+                <a href="{{ url_for('colegio.lista_docentes') }}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
