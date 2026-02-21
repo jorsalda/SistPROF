@@ -17,7 +17,6 @@ class Config:
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_pre_ping": True,
             "pool_recycle": 300,
-
         }
     else:
         SQLALCHEMY_DATABASE_URI = (
@@ -36,3 +35,8 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
 
+    # 🔹 NUEVO: Configuración para Render/HTTPS ✅
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PREFERRED_URL_SCHEME = 'https'
