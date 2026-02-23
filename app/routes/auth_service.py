@@ -1,53 +1,49 @@
-from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime, timedelta  # ⚠️ Importar timedelta
+from werkzeug.security import check_password_hash
+from datetime import datetime, timedelta
 from app.models.usuario import Usuario
-from app.models.colegio import Colegio
 from app.extensions import db
 
 
+MAX_INTENTOS = 5
+TIEMPO_BLOQUEO_MIN = 2
+
+
 def login_usuario(email, password):
+    ahora = datetime.utcnow()
+
     usuario = Usuario.query.filter_by(email=email).first()
 
+    # ❌ No existe el usuario (mensaje genérico)
     if not usuario:
-        return False, "Usuario no encontrado"
+        return False, "Credenciales inválidas"
 
+    # 🔒 Usuario bloqueado temporalmente
+    if usuario.locked_until and usuario.locked_until > ahora:
+        segundos = int((usuario.locked_until - ahora).total_seconds())
+        return False, f"Cuenta bloqueada. Intenta en {segundos} segundos"
+
+    # 🔐 Contraseña incorrecta
     if not check_password_hash(usuario.password_hash, password):
-        return False, "Contraseña incorrecta"
+        usuario.failed_attempts = (usuario.failed_attempts or 0) + 1
 
-    # ✅ CORREGIDO: Usar is_active en lugar de estatus
+        if usuario.failed_attempts >= MAX_INTENTOS:
+            usuario.locked_until = ahora + timedelta(minutes=TIEMPO_BLOQUEO_MIN)
+            usuario.failed_attempts = 0  # reset tras bloqueo
+
+        db.session.commit()
+        return False, "Credenciales inválidas"
+
+    # 🚫 Usuario inactivo
     if not usuario.is_active:
         return False, "Usuario no activo"
 
-    return True, usuario
+    # ⏳ Cuenta expirada
+    if usuario.fecha_expiracion and usuario.fecha_expiracion < ahora:
+        return False, "Cuenta expirada. Contacte al administrador"
 
-
-def registrar_usuario(email, password, colegio_nombre):
-    if Usuario.query.filter_by(email=email).first():
-        return False, "El email ya está registrado"
-
-    colegio = Colegio.query.filter_by(nombre=colegio_nombre).first()
-    if not colegio:
-        colegio = Colegio(nombre=colegio_nombre)
-        db.session.add(colegio)
-        db.session.commit()
-
-    # ⭐⭐ DETERMINAR ROL: Primer usuario = admin, demás = colegio ⭐⭐
-    total_usuarios = Usuario.query.count()
-    es_admin = total_usuarios == 0
-
-    usuario = Usuario(
-        email=email,
-        password_hash=generate_password_hash(password),
-        colegio_id=colegio.id,
-        fecha_registro=datetime.utcnow(),
-        is_superadmin=es_admin,           # ⭐ Primer usuario = superadmin
-        is_active=True,                   # ⭐ Activo al registrarse
-        is_approved=False,                # ⭐ No aprobado todavía
-        dias_prueba=15,                   # ⭐ 15 días de prueba
-        fecha_expiracion=datetime.utcnow() + timedelta(days=15)  # ⭐ Fecha de expiración
-    )
-
-    db.session.add(usuario)
+    # ✅ LOGIN EXITOSO → limpiar seguridad
+    usuario.failed_attempts = 0
+    usuario.locked_until = None
     db.session.commit()
 
-    return True, "OK"
+    return True, usuario
