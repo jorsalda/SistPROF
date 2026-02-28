@@ -5,8 +5,9 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix  # ✅ IMPORTANTE
 
-from .extensions import db, login_manager, mail  # ✅ TODO desde extensions
+from .extensions import db, login_manager, mail
 
 migrate = Migrate()
 
@@ -24,11 +25,14 @@ def create_app():
 
     app.config.from_object('config.Config')
 
+    # 🔥 FIX DEFINITIVO PARA RENDER (HTTPS + Proxy)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
     # 🔹 Inicializar extensiones
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
-    mail.init_app(app)        # ✅ CORRECTO
+    mail.init_app(app)
     CSRFProtect(app)
 
     # 🔹 Rate limiter
@@ -70,5 +74,3 @@ def create_app():
     app.limiter = limiter
 
     return app
-
-
