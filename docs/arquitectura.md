@@ -14,45 +14,46 @@ graph TD
     %% Usuarios
     subgraph Actors
         direction TB
-        U_Admin[👤 Admin / Superadmin]:::user
-        U_Doc[👨‍🏫 Docente]:::user
-        U_Acu[👪 Acudiente]:::user
-        U_Est[🎓 Estudiante]:::user
+        U_Admin["👤 Admin / Superadmin"]:::user
+        U_Doc["👨‍ Docente"]:::user
+        U_Acu["👪 Acudiente"]:::user
+        U_Est["🎓 Estudiante"]:::user
     end
 
     %% Aplicación
     subgraph SistPROF_SaaS
         direction LR
-        subgraph Frontend_Layer [Frontend (Web)]
-            F_Browser[🌐 Navegador Web]:::frontend
-            F_Temp[📄 Plantillas Jinja2 / CSS]:::frontend
+        
+        subgraph Frontend_Layer["Frontend Web"]
+            F_Browser["🌐 Navegador Web"]:::frontend
+            F_Temp["📄 Plantillas Jinja2 / CSS"]:::frontend
         end
 
-        subgraph Backend_Layer [Backend (Flask)]
-            B_App[⚙️ App Logic (Routes)]:::backend
-            B_Auth[🔐 Auth Service]:::backend
-            B_Service[🛠️ Business Services]:::backend
-            B_MW[🛡️ Middleware (Roles)]:::backend
+        subgraph Backend_Layer["Backend Flask"]
+            B_App["⚙️ App Logic Routes"]:::backend
+            B_Auth["🔐 Auth Service"]:::backend
+            B_Service["🛠️ Business Services"]:::backend
+            B_MW["🛡️ Middleware Roles"]:::backend
         end
 
-        subgraph DB_Layer [Datos]
-            DB_PG[(🐘 PostgreSQL)]:::db
-            DB_Admin[🗄️ PGAdmin]:::db
+        subgraph DB_Layer["Base de Datos"]
+            DB_PG["(🐘 PostgreSQL)"]:::db
+            DB_Admin["🗄️ PGAdmin"]:::db
         end
         
         %% Módulos Internos
-        M_Auth[🔑 Autenticación]:::backend
-        M_Esc[🏫 Gestión Escolar]:::backend
-        M_Aca[📚 Académico]:::backend
-        M_Seg[📋 Seguimiento]:::backend
-        M_Eva[📝 Evaluación]:::backend
+        M_Auth["🔑 Autenticación"]:::backend
+        M_Esc["🏫 Gestión Escolar"]:::backend
+        M_Aca["📚 Académico"]:::backend
+        M_Seg["📋 Seguimiento"]:::backend
+        M_Eva["📝 Evaluación"]:::backend
     end
 
     %% Externos
-    subgraph Externos
-        EXT_File[📂 Archivos / Storage]:::ext
-        EXT_API[🔗 APIs Externas]:::ext
-        EXT_AI[🤖 AI Services]:::ext
+    subgraph Externos["Servicios Externos"]
+        EXT_File["📂 Archivos Storage"]:::ext
+        EXT_API["🔗 APIs Externas"]:::ext
+        EXT_AI["🤖 AI Services"]:::ext
     end
 
     %% Relaciones
@@ -61,7 +62,7 @@ graph TD
     U_Acu -->|HTTPS| F_Browser
     U_Est -->|HTTPS| F_Browser
 
-    F_Browser <-->|HTTP/REST| B_App
+    F_Browser <-->|HTTP REST| B_App
     F_Temp <--> B_App
 
     B_App --> B_Auth
