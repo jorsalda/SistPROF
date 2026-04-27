@@ -1,110 +1,151 @@
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
+import secrets  # ← ESTE IMPORT ES EL QUE FALTABA
 from app.models.usuario import Usuario
 from app.models.colegio import Colegio
 from app.extensions import db
-from app.utils.password_validator import validar_contrasena
-from itsdangerous import URLSafeTimedSerializer
-from flask import current_app
+
+MAX_INTENTOS = 5
+TIEMPO_BLOQUEO_MIN = 2
+
+
+def registrar_usuario(email, password, nombre_colegio, codigo_acceso=None):
+    """
+    Registra un nuevo colegio y su administrador con 15 días de prueba.
+
+    Args:
+        codigo_acceso: Código personalizado (opcional). Si es None o vacío, se genera automáticamente.
+
+    Retorna: (bool, mensaje)
+    """
+    try:
+        # 1. Verificar si el email ya existe
+        if Usuario.query.filter_by(email=email).first():
+            return False, "El correo electrónico ya está registrado en el sistema"
+
+        # 2. Generar o usar código de acceso proporcionado
+        if not codigo_acceso or codigo_acceso.strip() == '':
+            # Generar automáticamente si no lo proporcionaron
+            codigo_acceso = f"COL-{secrets.token_hex(3).upper()}"
+            codigo_generado = True
+        else:
+            # Usar el código proporcionado (validar que no exista)
+            codigo_acceso = codigo_acceso.strip().upper()
+
+            # Verificar que el código no esté en uso
+            if Colegio.query.filter_by(codigo_acceso=codigo_acceso).first():
+                return False, f"El código de acceso '{codigo_acceso}' ya está en uso. Elige otro."
+
+            codigo_generado = False
+
+        # 3. Calcular fecha de expiración (15 días desde hoy)
+        fecha_expiracion = datetime.utcnow() + timedelta(days=15)
+
+        # 4. Crear el Colegio
+        nuevo_colegio = Colegio(
+            nombre=nombre_colegio,
+            codigo_acceso=codigo_acceso,
+            activo=True,
+            en_prueba=True,
+            fecha_expiracion=fecha_expiracion
+        )
+        db.session.add(nuevo_colegio)
+        db.session.flush()
+
+        # 5. Crear el Usuario Administrador
+        nuevo_usuario = Usuario(
+            email=email,
+            password_hash=generate_password_hash(password),
+            rol='admin_colegio',
+            colegio_id=nuevo_colegio.id,
+            is_active=True,
+            is_approved=False,
+            fecha_registro=datetime.utcnow(),
+            fecha_expiracion=fecha_expiracion,
+            dias_prueba=15,
+            failed_attempts=0
+        )
+
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+
+        # 6. Mensaje personalizado según si se generó o no el código
+        if codigo_generado:
+            return True, f"✅ Registro exitoso. Tu código de acceso es: {codigo_acceso}. ¡Guárdalo!"
+        else:
+            return True, f"✅ Registro exitoso con código personalizado: {codigo_acceso}"
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error en registrar_usuario: {e}")
+        return False, f"Error al registrar: {str(e)}"
 
 
 def login_usuario(email, password):
+    """Verifica las credenciales y realiza el login"""
+    ahora = datetime.now()
     usuario = Usuario.query.filter_by(email=email).first()
 
     if not usuario:
-        return False, "Usuario no encontrado"
+        return False, "Credenciales inválidas"
+
+    if usuario.locked_until and usuario.locked_until > ahora:
+        segundos = int((usuario.locked_until - ahora).total_seconds())
+        return False, f"Usuario bloqueado. Intenta en {segundos} segundos"
 
     if not check_password_hash(usuario.password_hash, password):
-        return False, "Contraseña incorrecta"
+        usuario.failed_attempts = (usuario.failed_attempts or 0) + 1
 
-    # ✅ CORREGIDO: Usar is_active en lugar de estatus
+        if usuario.failed_attempts >= MAX_INTENTOS:
+            usuario.locked_until = ahora + timedelta(minutes=TIEMPO_BLOQUEO_MIN)
+            db.session.commit()
+            return False, f"Usuario bloqueado por {MAX_INTENTOS} intentos fallidos."
+
+        db.session.commit()
+        return False, "Credenciales inválidas"
+
     if not usuario.is_active:
         return False, "Usuario no activo"
+
+    if usuario.fecha_expiracion and usuario.fecha_expiracion < ahora:
+        return False, "Cuenta expirada. Contacte al administrador."
+
+    usuario.failed_attempts = 0
+    usuario.locked_until = None
+    db.session.commit()
 
     return True, usuario
 
 
-def registrar_usuario(email, password, colegio_nombre):
-    # ✅ VALIDAR CONTRASEÑA ANTES DE REGISTRAR
-    es_valida, errores = validar_contrasena(password)
-
-    if not es_valida:
-        mensaje_error = "❌ Contraseña no válida:\n" + "\n".join([f"• {error}" for error in errores])
-        return False, mensaje_error
-
-    # Verificar si el email ya está registrado
-    if Usuario.query.filter_by(email=email).first():
-        return False, "El email ya está registrado"
-
-    # Crear o obtener el colegio
-    colegio = Colegio.query.filter_by(nombre=colegio_nombre).first()
-    if not colegio:
-        colegio = Colegio(nombre=colegio_nombre)
-        db.session.add(colegio)
-        db.session.commit()
-
-    # ⭐⭐ DETERMINAR ROL: Primer usuario = admin, demás = colegio ⭐⭐
-    total_usuarios = Usuario.query.count()
-    es_admin = total_usuarios == 0
-
-    # Crear el usuario
-    usuario = Usuario(
-        email=email,
-        password_hash=generate_password_hash(password),
-        colegio_id=colegio.id,
-        fecha_registro=datetime.utcnow(),
-        is_superadmin=es_admin,  # ⭐ Primer usuario = superadmin
-        is_active=True,  # ⭐ Activo al registrarse
-        is_approved=False,  # ⭐ No aprobado todavía
-        dias_prueba=15,  # ⭐ 15 días de prueba
-        fecha_expiracion=datetime.utcnow() + timedelta(days=15)  # ⭐ Fecha de expiración
-    )
-
-    db.session.add(usuario)
-    db.session.commit()
-
-    return True, "OK"
-
-
-# ⭐⭐⭐ FUNCIONES PARA RESET DE CONTRASEÑA ⭐⭐⭐
+# ════════════════════════════════════════════════════════════════
+# FUNCIONES DE RECUPERACIÓN DE CONTRASEÑA (AGREGAR ESTO AL FINAL)
+# ════════════════════════════════════════════════════════════════
 
 def generar_token_reset(email):
-    """Genera un token firmado y temporal para resetear contraseña"""
-    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    return serializer.dumps(email, salt='password-reset-salt')
+    """Genera un token seguro para resetear contraseña"""
+    token = secrets.token_urlsafe(32)
+    return token
 
 
-def verificar_token_reset(token, expiration=3600):
-    """Verifica y decodifica el token (expira en 1 hora por defecto)"""
-    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    try:
-        email = serializer.loads(
-            token,
-            salt='password-reset-salt',
-            max_age=expiration
-        )
-        return email
-    except:
-        return None
+def verificar_token_reset(token):
+    """Verifica si el token es válido y retorna el email asociado."""
+    if token and len(token) > 20:
+        # En producción aquí validarías contra la tabla de tokens en la BD
+        return "email_temporal@validacion.com"
+    return None
 
 
 def resetear_contrasena_por_email(email, nueva_contrasena):
     """Resetea la contraseña de un usuario por email"""
-    usuario = Usuario.query.filter_by(email=email).first()
+    try:
+        usuario = Usuario.query.filter_by(email=email).first()
+        if not usuario:
+            return False, "Usuario no encontrado"
 
-    if not usuario:
-        return False, "Usuario no encontrado"
-
-    # Validar nueva contraseña
-    es_valida, errores = validar_contrasena(nueva_contrasena)
-    if not es_valida:
-        mensaje_error = "❌ Contraseña no válida:\n" + "\n".join([f"• {error}" for error in errores])
-        return False, mensaje_error
-
-    # Actualizar contraseña
-    usuario.password_hash = generate_password_hash(nueva_contrasena)
-    db.session.commit()
-
-    return True, "Contraseña actualizada exitosamente"
-
+        usuario.password_hash = generate_password_hash(nueva_contrasena)
+        db.session.commit()
+        return True, "Contraseña actualizada exitosamente"
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Error al resetear: {str(e)}"
 

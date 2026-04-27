@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - SistPRO{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ titulo }}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Mensajes flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label required">Nombre completo *</label>
+                            <input type="text" 
+                                   name="nombre" 
+                                   id="nombre" 
+                                   class="form-control" 
+                                   value="{{ estudiante.nombre if estudiante else '' }}"
+                                   placeholder="Ej: Juan Pérez García"
+                                   required>
+                        </div>
+
+                        <!-- Grado y Grupo -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="grado" class="form-label required">Grado *</label>
+                                <select name="grado" id="grado" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Preescolar" {% if estudiante and estudiante.grado == 'Preescolar' %}selected{% endif %}>Preescolar</option>
+                                    <option value="1°" {% if estudiante and estudiante.grado == '1°' %}selected{% endif %}>1°</option>
+                                    <option value="2°" {% if estudiante and estudiante.grado == '2°' %}selected{% endif %}>2°</option>
+                                    <option value="3°" {% if estudiante and estudiante.grado == '3°' %}selected{% endif %}>3°</option>
+                                    <option value="4°" {% if estudiante and estudiante.grado == '4°' %}selected{% endif %}>4°</option>
+                                    <option value="5°" {% if estudiante and estudiante.grado == '5°' %}selected{% endif %}>5°</option>
+                                    <option value="6°" {% if estudiante and estudiante.grado == '6°' %}selected{% endif %}>6°</option>
+                                    <option value="7°" {% if estudiante and estudiante.grado == '7°' %}selected{% endif %}>7°</option>
+                                    <option value="8°" {% if estudiante and estudiante.grado == '8°' %}selected{% endif %}>8°</option>
+                                    <option value="9°" {% if estudiante and estudiante.grado == '9°' %}selected{% endif %}>9°</option>
+                                    <option value="10°" {% if estudiante and estudiante.grado == '10°' %}selected{% endif %}>10°</option>
+                                    <option value="11°" {% if estudiante and estudiante.grado == '11°' %}selected{% endif %}>11°</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="grupo" class="form-label">Grupo</label>
+                                <input type="text" 
+                                       name="grupo" 
+                                       id="grupo" 
+                                       class="form-control" 
+                                       value="{{ estudiante.grupo if estudiante else '' }}"
+                                       placeholder="Ej: A, B, C">
+                            </div>
+                        </div>
+
+                        <!-- Sede -->
+                        <div class="mb-3">
+                            <label for="sede_id" class="form-label">Sede</label>
+                            <select name="sede_id" id="sede_id" class="form-select">
+                                <option value="">Seleccionar sede...</option>
+                                {% for sede in sedes %}
+                                <option value="{{ sede.id }}" 
+                                        {% if estudiante and estudiante.sede_id == sede.id %}selected{% endif %}>
+                                    {{ sede.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Jornada -->
+                        <div class="mb-3">
+                            <label for="jornada_id" class="form-label">Jornada</label>
+                            <select name="jornada_id" id="jornada_id" class="form-select">
+                                <option value="">Seleccionar jornada...</option>
+                                {% for jornada in jornadas %}
+                                <option value="{{ jornada.id }}" 
+                                        {% if estudiante and estudiante.jornada_id == jornada.id %}selected{% endif %}>
+                                    {{ jornada.nombre }} ({{ jornada.hora_inicio }} - {{ jornada.hora_fin }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Docente Tutor -->
+                        <div class="mb-3">
+                            <label for="docente_id" class="form-label">Docente Tutor / Director de Grupo</label>
+                            <select name="docente_id" id="docente_id" class="form-select">
+                                <option value="">Seleccionar docente...</option>
+                                {% for docente in docentes %}
+                                <option value="{{ docente.id }}" 
+                                        {% if estudiante and estudiante.docente_id == docente.id %}selected{% endif %}>
+                                    {{ docente.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Estado (solo en edición) -->
+                        {% if estudiante %}
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" 
+                                   name="activo" 
+                                   id="activo" 
+                                   class="form-check-input"
+                                   {% if estudiante.activo %}checked{% endif %}>
+                            <label for="activo" class="form-check-label">Estudiante activo</label>
+                        </div>
+                        {% endif %}
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('estudiante.listar') }}" class="btn btn-secondary">
+                                ← Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                💾 Guardar Estudiante
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}

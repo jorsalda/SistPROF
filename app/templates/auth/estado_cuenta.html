@@ -1,10 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<h2>Estado de cuenta</h2>
 
-</body>
-</html>
+<p>Días restantes: {{ dias_restantes }}</p>
+
+{% if is_approved %}
+    <p>✅ Cuenta aprobada</p>
+{% else %}
+    <p>⏳ Cuenta en revisión</p>
+{% endif %}
+
+<a href="{{ url_for('auth.logout') }}">Cerrar sesión</a>

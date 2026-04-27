@@ -40,4 +40,8 @@ def create_app():
                 return redirect(url_for("permiso.listado"))
         return redirect(url_for("auth.login"))
 
+    from app.routes.docs_routes import docs_bp
+    app.register_blueprint(docs_bp)
+
+
     return app

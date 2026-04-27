@@ -30,12 +30,39 @@
                     </a>
                 </li>
 
-                <!-- ✅ Usuarios: Ahora apunta al Dashboard (donde están los colegios) -->
+                <!-- ✅ Usuarios / Colegios -->
                 <li class="menu-item">
                     <a href="{{ url_for('admin.dashboard') }}"
                        class="menu-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
                         <i class="bi bi-people"></i>
                         Usuarios / Colegios
+                    </a>
+                </li>
+
+                <!-- ✅ NUEVO: Estudiantes -->
+                <li class="menu-item">
+                    <a href="{{ url_for('estudiante.listar') }}"
+                       class="menu-link {% if request.endpoint and 'estudiante' in request.endpoint %}active{% endif %}">
+                        <i class="bi bi-mortarboard"></i>
+                        Estudiantes
+                    </a>
+                </li>
+
+                <!-- ✅ Docentes (si quieres agregarlo también) -->
+                <li class="menu-item">
+                    <a href="{{ url_for('docente.listar') }}"
+                       class="menu-link {% if request.endpoint and 'docente' in request.endpoint %}active{% endif %}">
+                        <i class="bi bi-person-badge"></i>
+                        Docentes
+                    </a>
+                </li>
+
+                <!-- ✅ Permisos (si quieres agregarlo también) -->
+                <li class="menu-item">
+                    <a href="{{ url_for('permiso.listar') }}"
+                       class="menu-link {% if request.endpoint and 'permiso' in request.endpoint %}active{% endif %}">
+                        <i class="bi bi-shield-check"></i>
+                        Permisos
                     </a>
                 </li>
 

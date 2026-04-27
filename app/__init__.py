@@ -6,6 +6,32 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix  # ✅ IMPORTANTE
+from .routes.estudiantes_routes import estudiante_bp  # ← AGREGAR ESTO
+from .models.sede import Sede  # ← AGREGAR ESTO
+from .models.jornada import Jornada  # ← AGREGAR ESTO
+# 🔹 Importar modelos
+from .models.usuario import Usuario
+from .models.colegio import Colegio
+from .models.docente import Docente
+from .models.permiso import Permiso
+from .models.estudiante import Estudiante
+from .models.sede import Sede
+from .models.jornada import Jornada
+from .models.acudiente import Acudiente
+from .models.clase import Clase
+from .models.clase_estudiante import ClaseEstudiante
+from .models.asistencia import Asistencia
+from .models.novedad import Novedad
+from .models.citacion_acudiente import CitacionAcudiente
+from .models.estudiante_acudiente import EstudianteAcudiente
+from .models.piar import PIAR
+from .models.alerta import Alerta
+from .models.ingreso_colegio import IngresoColegio
+from .models.evaluacion_estudiante import EvaluacionEstudiante
+from .models.descargo_estudiante import DescargoEstudiante
+from .models.acuerdo_correctivo import AcuerdoCorrectivo
+from .models.resultado_examen import ResultadoExamen
+from .models.materia import Materia  # ← AGREGAR ESTA LÍNEA
 
 from .extensions import db, login_manager, mail
 
@@ -70,6 +96,7 @@ def create_app():
     app.register_blueprint(docente_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(colegio_bp)
+    app.register_blueprint(estudiante_bp)  # ← AGREGAR ESTO
 
     app.limiter = limiter
 

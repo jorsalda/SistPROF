@@ -4,16 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - SistPROF</title>
-    <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- Estilos Personalizados -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
 <body>
     <div class="admin-container">
-        <!-- Sidebar de Administración -->
         <aside class="admin-sidebar">
             <div class="sidebar-header">
                 <h2><i class="bi bi-people"></i> Admin Panel</h2>
@@ -21,7 +17,7 @@
             </div>
 
             <ul class="sidebar-menu">
-                <!-- ✅ Dashboard -->
+                <!-- ✅ Dashboard: Esta ruta SÍ funciona -->
                 <li class="menu-item">
                     <a href="{{ url_for('admin.dashboard') }}"
                        class="menu-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
@@ -30,12 +26,11 @@
                     </a>
                 </li>
 
-                <!-- ✅ Usuarios: Ahora apunta al Dashboard (donde están los colegios) -->
+                <!-- ⚠️ Usuarios: Desactivado temporalmente -->
                 <li class="menu-item">
-                    <a href="{{ url_for('admin.dashboard') }}"
-                       class="menu-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    <a href="#" class="menu-link" onclick="return false;" title="Próximamente">
                         <i class="bi bi-people"></i>
-                        Usuarios / Colegios
+                        Usuarios
                     </a>
                 </li>
 
@@ -55,7 +50,6 @@
             </button>
         </aside>
 
-        <!-- Contenido Principal -->
         <main class="admin-content">
             <header class="admin-header">
                 <h1>{% block admin_page_title %}Panel de Administración{% endblock %}</h1>
@@ -81,8 +75,6 @@
             </div>
         </main>
     </div>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

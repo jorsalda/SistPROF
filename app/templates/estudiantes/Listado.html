@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Estudiantes - SistPRO{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📚 Gestión de Estudiantes</h2>
+        <a href="{{ url_for('estudiante.nuevo') }}" class="btn btn-primary">
+            + Nuevo Estudiante
+        </a>
+    </div>
+
+    <!-- Mensajes flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Tabla de estudiantes -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if estudiantes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Grado/Grupo</th>
+                            <th>Sede</th>
+                            <th>Docente Tutor</th>
+                            <th>QR</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for est in estudiantes %}
+                        <tr>
+                            <td>
+                                <strong>{{ est.nombre }}</strong>
+                                {% if est.tiene_piar_activo() %}
+                                <span class="badge bg-info ms-1">PIAR</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ est.grado }}{{ '-' + est.grupo if est.grupo else '' }}</td>
+                            <td>{{ est.sede.nombre if est.sede else '—' }}</td>
+                            <td>{{ est.docente_tutor.nombre if est.docente_tutor else '—' }}</td>
+                            <td>
+                                <small class="text-muted">{{ est.qr_token[:20] }}...</small>
+                            </td>
+                            <td>
+                                {% if est.activo %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('estudiante.ver', id=est.id) }}" 
+                                       class="btn btn-outline-primary" title="Ver">
+                                        👁️
+                                    </a>
+                                    <a href="{{ url_for('estudiante.editar', id=est.id) }}" 
+                                       class="btn btn-outline-warning" title="Editar">
+                                        ✏️
+                                    </a>
+                                    <form method="POST" 
+                                          action="{{ url_for('estudiante.eliminar', id=est.id) }}" 
+                                          class="d-inline"
+                                          onsubmit="return confirm('¿Estás seguro de eliminar este estudiante?');">
+                                        <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <p class="mb-0">📭 No hay estudiantes registrados aún.</p>
+                <a href="{{ url_for('estudiante.nuevo') }}" class="btn btn-sm btn-primary mt-2">
+                    Registrar el primero
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

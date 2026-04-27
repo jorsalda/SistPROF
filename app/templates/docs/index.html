@@ -1,10 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<h1>Documentación SistPROF</h1>
+
+<ul>
+    {% for file in files %}
+        <li>
+            <a href="{{ url_for('docs.show_doc', filename=file) }}">
+                {{ file }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}

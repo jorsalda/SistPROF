@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}{{ estudiante.nombre }} - SistPRO{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>📋 {{ estudiante.nombre }}</h2>
+            <p class="text-muted mb-0">
+                Grado {{ estudiante.grado }}{{ '-' + estudiante.grupo if estudiante.grupo else '' }}
+                {% if estudiante.sede %} • {{ estudiante.sede.nombre }}{% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('estudiante.editar', id=estudiante.id) }}" class="btn btn-warning">
+                ✏️ Editar
+            </a>
+            <a href="{{ url_for('estudiante.listar') }}" class="btn btn-secondary">
+                ← Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensajes flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        <!-- Columna Izquierda: Información General -->
+        <div class="col-lg-4">
+            <!-- QR Token -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">🔳 Código QR</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if estudiante.qr_token %}
+                    <div class="bg-light p-3 rounded mb-3">
+                        <small class="text-muted d-block mb-1">Token:</small>
+                        <code class="d-block text-break">{{ estudiante.qr_token }}</code>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" 
+                            onclick="navigator.clipboard.writeText('{{ estudiante.qr_token }}')">
+                        📋 Copiar
+                    </button>
+                    {% else %}
+                    <p class="text-muted">Sin QR generado</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Datos Básicos -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📊 Información</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6">Estado:</dt>
+                        <dd class="col-6">
+                            {% if estudiante.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-6">Jornada:</dt>
+                        <dd class="col-6">{{ estudiante.jornada_id or '—' }}</dd>
+                        
+                        <dt class="col-6">Docente Tutor:</dt>
+                        <dd class="col-6">{{ estudiante.docente_tutor.nombre if estudiante.docente_tutor else '—' }}</dd>
+                        
+                        <dt class="col-6">Registro:</dt>
+                        <dd class="col-6">{{ estudiante.fecha_creacion.strftime('%d/%m/%Y') if estudiante.fecha_creacion else '—' }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Acudientes -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">👪 Acudientes</h5>
+                </div>
+                <div class="card-body">
+                    {% if acudientes %}
+                    <ul class="list-unstyled mb-0">
+                        {% for acud in acudientes %}
+                        <li class="mb-2">
+                            <strong>{{ acud.nombre }}</strong><br>
+                            <small class="text-muted">{{ acud.parentesco }} • {{ acud.telefono or acud.email }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">Sin acudientes registrados</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Historial -->
+        <div class="col-lg-8">
+            <!-- PIAR Alert -->
+            {% if tiene_piar %}
+            <div class="alert alert-info d-flex align-items-center">
+                <div class="me-3">🎯</div>
+                <div>
+                    <strong>Este estudiante tiene un PIAR activo</strong>
+                    <p class="mb-0 small">Se aplican ajustes razonables y protocolos de inclusión.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Asistencias Recientes -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📅 Asistencias Recientes</h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Ver todas</a>
+                </div>
+                <div class="card-body">
+                    {% if asistencias %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th>Observación</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asis in asistencias %}
+                                <tr>
+                                    <td>{{ asis.fecha }}</td>
+                                    <td>
+                                        {% if asis.estado == 'presente' %}
+                                        <span class="badge bg-success">Presente</span>
+                                        {% elif asis.estado == 'tarde' %}
+                                        <span class="badge bg-warning text-dark">Tarde</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Ausente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ asis.observacion or '—' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Sin registros de asistencia</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Novedades Recientes -->
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">⚠️ Novedades</h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Registrar</a>
+                </div>
+                <div class="card-body">
+                    {% if novedades %}
+                    <div class="list-group list-group-flush">
+                        {% for nov in novedades %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ nov.tipo_novedad }}</strong>
+                                <span class="badge {% if nov.gravedad == 'Tipo 3' %}bg-danger{% elif nov.gravedad == 'Tipo 2' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ nov.gravedad }}
+                                </span>
+                            </div>
+                            <p class="mb-1 small">{{ nov.informe }}</p>
+                            <small class="text-muted">{{ nov.fecha }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Sin novedades registradas</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

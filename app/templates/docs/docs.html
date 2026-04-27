@@ -1,10 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<h2>{{ filename }}</h2>
+
+<div>
+    {{ content | safe }}
+</div>
+<div class="docs-content">
+    {{ content | safe }}
+</div>
+<a href="{{ url_for('docs.index') }}">← Volver</a>
+{% endblock %}

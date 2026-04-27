@@ -65,12 +65,15 @@ def register():
         ok, mensaje = registrar_usuario(
             request.form['email'],
             request.form['password'],
-            request.form['colegio'],
-            request.form.get('codigo_acceso', '')  # ← Campo opcional
+            request.form['colegio']
         )
 
         if ok:
-            flash(mensaje, "success")
+            flash(
+                "✅ Registro exitoso. Tienes 15 días de prueba gratuita. "
+                "Un administrador revisará tu cuenta pronto.",
+                "success"
+            )
             return redirect(url_for('auth.login'))
 
         flash(mensaje, 'danger')

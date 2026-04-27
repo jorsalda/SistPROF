@@ -28,8 +28,8 @@ class Usuario(db.Model, UserMixin):
     # Control de acceso
     # --------------------
     rol = db.Column(
-        db.Enum('superadmin', 'admin_colegio', 'docente', 'estudiante', 'acudiente', name='rol_usuario'),
-        default='estudiante'
+        db.Enum('superadmin', 'admin_colegio', 'docente', 'estudiantes', 'acudiente', name='rol_usuario'),
+        default='estudiantes'
     )
     is_active = db.Column(db.Boolean, default=True)
     is_approved = db.Column(db.Boolean, default=False)

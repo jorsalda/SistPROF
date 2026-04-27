@@ -13,7 +13,7 @@
     display: flex;
     justify-content: center;
     width: 100%;
-    max-width: 500px; /* ✅ Aumentado de 450px a 500px para más espacio */
+    max-width: 450px;
 }
 
 .auth-card {
@@ -23,12 +23,6 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     padding: 40px 30px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-
-    /* ✅ Asegurar que la tarjeta se expanda con el contenido */
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
 }
 
 .auth-card:hover {
@@ -68,22 +62,6 @@
     margin-bottom: 20px;
 }
 
-/* ✅ Nuevo: Ajuste para campos con texto de ayuda */
-.form-text {
-    font-size: 12px;
-    color: var(--secondary-color);
-    margin-top: 4px;
-    display: block;
-    line-height: 1.4;
-}
-
-/* ✅ Nuevo: Estilo para labels con texto opcional */
-.form-label small {
-    font-weight: 400;
-    color: var(--secondary-color);
-    margin-left: 4px;
-}
-
 .btn-block {
     width: 100%;
     padding: 12px;
@@ -110,7 +88,7 @@
     text-decoration: underline;
 }
 
-/* ✅ Nuevo: Ajustes para pantallas muy pequeñas */
+/* Responsive */
 @media (max-width: 480px) {
     .auth-card {
         padding: 30px 20px;
@@ -123,18 +101,4 @@
     .login-icon {
         font-size: 48px;
     }
-
-    .form-label small {
-        display: block;
-        margin-left: 0;
-        margin-top: 2px;
-    }
 }
-
-/* ✅ Nuevo: Ajuste para pantallas medianas */
-@media (min-width: 481px) and (max-width: 768px) {
-    .auth-container {
-        max-width: 480px;
-    }
-}
-
