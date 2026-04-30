@@ -1,0 +1,42 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block content %}
+
+<h2>Sedes del Colegio</h2>
+
+{% if sedes %}
+    {% for sede in sedes %}
+        <div class="card">
+            <h3>{{ sede.nombre }}</h3>
+
+            <p>
+                Dirección:
+                {{ sede.direccion or "Sin dirección" }}
+            </p>
+
+            <p>
+                Teléfono:
+                {{ sede.telefono or "Sin teléfono" }}
+            </p>
+
+            <p>
+                Total docentes:
+                {{ sede.docentes_sede|length }}
+            </p>
+
+            <p>
+                Total estudiantes:
+                {{ sede.estudiantes|length }}
+            </p>
+
+            <p>
+                Total jornadas:
+                {{ sede.jornadas|length }}
+            </p>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No hay sedes registradas.</p>
+{% endif %}
+
+{% endblock %}s

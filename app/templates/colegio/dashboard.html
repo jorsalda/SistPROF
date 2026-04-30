@@ -1,50 +1,95 @@
 {% extends "colegio/colegio_base.html" %}
 
-{% block colegio_page_title %}Dashboard del Colegio{% endblock %}
+{% block colegio_page_title %}
+Dashboard del Colegio
+{% endblock %}
 
 {% block colegio_content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-speedometer2"></i> Dashboard del Colegio</h2>
+    <h2>
+        <i class="bi bi-speedometer2"></i>
+        Dashboard del Colegio
+    </h2>
+
     <div class="text-muted">
-        <i class="bi bi-calendar"></i> {{ hoy.strftime('%d/%m/%Y') }}
+        <i class="bi bi-calendar"></i>
+        {{ hoy.strftime('%d/%m/%Y') }}
     </div>
 </div>
 
-<!-- Estadísticas del Colegio -->
+<!-- Estadísticas -->
 <div class="stats-grid">
+
     <div class="stat-card">
-        <h3><i class="bi bi-person"></i> Total de Docentes</h3>
-        <div class="stat-value">{{ total_docentes }}</div>
-        <p class="stat-description">Docentes registrados en el colegio</p>
+        <h3>
+            <i class="bi bi-person"></i>
+            Total de Docentes
+        </h3>
+        <div class="stat-value">
+            {{ total_docentes }}
+        </div>
+        <p class="stat-description">
+            Docentes registrados en el colegio
+        </p>
     </div>
 
     <div class="stat-card">
-        <h3><i class="bi bi-clipboard-check"></i> Total de Permisos</h3>
-        <div class="stat-value">{{ total_permisos }}</div>
-        <p class="stat-description">Permisos registrados en el colegio</p>
+        <h3>
+            <i class="bi bi-clipboard-check"></i>
+            Total de Permisos
+        </h3>
+        <div class="stat-value">
+            {{ total_permisos }}
+        </div>
+        <p class="stat-description">
+            Permisos registrados en el colegio
+        </p>
     </div>
 
     <div class="stat-card">
-        <h3><i class="bi bi-check-circle"></i> Permisos Activos</h3>
-        <div class="stat-value">{{ permisos_activos }}</div>
-        <p class="stat-description">Permisos vigentes actualmente</p>
+        <h3>
+            <i class="bi bi-check-circle"></i>
+            Permisos Activos
+        </h3>
+        <div class="stat-value">
+            {{ permisos_activos }}
+        </div>
+        <p class="stat-description">
+            Permisos vigentes actualmente
+        </p>
     </div>
 
     <div class="stat-card">
-        <h3><i class="bi bi-hourglass-half"></i> Permisos Pendientes</h3>
-        <div class="stat-value">{{ permisos_pendientes }}</div>
-        <p class="stat-description">Permisos por comenzar</p>
+        <h3>
+            <i class="bi bi-hourglass-half"></i>
+            Permisos Pendientes
+        </h3>
+        <div class="stat-value">
+            {{ permisos_pendientes }}
+        </div>
+        <p class="stat-description">
+            Permisos pendientes por iniciar
+        </p>
     </div>
+
 </div>
 
-<!-- Últimos Permisos -->
+<!-- Últimos permisos -->
 <div class="card border-0 shadow-sm mt-4">
+
     <div class="card-header bg-primary bg-opacity-10">
-        <h5 class="mb-0">📋 Últimos Permisos Registrados</h5>
+        <h5 class="mb-0">
+            📋 Últimos Permisos Registrados
+        </h5>
     </div>
+
     <div class="card-body">
+
         <div class="table-responsive">
+
             <table class="table table-hover align-middle">
+
                 <thead>
                     <tr>
                         <th>Docente</th>
@@ -54,27 +99,80 @@
                         <th>Estado</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                    {% for permiso in ultimos_permisos %}
-                    <tr>
-                        <td>{{ permiso.docente.nombre }}</td>
-                        <td>{{ permiso.tipo }}</td>
-                        <td>{{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ permiso.fecha_fin.strftime('%d/%m/%Y') }}</td>
-                        <td>
-                            {% if permiso.fecha_inicio <= hoy and permiso.fecha_fin >= hoy %}
-                                <span class="badge bg-success">Activo</span>
-                            {% elif permiso.fecha_inicio > hoy %}
-                                <span class="badge bg-info">Pendiente</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Finalizado</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
+
+                    {% if ultimos_permisos %}
+
+                        {% for permiso in ultimos_permisos %}
+                        <tr>
+
+                            <td>
+                                {{ permiso.docente.nombre if permiso.docente else 'Sin docente' }}
+                            </td>
+
+                            <td>
+                                {{ permiso.tipo if permiso.tipo else '-' }}
+                            </td>
+
+                            <td>
+                                {{ permiso.fecha_inicio.strftime('%d/%m/%Y') if permiso.fecha_inicio else '-' }}
+                            </td>
+
+                            <td>
+                                {{ permiso.fecha_fin.strftime('%d/%m/%Y') if permiso.fecha_fin else '-' }}
+                            </td>
+
+                            <td>
+
+                                {% if permiso.fecha_inicio and permiso.fecha_fin %}
+
+                                    {% if permiso.fecha_inicio <= hoy and permiso.fecha_fin >= hoy %}
+                                        <span class="badge bg-success">
+                                            Activo
+                                        </span>
+
+                                    {% elif permiso.fecha_inicio > hoy %}
+                                        <span class="badge bg-info">
+                                            Pendiente
+                                        </span>
+
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            Finalizado
+                                        </span>
+
+                                    {% endif %}
+
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        Incompleto
+                                    </span>
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+
+                    {% else %}
+
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                No hay permisos registrados
+                            </td>
+                        </tr>
+
+                    {% endif %}
+
                 </tbody>
+
             </table>
+
         </div>
+
     </div>
+
 </div>
+
 {% endblock %}
