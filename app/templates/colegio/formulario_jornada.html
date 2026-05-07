@@ -1,0 +1,46 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Nueva Jornada
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <h2>
+            Nueva Jornada para {{ sede.nombre }}
+        </h2>
+
+        <form method="POST">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Nombre de la jornada
+                </label>
+
+                <input
+                    type="text"
+                    name="nombre"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="btn btn-primary">
+                Guardar
+            </button>
+
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

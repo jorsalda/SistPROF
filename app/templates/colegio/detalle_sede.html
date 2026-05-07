@@ -1,0 +1,26 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Detalle de Sede
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <h2>{{ sede.nombre }}</h2>
+
+        <p><strong>Dirección:</strong> {{ sede.direccion }}</p>
+        <p><strong>Teléfono:</strong> {{ sede.telefono }}</p>
+
+        <hr>
+
+        <p><strong>Docentes:</strong> {{ sede.docentes_sede|length }}</p>
+        <p><strong>Estudiantes:</strong> {{ sede.estudiantes|length }}</p>
+        <p><strong>Jornadas:</strong> {{ sede.jornadas|length }}</p>
+
+    </div>
+</div>
+
+{% endblock %}

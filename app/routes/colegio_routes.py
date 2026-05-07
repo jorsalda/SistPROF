@@ -17,14 +17,14 @@ colegio_bp = Blueprint(
     url_prefix="/dashboard"
 )
 
-# ════════════════════════════════════════════════════════════════
-# DASHBOARD PRINCIPAL DEL COLEGIO
-# ════════════════════════════════════════════════════════════════
+
+# ==========================================================
+# DASHBOARD PRINCIPAL
+# ==========================================================
 
 @colegio_bp.route("/")
 @login_required
 def dashboard():
-    """Dashboard principal del colegio"""
 
     if current_user.is_superadmin:
         return redirect(url_for("admin.dashboard"))
@@ -91,14 +91,13 @@ def dashboard():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# SEDES DEL COLEGIO
-# ════════════════════════════════════════════════════════════════
+# ==========================================================
+# SEDES
+# ==========================================================
 
 @colegio_bp.route("/sedes")
 @login_required
 def sedes():
-    """Listado de sedes"""
 
     colegio = Colegio.query.get_or_404(
         current_user.colegio_id
@@ -113,59 +112,193 @@ def sedes():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# EDITAR COLEGIO
-# ════════════════════════════════════════════════════════════════
-
-@colegio_bp.route("/colegio/editar", methods=["GET", "POST"])
+@colegio_bp.route("/sedes/nueva", methods=["GET", "POST"])
 @login_required
-def editar_colegio():
-    """Editar información del colegio"""
-
-    colegio = Colegio.query.get_or_404(
-        current_user.colegio_id
-    )
+def nueva_sede():
 
     if request.method == "POST":
+
         nombre = request.form.get("nombre", "").strip()
-        codigo_acceso = request.form.get("codigo_acceso", "").strip()
+        direccion = request.form.get("direccion", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+        activo = request.form.get("activo") == "on"
 
         if not nombre:
             flash(
-                "El nombre del colegio es obligatorio",
+                "El nombre de la sede es obligatorio",
                 "danger"
             )
-            return redirect(
-                url_for("colegio.editar_colegio")
-            )
+            return redirect(url_for("colegio.nueva_sede"))
 
-        colegio.nombre = nombre
-        colegio.codigo_acceso = codigo_acceso
+        existe = Sede.query.filter_by(
+            nombre=nombre,
+            colegio_id=current_user.colegio_id
+        ).first()
+
+        if existe:
+            flash(
+                "Ya existe una sede con ese nombre",
+                "warning"
+            )
+            return redirect(url_for("colegio.nueva_sede"))
+
+        sede = Sede(
+            nombre=nombre,
+            direccion=direccion if direccion else None,
+            telefono=telefono if telefono else None,
+            activo=activo,
+            colegio_id=current_user.colegio_id
+        )
+
+        db.session.add(sede)
+        db.session.commit()
+
+        flash(
+            "Sede registrada correctamente",
+            "success"
+        )
+
+        return redirect(url_for("colegio.sedes"))
+
+    return render_template(
+        "colegio/formulario_sede.html"
+    )
+
+
+@colegio_bp.route("/sedes/<int:sede_id>")
+@login_required
+def detalle_sede(sede_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    return render_template(
+        "colegio/detalle_sede.html",
+        sede=sede
+    )
+
+
+@colegio_bp.route("/sedes/<int:sede_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_sede(sede_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    if request.method == "POST":
+
+        sede.nombre = request.form.get("nombre")
+        sede.direccion = request.form.get("direccion")
+        sede.telefono = request.form.get("telefono")
+        sede.activo = request.form.get("activo") == "on"
 
         db.session.commit()
 
         flash(
-            "Información del colegio actualizada correctamente",
+            "Sede actualizada correctamente",
             "success"
         )
 
         return redirect(
-            url_for("colegio.sedes")
+            url_for(
+                "colegio.detalle_sede",
+                sede_id=sede.id
+            )
         )
 
     return render_template(
-        "colegio/editar_colegio.html",
-        colegio=colegio
+        "colegio/formulario_sede.html",
+        sede=sede
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# LISTADO DE DOCENTES
-# ════════════════════════════════════════════════════════════════
+# ==========================================================
+# JORNADAS
+# ==========================================================
+
+@colegio_bp.route("/sedes/<int:sede_id>/jornadas")
+@login_required
+def jornadas_sede(sede_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornadas = sede.jornadas
+
+    return render_template(
+        "colegio/jornadas_sede.html",
+        sede=sede,
+        jornadas=jornadas
+    )
+
+
+@colegio_bp.route(
+    "/sedes/<int:sede_id>/jornadas/nueva",
+    methods=["GET", "POST"]
+)
+@login_required
+def nueva_jornada(sede_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    if request.method == "POST":
+
+        nombre = request.form.get("nombre")
+        hora_inicio = request.form.get("hora_inicio")
+        hora_fin = request.form.get("hora_fin")
+        tolerancia_minutos = request.form.get(
+            "tolerancia_minutos",
+            0
+        )
+
+        jornada = Jornada(
+            nombre=nombre,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            tolerancia_minutos=tolerancia_minutos,
+            sede_id=sede.id,
+            colegio_id=current_user.colegio_id,
+            activo=True
+        )
+
+        db.session.add(jornada)
+        db.session.commit()
+
+        flash(
+            "Jornada registrada correctamente",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "colegio.jornadas_sede",
+                sede_id=sede.id
+            )
+        )
+
+    return render_template(
+        "colegio/formulario_jornada.html",
+        sede=sede
+    )
+
+
+# ==========================================================
+# DOCENTES
+# ==========================================================
 
 @colegio_bp.route("/docentes")
 @login_required
 def lista_docentes():
+
     docentes = Docente.query.filter_by(
         colegio_id=current_user.colegio_id
     ).order_by(
@@ -178,15 +311,12 @@ def lista_docentes():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# NUEVO DOCENTE
-# ════════════════════════════════════════════════════════════════
-
 @colegio_bp.route("/docentes/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo_docente():
 
     if request.method == "POST":
+
         nombre = request.form.get("nombre", "").strip()
         documento = request.form.get("documento", "").strip()
         telefono = request.form.get("telefono", "").strip()
@@ -243,10 +373,6 @@ def nuevo_docente():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# EDITAR DOCENTE
-# ════════════════════════════════════════════════════════════════
-
 @colegio_bp.route("/docentes/editar/<int:id>", methods=["GET", "POST"])
 @login_required
 def editar_docente(id):
@@ -257,6 +383,7 @@ def editar_docente(id):
     ).first_or_404()
 
     if request.method == "POST":
+
         docente.nombre = request.form.get("nombre")
         docente.documento = request.form.get("documento")
         docente.telefono = request.form.get("telefono")
@@ -280,10 +407,6 @@ def editar_docente(id):
         titulo="Editar Docente"
     )
 
-
-# ════════════════════════════════════════════════════════════════
-# ELIMINAR DOCENTE
-# ════════════════════════════════════════════════════════════════
 
 @colegio_bp.route("/docentes/eliminar/<int:id>", methods=["POST"])
 @login_required
@@ -318,19 +441,24 @@ def eliminar_docente(id):
     return redirect(
         url_for("colegio.lista_docentes")
     )
-# ════════════════════════════════════════════════════════════════
-# LISTADO DE PERMISOS
-# ════════════════════════════════════════════════════════════════
+
+
+# ==========================================================
+# PERMISOS
+# ==========================================================
 
 @colegio_bp.route("/permisos")
 @login_required
 def lista_permisos():
-    """Lista de permisos del colegio actual"""
+
     permisos = Permiso.query.filter_by(
         colegio_id=current_user.colegio_id
-    ).order_by(Permiso.fecha_inicio.desc()).all()
+    ).order_by(
+        Permiso.fecha_inicio.desc()
+    ).all()
 
     hoy = datetime.utcnow().date()
+
     return render_template(
         "colegio/permisos.html",
         permisos=permisos,
@@ -338,14 +466,10 @@ def lista_permisos():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# PERMISOS DE UN DOCENTE ESPECÍFICO
-# ════════════════════════════════════════════════════════════════
-
 @colegio_bp.route("/docentes/<int:docente_id>/permisos")
 @login_required
 def permisos_docente(docente_id):
-    """Lista de permisos de un docente específico"""
+
     docente = Docente.query.filter_by(
         id=docente_id,
         colegio_id=current_user.colegio_id
@@ -354,9 +478,12 @@ def permisos_docente(docente_id):
     permisos = Permiso.query.filter_by(
         docente_id=docente_id,
         colegio_id=current_user.colegio_id
-    ).order_by(Permiso.fecha_inicio.desc()).all()
+    ).order_by(
+        Permiso.fecha_inicio.desc()
+    ).all()
 
     hoy = datetime.utcnow().date()
+
     return render_template(
         "colegio/permisos_docente.html",
         docente=docente,
@@ -365,20 +492,17 @@ def permisos_docente(docente_id):
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# NUEVO PERMISO
-# ════════════════════════════════════════════════════════════════
-
 @colegio_bp.route("/permisos/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo_permiso():
-    """Registrar nuevo permiso"""
+
     docentes = Docente.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
     ).all()
 
     if request.method == "POST":
+
         permiso = Permiso(
             docente_id=request.form.get("docente_id"),
             fecha_inicio=request.form.get("fecha_inicio"),
@@ -391,8 +515,14 @@ def nuevo_permiso():
         db.session.add(permiso)
         db.session.commit()
 
-        flash("Permiso registrado correctamente", "success")
-        return redirect(url_for("colegio.lista_permisos"))
+        flash(
+            "Permiso registrado correctamente",
+            "success"
+        )
+
+        return redirect(
+            url_for("colegio.lista_permisos")
+        )
 
     return render_template(
         "colegio/formulario_permiso.html",
@@ -400,14 +530,10 @@ def nuevo_permiso():
     )
 
 
-# ════════════════════════════════════════════════════════════════
-# ELIMINAR PERMISO
-# ════════════════════════════════════════════════════════════════
-
 @colegio_bp.route("/permisos/eliminar/<int:id>", methods=["POST"])
 @login_required
 def eliminar_permiso(id):
-    """Eliminar permiso"""
+
     permiso = Permiso.query.filter_by(
         id=id,
         colegio_id=current_user.colegio_id
@@ -416,5 +542,11 @@ def eliminar_permiso(id):
     db.session.delete(permiso)
     db.session.commit()
 
-    flash("Permiso eliminado correctamente", "success")
-    return redirect(url_for("colegio.lista_permisos"))
+    flash(
+        "Permiso eliminado correctamente",
+        "success"
+    )
+
+    return redirect(
+        url_for("colegio.lista_permisos")
+    )

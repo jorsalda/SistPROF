@@ -1,0 +1,53 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Nueva Sede
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <h2 class="mb-4">Registrar Nueva Sede</h2>
+
+        <form method="POST">
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input
+                    type="text"
+                    name="nombre"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <input
+                    type="text"
+                    name="direccion"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input
+                    type="text"
+                    name="telefono"
+                    class="form-control"
+                >
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar Sede
+            </button>
+
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

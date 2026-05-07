@@ -1,10 +1,153 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "colegio/colegio_base.html" %}
 
-</body>
-</html>
+{% block colegio_page_title %}
+Mi Colegio
+{% endblock %}
+
+{% block colegio_content %}
+
+<!-- Información institucional -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h4>
+            <i class="bi bi-building"></i>
+            Información Institucional
+        </h4>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+            <div class="col-md-4"><strong>Nombre:</strong></div>
+            <div class="col-md-8">{{ colegio.nombre }}</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4"><strong>Código de acceso:</strong></div>
+            <div class="col-md-8">{{ colegio.codigo_acceso }}</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4"><strong>Estado:</strong></div>
+            <div class="col-md-8">
+                {% if colegio.activo %}
+                    <span class="badge bg-success">Activo</span>
+                {% else %}
+                    <span class="badge bg-danger">Inactivo</span>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Resumen institucional -->
+<div class="row mb-4">
+
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2>{{ total_sedes }}</h2>
+                <p>Total Sedes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2>{{ total_jornadas }}</h2>
+                <p>Total Jornadas</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2>{{ total_docentes }}</h2>
+                <p>Total Docentes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2>{{ total_estudiantes }}</h2>
+                <p>Total Estudiantes</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sedes -->
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4>
+            <i class="bi bi-geo-alt"></i>
+            Sedes Registradas
+        </h4>
+
+        <a href="#"
+           class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i>
+            Nueva Sede
+        </a>
+    </div>
+
+    <div class="card-body">
+
+        {% if sedes %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Dirección</th>
+                            <th>Teléfono</th>
+                            <th>Jornadas</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for sede in sedes %}
+                        <tr>
+                            <td>{{ sede.nombre }}</td>
+                            <td>{{ sede.direccion or "-" }}</td>
+                            <td>{{ sede.telefono or "-" }}</td>
+                            <td>{{ sede.jornadas|length }}</td>
+                            <td>
+                                {% if sede.activo %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactiva</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">
+                No hay sedes registradas.
+            </p>
+        {% endif %}
+
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('colegio.editar_colegio') }}"
+       class="btn btn-outline-primary">
+        <i class="bi bi-pencil-square"></i>
+        Editar Información del Colegio
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Jornadas de la Sede
+{% endblock %}
+
+{% block colegio_content %}
+
+<h2>Jornadas de {{ sede.nombre }}</h2>
+
+{% if jornadas %}
+    {% for jornada in jornadas %}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+                <h4>{{ jornada.nombre }}</h4>
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No hay jornadas registradas.</p>
+{% endif %}
+
+{% endblock %}

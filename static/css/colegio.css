@@ -1,10 +1,11 @@
 /* static/css/colegio.css */
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f5f7fa;
     margin: 0;
     padding: 0;
-    height: 100vh;
+    min-height: 100vh;
     overflow-x: hidden;
 }
 
@@ -13,13 +14,20 @@ body {
     min-height: 100vh;
 }
 
-/* Sidebar Estilo Profesional */
+/* ==========================================================
+   SIDEBAR
+========================================================== */
+
 .colegio-sidebar {
     width: 280px;
-    background: linear-gradient(180deg, #1a2530 0%, #121a22 100%);
+    background: linear-gradient(
+        180deg,
+        #1a2530 0%,
+        #121a22 100%
+    );
     color: #ecf0f1;
     padding: 1.5rem 0;
-    box-shadow: 3px 0 15px rgba(0,0,0,0.15);
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.15);
     position: fixed;
     height: 100vh;
     z-index: 100;
@@ -47,7 +55,7 @@ body {
 
 .colegio-sidebar .sidebar-header p {
     color: #95a5a6;
-    margin: 0.25rem 0 0 0;
+    margin: 0.25rem 0 0;
     font-size: 0.9rem;
 }
 
@@ -98,19 +106,23 @@ body {
 }
 
 .colegio-sidebar .logout-btn {
-    margin-top: 1.5rem;
+    margin: 1.5rem;
     padding: 0.85rem 1.25rem;
     background: #e74c3c;
     color: white;
     border: none;
-    width: 100%;
+    width: calc(100% - 3rem);
     text-align: left;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     font-weight: 500;
     display: flex;
     align-items: center;
+}
+
+.colegio-sidebar .logout-btn i {
+    margin-right: 12px;
 }
 
 .colegio-sidebar .logout-btn:hover {
@@ -118,11 +130,10 @@ body {
     transform: translateX(3px);
 }
 
-.colegio-sidebar .logout-btn i {
-    margin-right: 12px;
-}
+/* ==========================================================
+   CONTENIDO PRINCIPAL
+========================================================== */
 
-/* Contenido Principal */
 .colegio-content {
     flex: 1;
     margin-left: 280px;
@@ -130,12 +141,13 @@ body {
     background: #f5f7fa;
 }
 
+/* Header superior */
 .colegio-header {
     background: white;
     border-radius: 12px;
     padding: 1.25rem 1.5rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    margin-bottom: 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -162,17 +174,35 @@ body {
     margin-right: 8px;
 }
 
+/* Área dinámica */
 .colegio-main-content {
-    background: white;
-    border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     min-height: calc(100vh - 200px);
 }
 
+/* ==========================================================
+   TARJETAS BOOTSTRAP (MEJORADAS)
+========================================================== */
+
+.card {
+    border-radius: 14px;
+    transition: all 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+}
+
+/* ==========================================================
+   ESTADÍSTICAS ANTIGUAS (compatibilidad)
+========================================================== */
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(280px, 1fr)
+    );
     gap: 1.5rem;
     margin-top: 1.5rem;
 }
@@ -181,12 +211,12 @@ body {
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    transition: transform 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.25s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
 }
 
 .stat-card h3 {
@@ -215,7 +245,10 @@ body {
     line-height: 1.5;
 }
 
-/* Responsive para móviles */
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
 @media (max-width: 992px) {
     .colegio-container {
         flex-direction: column;
@@ -225,11 +258,21 @@ body {
         width: 100%;
         height: auto;
         position: relative;
-        border-radius: 12px 12px 0 0;
+        border-radius: 0;
     }
 
     .colegio-content {
         margin-left: 0;
-        border-radius: 0 0 12px 12px;
+        padding: 1rem;
+    }
+
+    .colegio-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .colegio-main-content {
+        padding: 1rem;
     }
 }
