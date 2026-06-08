@@ -1,0 +1,157 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Editar Coordinador{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+
+            {# Mensajes flash #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i>
+                        Editar Coordinador
+                    </h5>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST"
+                          action="{{ url_for('colegio.editar_coordinador', coordinador_id=coordinador.id) }}">
+
+                        <input type="hidden"
+                               name="csrf_token"
+                               value="{{ csrf_token() }}">
+
+                        <!-- Nombre completo -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Nombre completo *
+                            </label>
+                            <input type="text"
+                                   name="nombre"
+                                   class="form-control"
+                                   value="{{ coordinador.usuario.nombre if coordinador.usuario else '' }}"
+                                   required>
+                        </div>
+
+                        <!-- Documento de identidad -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Documento de identidad
+                            </label>
+                            <input type="text"
+                                   name="documento"
+                                   class="form-control"
+                                   value="{{ coordinador.documento or '' }}">
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Teléfono
+                            </label>
+                            <input type="tel"
+                                   name="telefono"
+                                   class="form-control"
+                                   value="{{ coordinador.telefono or '' }}">
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Email *
+                            </label>
+                            <input type="email"
+                                   name="email"
+                                   class="form-control"
+                                   value="{{ coordinador.usuario.email if coordinador.usuario else '' }}"
+                                   required>
+                        </div>
+
+                        <!-- Sede -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                Sede
+                            </label>
+                            <select name="sede_id"
+                                    class="form-select"
+                                    required>
+                                <option value="">
+                                    Seleccione una sede
+                                </option>
+                                {% for sede in sedes %}
+                                <option value="{{ sede.id }}"
+                                        {% if coordinador.sede_id == sede.id %}selected{% endif %}>
+                                    {{ sede.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Información adicional de solo lectura -->
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Información adicional:</strong><br>
+                            <small>
+                                • El cargo se asigna automáticamente como "Coordinador Académico"<br>
+                                • La contraseña no se muestra por seguridad.<br>
+                                • Para cambiar la contraseña, use la opción
+                                <strong>"Cambiar contraseña"</strong> en la lista de coordinadores.
+                            </small>
+                        </div>
+
+                        <!-- Estado actual -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                Estado actual
+                            </label>
+                            <div>
+                                {% if coordinador.usuario and coordinador.usuario.is_active %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Activo
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle"></i> Inactivo
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('colegio.lista_coordinadores') }}"
+                               class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-warning">
+                                <i class="bi bi-save"></i>
+                                Actualizar
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación Interactiva | SistPROF</title>
+    <!-- Estilos -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/examen.css') }}">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Evaluación Estudiante</h1>
+
+        <!-- 🎮 Área de juego (se muestra cuando hay un examen seleccionado) -->
+        <div id="gameArea">
+            <div id="contexto"></div>
+            <div id="question"></div>
+            <div id="options"></div>
+            <p id="feedback"></p>
+            <p id="countdown"></p>
+
+            <div id="controls">
+                <button id="nextButton" style="display:none;">Siguiente Pregunta</button>
+                <button id="explanationButton" style="display:none;">Ver Explicación</button>
+            </div>
+            <div id="explanation-column"></div>
+        </div>
+
+        <!-- 📋 Resultados finales -->
+        <div id="result"></div>
+    </div>
+
+    <!-- Lógica principal -->
+    <script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Lista de Estudiantes{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Lista de Estudiantes</h1>
+        <a href="{{ url_for('estudiante.nuevo') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i>
+            Nuevo Estudiante
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Buscar por nombre</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Nombre del estudiante" 
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por sede</label>
+                    <select name="sede_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">Todas las sedes</option>
+                        {% for sede in sedes %}
+                        <option value="{{ sede.id }}" {% if current_sede_id == sede.id %}selected{% endif %}>
+                            {{ sede.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por grado</label>
+                    <select name="grado" class="form-select" onchange="this.form.submit()">
+                        <option value="">Todos los grados</option>
+                        {% for grado in grados_lista %}
+                        <option value="{{ grado }}" {% if current_grado == grado %}selected{% endif %}>
+                            Grado {{ grado }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por grupo</label>
+                    <select name="grupo_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">Todos los grupos</option>
+                        {% for grupo in grupos %}
+                        <option value="{{ grupo.id }}" {% if current_grupo_id == grupo.id %}selected{% endif %}>
+                            {{ grupo.grado }}{{ grupo.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                    <a href="{{ url_for('estudiante.listar') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Limpiar filtros
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted">Total Estudiantes</h6>
+                            <h2 class="fw-bold text-primary">{{ estudiantes|length }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted">Activos</h6>
+                            <h2 class="fw-bold text-success">{{ estudiantes|selectattr('activo')|list|length }}</h2>
+                        </div>
+                        <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted">Por Grado</h6>
+                            <h2 class="fw-bold text-info">{{ grados_lista|length }}</h2>
+                        </div>
+                        <i class="bi bi-layers-fill fs-1 text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted">Por Grupo</h6>
+                            <h2 class="fw-bold text-warning">{{ grupos|length }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de estudiantes -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Grado/Grupo</th>
+                            <th>Sede</th>
+                            <th>Teléfono</th>
+                            <th>Acudiente</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for estudiante in estudiantes %}
+                        <tr>
+                            <td>
+                                <strong>{{ estudiante.nombre }}</strong>
+                            </td>
+                            
+                            <td>
+                                <span class="badge bg-primary">
+                                    {{ estudiante.grado }}{{ estudiante.grupo }}
+                                </span>
+                            </td>
+                            
+                            <td>
+                                {{ estudiante.sede.nombre if estudiante.sede else 'N/A' }}
+                            </td>
+                            
+                            <td>
+                                {{ estudiante.telefono or 'N/A' }}
+                            </td>
+                            
+                            <td>
+                                {{ estudiante.acudiente_principal.nombre if estudiante.acudiente_principal else 'N/A' }}
+                            </td>
+                            
+                            <td>
+                                {% if estudiante.activo %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('estudiante.ver', id=estudiante.id) }}"
+                                       class="btn btn-sm btn-outline-info" 
+                                       title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    
+                                    <a href="{{ url_for('estudiante.editar', id=estudiante.id) }}"
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    
+                                    {% if estudiante.activo %}
+                                    <button onclick="cambiarEstado({{ estudiante.id }})"
+                                            class="btn btn-sm btn-outline-warning" 
+                                            title="Desactivar">
+                                        <i class="bi bi-pause-circle"></i>
+                                    </button>
+                                    {% else %}
+                                    <button onclick="cambiarEstado({{ estudiante.id }})"
+                                            class="btn btn-sm btn-outline-success" 
+                                            title="Activar">
+                                        <i class="bi bi-play-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <button onclick="eliminarEstudiante({{ estudiante.id }})"
+                                            class="btn btn-sm btn-outline-danger" 
+                                            title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                                <p class="text-muted mb-0">
+                                    No hay estudiantes registrados en este colegio.
+                                </p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function cambiarEstado(id) {
+    if (confirm('¿Está seguro de cambiar el estado de este estudiante?')) {
+        fetch(`/estudiantes/cambiar-estado/${id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    }
+}
+
+function eliminarEstudiante(id) {
+    if (confirm('¿Está seguro de eliminar este estudiante? Esta acción no se puede deshacer.')) {
+        fetch(`/estudiantes/eliminar/${id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

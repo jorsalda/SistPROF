@@ -1,0 +1,247 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Dashboard Docente | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+Dashboard Docente
+{% endblock %}
+
+{% block docente_content %}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-speedometer2"></i>
+            Dashboard Docente
+        </h2>
+        <p class="text-muted mb-0">
+            Resumen de mi gestión académica
+        </p>
+    </div>
+
+    <div class="badge bg-light text-dark fs-6 p-2">
+        <i class="bi bi-calendar-event"></i>
+        {{ hoy.strftime('%d/%m/%Y') }}
+    </div>
+</div>
+
+<!-- Tarjetas principales -->
+<div class="row g-4">
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Mis Estudiantes</h6>
+                        <h2 class="fw-bold">{{ total_estudiantes }}</h2>
+                    </div>
+                    <i class="bi bi-people-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Total Permisos</h6>
+                        <h2 class="fw-bold">{{ total_permisos }}</h2>
+                    </div>
+                    <i class="bi bi-clipboard-check fs-1 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Permisos Activos</h6>
+                        <h2 class="fw-bold">{{ permisos_activos }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 text-info"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Mi Sede</h6>
+                        <h5 class="fw-bold">
+                            {{ docente.sede.nombre if docente.sede else 'No asignada' }}
+                        </h5>
+                    </div>
+                    <i class="bi bi-building fs-1 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+<!-- Mis datos -->
+<div class="card border-0 shadow-sm mt-4">
+
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-person-vcard"></i>
+            Información del Docente
+        </h5>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+                <strong>Nombre:</strong><br>
+                {{ docente.nombre }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Documento:</strong><br>
+                {{ docente.documento or 'No registrado' }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Teléfono:</strong><br>
+                {{ docente.telefono or 'No registrado' }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Correo:</strong><br>
+                {{ docente.email or current_user.email }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Sede:</strong><br>
+                {{ docente.sede.nombre if docente.sede else 'No asignada' }}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Últimos permisos -->
+<div class="card border-0 shadow-sm mt-4">
+
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+
+        <h5 class="mb-0">
+            <i class="bi bi-list-check"></i>
+            Mis Últimos Permisos
+        </h5>
+
+        <a href="{{ url_for('docente.mis_permisos') }}"
+           class="btn btn-light btn-sm">
+            Ver Todos
+        </a>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead class="table-light">
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% if ultimos_permisos %}
+
+                    {% for permiso in ultimos_permisos %}
+
+                    <tr>
+
+                        <td>{{ permiso.tipo }}</td>
+
+                        <td>
+                            {{ permiso.fecha_inicio.strftime('%d/%m/%Y') }}
+                        </td>
+
+                        <td>
+                            {{ permiso.fecha_fin.strftime('%d/%m/%Y') }}
+                        </td>
+
+                        <td>
+
+                            {% if permiso.fecha_inicio <= hoy and permiso.fecha_fin >= hoy %}
+                                <span class="badge bg-success">
+                                    Activo
+                                </span>
+
+                            {% elif permiso.fecha_inicio > hoy %}
+                                <span class="badge bg-info">
+                                    Pendiente
+                                </span>
+
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    Finalizado
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <tr>
+                        <td colspan="4" class="text-center py-4">
+
+                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-2"></i>
+
+                            <p class="text-muted mb-3">
+                                No hay permisos registrados
+                            </p>
+
+                            <a href="{{ url_for('docente.nuevo_permiso_docente') }}"
+                               class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i>
+                                Solicitar Permiso
+                            </a>
+
+                        </td>
+                    </tr>
+
+                {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Configuración Disciplinaria{% endblock %}
+
+{% block colegio_content %}
+<div class="container py-4">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold mb-1">
+                <i class="bi bi-shield-check text-primary"></i> Configuración Disciplinaria
+            </h1>
+            <p class="text-muted">Define las reglas automáticas para la gestión de faltas y convivencia</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Tarjeta de configuración -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-sliders2 text-primary"></i> Parámetros Generales
+                    </h5>
+                    <p class="text-muted small mt-1">Ajusta los valores según el manual de convivencia</p>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('colegio.guardar_configuracion_disciplina') }}">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-calendar"></i> Días de prescripción
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-clock-history text-muted"></i>
+                                </span>
+                                <input type="number"
+                                       name="dias_prescripcion"
+                                       class="form-control form-control-lg bg-light border-start-0"
+                                       value="{{ config.dias_prescripcion }}"
+                                       min="1" max="365" required>
+                                <span class="input-group-text bg-light">días</span>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <i class="bi bi-info-circle"></i> Número de días después de los cuales una falta prescribe (deja de contar).
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-arrow-up-circle"></i> Máximo Tipo 2
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                </span>
+                                <input type="number"
+                                       name="max_tipo2"
+                                       class="form-control form-control-lg bg-light border-start-0"
+                                       value="{{ config.max_tipo2 }}"
+                                       min="1" max="10" required>
+                                <span class="input-group-text bg-light">faltas</span>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <i class="bi bi-info-circle"></i> Cantidad de faltas Tipo 2 que convierten automáticamente a Tipo 3.
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save"></i> Guardar configuración
+                            </button>
+                            <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary px-4">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta de información actual -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-light">
+                <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-info-circle text-info"></i> Configuración Actual
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush bg-transparent">
+                        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="bi bi-calendar text-primary"></i>
+                                <span class="fw-semibold">Días de prescripción</span>
+                            </div>
+                            <span class="badge bg-primary rounded-pill px-3 py-2">{{ config.dias_prescripcion }} días</span>
+                        </div>
+                        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="bi bi-arrow-up-circle text-warning"></i>
+                                <span class="fw-semibold">Máximo faltas Tipo 2</span>
+                            </div>
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ config.max_tipo2 }} faltas</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 pb-4">
+                    <div class="alert alert-success rounded-3 mb-0">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <strong>Regla activa:</strong> Al acumular <strong>{{ config.max_tipo2 }} faltas Tipo 2</strong>, se convierten automáticamente a <strong>Tipo 3</strong>.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

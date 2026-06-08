@@ -49,6 +49,12 @@ class Sede(db.Model):
         cascade="all, delete-orphan",
         lazy=True
     )
+    # ✅ AGREGA ESTO (Relación con Coordinadores)
+    coordinadores = db.relationship(
+        "Coordinador",
+        back_populates="sede",  # <--- Debe coincidir con el nombre de la relación en Coordinador
+        overlaps="colegio,coordinadores"  # <--- Esto silencia la advertencia amarilla
+    )
 
     def __repr__(self):
         return f'<Sede {self.nombre}>'

@@ -1,0 +1,219 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Dashboard Estudiante | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}
+Dashboard Estudiante
+{% endblock %}
+
+{% block estudiante_content %}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-speedometer2"></i>
+            Dashboard Estudiante
+        </h2>
+        <p class="text-muted mb-0">
+            Resumen de mi progreso académico
+        </p>
+    </div>
+
+    <div class="badge bg-light text-dark fs-6 p-2">
+        <i class="bi bi-calendar-event"></i>
+        {{ hoy.strftime('%d/%m/%Y') }}
+    </div>
+</div>
+
+<!-- Tarjetas principales -->
+<div class="row g-4">
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Exámenes Presentados</h6>
+                        <h2 class="fw-bold">{{ total_examenes }}</h2>
+                    </div>
+                    <i class="bi bi-journal-check fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Promedio General</h6>
+                        <h2 class="fw-bold">{{ promedio_general }}</h2>
+                    </div>
+                    <i class="bi bi-star-fill fs-1 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Mejor Nota</h6>
+                        <h2 class="fw-bold">{{ mejor_nota }}</h2>
+                    </div>
+                    <i class="bi bi-trophy-fill fs-1 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted">Mi Grupo</h6>
+                        <h5 class="fw-bold">
+                            {{ estudiante.grupo.nombre if estudiante.grupo else 'No asignado' }}
+                        </h5>
+                    </div>
+                    <i class="bi bi-people-fill fs-1 text-info"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Mis datos -->
+<div class="card border-0 shadow-sm mt-4">
+
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-person-vcard"></i>
+            Información del Estudiante
+        </h5>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+                <strong>Nombre:</strong><br>
+                {{ estudiante.nombre }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Grado:</strong><br>
+                {{ estudiante.grado or 'No registrado' }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Grupo:</strong><br>
+                {{ estudiante.grupo.nombre if estudiante.grupo else 'No asignado' }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Correo:</strong><br>
+                {{ current_user.email }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Sede:</strong><br>
+                {{ estudiante.sede.nombre if estudiante.sede else 'No asignada' }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <strong>Jornada:</strong><br>
+                {{ estudiante.jornada.nombre if estudiante.jornada else 'No asignada' }}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Últimos exámenes -->
+<div class="card border-0 shadow-sm mt-4">
+
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+
+        <h5 class="mb-0">
+            <i class="bi bi-list-check"></i>
+            Mis Últimos Exámenes
+        </h5>
+
+        <a href="{{ url_for('estudiante.mis_resultados') }}"
+           class="btn btn-light btn-sm">
+            Ver Todos
+        </a>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead class="table-light">
+                    <tr>
+                        <th>Examen</th>
+                        <th>Nota</th>
+                        <th>Porcentaje</th>
+                        <th>Literal</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% if ultimos_resultados %}
+
+                    {% for resultado in ultimos_resultados %}
+
+                    <tr>
+                        <td>{{ resultado.examen_nombre }}</td>
+                        <td>{{ resultado.nota_numerica or '-' }}</td>
+                        <td>{{ resultado.porcentaje }}%</td>
+                        <td>{{ resultado.literal or '-' }}</td>
+                        <td>{{ resultado.fecha.strftime('%d/%m/%Y') }}</td>
+                    </tr>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="bi bi-journal-x fs-1 text-muted d-block mb-2"></i>
+                            <p class="text-muted mb-3">
+                                No has presentado ningún examen aún
+                            </p>
+                            <a href="{{ url_for('estudiante.examen') }}"
+                               class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i>
+                                Presentar Examen
+                            </a>
+                        </td>
+                    </tr>
+
+                {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

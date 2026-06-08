@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil | SistPROF{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-circle fs-1 me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold">Mi Perfil</h3>
+                            <p class="mb-0 opacity-75">Actualice su información personal</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-5">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Nombre completo</label>
+                            <input type="text" class="form-control form-control-lg" value="{{ docente.nombre }}" disabled>
+                            <small class="text-muted">El nombre no se puede modificar. Contacte al administrador.</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Documento de identidad</label>
+                            <input type="text" class="form-control form-control-lg" value="{{ docente.documento or 'No registrado' }}" disabled>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-telephone text-muted"></i>
+                                </span>
+                                <input type="tel" name="telefono" class="form-control border-start-0 ps-0 form-control-lg" value="{{ docente.telefono or '' }}" placeholder="Ej: 300 123 4567">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Correo electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-envelope text-muted"></i>
+                                </span>
+                                <input type="email" name="email" class="form-control border-start-0 ps-0 form-control-lg" value="{{ docente.email or current_user.email }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Sede asignada</label>
+                            <input type="text" class="form-control form-control-lg" value="{{ docente.sede.nombre if docente.sede else 'No asignada' }}" disabled>
+                        </div>
+                        
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <small>Para cambiar su contraseña, use la opción <strong>"Cambiar Contraseña"</strong> en el menú.</small>
+                        </div>
+                        
+                        <div class="d-flex gap-3 justify-content-end pt-3">
+                            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-save me-2"></i>Actualizar Perfil
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+</style>
+
+{% endblock %}

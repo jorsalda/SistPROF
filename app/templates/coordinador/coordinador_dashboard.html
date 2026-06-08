@@ -1,0 +1,70 @@
+{% extends "coordinador/coordinador_base.html" %}
+
+{% block coordinador_page_title %}
+Dashboard del Coordinador
+{% endblock %}
+
+{% block coordinador_content %}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-speedometer2"></i>
+            Resumen General
+        </h2>
+        <p class="text-muted mb-0">
+            {% if session.get('sede_actual_id') %}
+                Estadísticas para la sede seleccionada.
+            {% else %}
+                Seleccione una sede en el menú "Sedes" para ver detalles.
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Tarjetas estadísticas (Simuladas o Reales si pasamos variables desde Python) -->
+<div class="row g-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100 border-start border-4 border-primary">
+            <div class="card-body">
+                <h6 class="text-muted">Docentes Activos</h6>
+                <h2 class="fw-bold text-primary">15</h2> <!-- Puede hacerse dinámico -->
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <h6 class="text-muted">Estudiantes Matriculados</h6>
+                <h2 class="fw-bold text-success">120</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100 border-start border-4 border-warning">
+            <div class="card-body">
+                <h6 class="text-muted">Permisos Pendientes</h6>
+                <h2 class="fw-bold text-warning">5</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm border-0 h-100 border-start border-4 border-danger">
+            <div class="card-body">
+                <h6 class="text-muted">Novedades Disciplinares</h6>
+                <h2 class="fw-bold text-danger">2</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mensaje de bienvenida -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+        <h5 class="card-title">Bienvenido, Coordinador</h5>
+        <p class="card-text">Utilice el menú lateral para navegar. Recuerde ir a <strong>Sedes</strong> para filtrar la información por campus.</p>
+    </div>
+</div>
+
+{% endblock %}

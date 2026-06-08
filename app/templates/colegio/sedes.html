@@ -21,68 +21,92 @@ Sedes del Colegio
 
 {% if sedes %}
 
-    <div class="row">
+   <div class="row g-4">
         {% for sede in sedes %}
-            <div class="col-md-6 mb-4">
+          <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card shadow-sm border-0 h-100">
 
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <h4 class="mb-0">
+                  <div class="card-header border-0 bg-light">
+                      <h5 class="fw-bold mb-1">
                             <i class="bi bi-building"></i>
                             {{ sede.nombre }}
-                        </h4>
+                      </h5>
+                      <div class="mt-2">
+                           {% if sede.activo %}
+                                <span class="badge bg-success">Activa</span>
+                           {% else %}
+                                <span class="badge bg-danger">Inactiva</span>
+                           {% endif %}
+                      </div>
                     </div>
 
                     <div class="card-body">
-
                         <p>
-                            <strong>
-                                <i class="bi bi-geo-alt"></i>
-                                Dirección:
-                            </strong>
+                            <strong><i class="bi bi-geo-alt"></i> Dirección:</strong>
                             {{ sede.direccion or "Sin dirección" }}
                         </p>
-
                         <p>
-                            <strong>
-                                <i class="bi bi-telephone"></i>
-                                Teléfono:
-                            </strong>
+                            <strong><i class="bi bi-telephone"></i> Teléfono:</strong>
                             {{ sede.telefono or "Sin teléfono" }}
                         </p>
-
                         <hr>
-
                         <div class="row text-center">
-
                             <div class="col-4">
                                 <h4>{{ sede.docentes_sede|length }}</h4>
                                 <small>Docentes</small>
                             </div>
-
                             <div class="col-4">
                                 <h4>{{ sede.estudiantes|length }}</h4>
                                 <small>Estudiantes</small>
                             </div>
-
                             <div class="col-4">
                                 <h4>{{ sede.jornadas|length }}</h4>
                                 <small>Jornadas</small>
                             </div>
-
                         </div>
-
                     </div>
 
                     <div class="card-footer bg-white border-0">
+                        <div class="d-flex flex-wrap gap-2">
 
-                        <div class="d-flex gap-2">
+                            <!-- BOTÓN SELECCIONAR ESTA SEDE -->
+                            <a href="{{ url_for('colegio.seleccionar_sede', sede_id=sede.id) }}"
+                               class="btn btn-success btn-sm flex-fill">
+                                <i class="bi bi-check-circle"></i>
+                                Seleccionar esta sede
+                            </a>
 
                             <a href="{{ url_for('colegio.detalle_sede', sede_id=sede.id) }}"
-                               class="btn btn-outline-primary btn-sm">
+                               class="btn btn-outline-primary btn-sm flex-fill">
                                 <i class="bi bi-eye"></i>
                                 Ver detalle
                             </a>
+
+                            <a href="{{ url_for('colegio.editar_sede', sede_id=sede.id) }}"
+                               class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-pencil-square"></i>
+                                Editar
+                            </a>
+
+                            {% if sede.activo %}
+                                <form method="POST"
+                                      action="{{ url_for('colegio.desactivar_sede', sede_id=sede.id) }}">
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle"></i>
+                                        Desactivar
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST"
+                                      action="{{ url_for('colegio.activar_sede', sede_id=sede.id) }}">
+                                    <button type="submit"
+                                            class="btn btn-outline-success btn-sm">
+                                        <i class="bi bi-check-circle"></i>
+                                        Activar
+                                    </button>
+                                </form>
+                            {% endif %}
 
                             <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}"
                                class="btn btn-outline-success btn-sm">
@@ -91,7 +115,6 @@ Sedes del Colegio
                             </a>
 
                         </div>
-
                     </div>
 
                 </div>
@@ -103,23 +126,12 @@ Sedes del Colegio
 
     <div class="card shadow-sm border-0">
         <div class="card-body text-center py-5">
-
             <i class="bi bi-building display-1 text-muted"></i>
-
-            <h4 class="mt-3">
-                No hay sedes registradas
-            </h4>
-
-            <p class="text-muted">
-                Registre la primera sede de su colegio para comenzar.
-            </p>
-
-            <a href="{{ url_for('colegio.nueva_sede') }}"
-               class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i>
-                Crear primera sede
+            <h4 class="mt-3">No hay sedes registradas</h4>
+            <p class="text-muted">Registre la primera sede de su colegio para comenzar.</p>
+            <a href="{{ url_for('colegio.nueva_sede') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Crear primera sede
             </a>
-
         </div>
     </div>
 

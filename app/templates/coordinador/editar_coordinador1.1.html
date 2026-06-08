@@ -1,0 +1,236 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Editar Coordinador | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.lista_coordinadores') }}">Coordinadores</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Editar Coordinador
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Card Principal -->
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-person-badge fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="mb-0 fw-bold">Editar Coordinador</h3>
+                            <p class="mb-0 opacity-75">Actualice la información del coordinador académico</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-5">
+
+                    <!-- Alertas Flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('colegio.editar_coordinador', coordinador_id=coordinador.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Fila 1: Nombre y Documento -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Nombre completo <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="nombre"
+                                           class="form-control border-start-0 ps-0"
+                                           value="{{ coordinador.usuario.nombre if coordinador.usuario else '' }}"
+                                           placeholder="Ej: María González Pérez"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Documento de identidad
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-credit-card text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="documento"
+                                           class="form-control border-start-0 ps-0"
+                                           value="{{ coordinador.documento or '' }}"
+                                           placeholder="Ej: 1234567890">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fila 2: Teléfono y Email -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           class="form-control border-start-0 ps-0"
+                                           value="{{ coordinador.telefono or '' }}"
+                                           placeholder="Ej: 300 123 4567">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Correo electrónico <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-envelope text-muted"></i>
+                                    </span>
+                                    <input type="email"
+                                           name="email"
+                                           class="form-control border-start-0 ps-0"
+                                           value="{{ coordinador.usuario.email if coordinador.usuario else '' }}"
+                                           placeholder="Ej: coordinador@colegio.edu.co"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fila 3: Sede y Estado -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Sede asignada <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-building text-muted"></i>
+                                    </span>
+                                    <select name="sede_id" class="form-select border-start-0 ps-0" required>
+                                        <option value="">Seleccione una sede</option>
+                                        {% for sede in sedes %}
+                                        <option value="{{ sede.id }}"
+                                                {% if coordinador.sede_id == sede.id %}selected{% endif %}>
+                                            {{ sede.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Estado de la cuenta
+                                </label>
+                                <div class="mt-2">
+                                    {% if coordinador.usuario and coordinador.usuario.is_active %}
+                                    <span class="badge bg-success bg-gradient px-3 py-2 rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Cuenta Activa
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-gradient px-3 py-2 rounded-pill">
+                                        <i class="bi bi-x-circle-fill me-1"></i> Cuenta Inactiva
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información Adicional -->
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>Información importante</strong><br>
+                                    <small>
+                                        • Para cambiar la contraseña, use la opción "Cambiar contraseña" en la lista de coordinadores.<br>
+                                        • El cargo se asigna automáticamente como "Coordinador Académico".<br>
+                                        • Los cambios se reflejarán inmediatamente en el sistema.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                            <a href="{{ url_for('colegio.lista_coordinadores') }}"
+                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-warning px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-save me-2"></i>Actualizar Coordinador
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS Adicional para gradientes -->
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: white;
+    }
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+
+{% endblock %}

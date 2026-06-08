@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Permiso | SistPROF{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar-plus fs-1 me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold">Solicitar Permiso</h3>
+                            <p class="mb-0 opacity-75">Complete el formulario para solicitar un permiso</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-5">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Tipo de Permiso <span class="text-danger">*</span></label>
+                            <select name="tipo" class="form-select form-select-lg" required>
+                                <option value="">Seleccione un tipo</option>
+                                <option value="enfermedad">🏥 Enfermedad</option>
+                                <option value="personal">👤 Personal</option>
+                                <option value="estudio">📚 Estudio</option>
+                                <option value="familiar">👨‍👩‍👧 Familiar</option>
+                                <option value="otro">📌 Otro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Fecha Inicio <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_inicio" class="form-control form-control-lg" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Fecha Fin <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_fin" class="form-control form-control-lg" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Observación</label>
+                            <textarea name="observacion" class="form-control" rows="4" placeholder="Motivo del permiso..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <small>Los permisos solo se pueden eliminar antes de la fecha de inicio.</small>
+                        </div>
+                        
+                        <div class="d-flex gap-3 justify-content-end pt-3">
+                            <a href="{{ url_for('docente.mis_permisos') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-save me-2"></i>Solicitar Permiso
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+</style>
+
+{% endblock %}

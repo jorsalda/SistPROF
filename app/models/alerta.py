@@ -1,25 +1,56 @@
-from app.extensions import db
+
+# app/models/alerta.py
+
 from datetime import datetime
+from app.extensions import db
 
 
 class Alerta(db.Model):
     __tablename__ = "alertas"
-    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    tipo = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.Text, nullable=False)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow)
-    atendida = db.Column(db.Boolean, default=False)
 
     estudiante_id = db.Column(
         db.Integer,
-        db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
+        db.ForeignKey(
+            "estudiantes.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
     )
 
-    # Relaciones
-    estudiante = db.relationship("Estudiante", backref="alertas", lazy=True)
+    tipo = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    descripcion = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    activa = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    fecha_creacion = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    estudiante = db.relationship(
+        "Estudiante",
+        backref=db.backref(
+            "alertas",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
 
     def __repr__(self):
-        return f'<Alerta {self.estudiante_id} - {self.tipo}>'
+        estado = "Activa" if self.activa else "Cerrada"
+        return f"<Alerta {self.tipo} - {estado}>"
+

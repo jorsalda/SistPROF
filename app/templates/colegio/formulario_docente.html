@@ -55,12 +55,44 @@
 
             <div class="col-md-6">
                 <label for="email" class="form-label">Email</label>
+
                 <input type="email" 
                        class="form-control" 
                        id="email" 
                        name="email" 
                        value="{{ docente.email if docente else '' }}">
             </div>
+            <div class="col-md-6">
+
+    <label for="sede_id" class="form-label">
+        Sede
+    </label>
+
+   <select class="form-select"
+        id="sede_id"
+        name="sede_id"
+        required>
+
+        <option value="">
+            Seleccione una sede
+        </option>
+
+        {% for sede in sedes %}
+
+            <option value="{{ sede.id }}"
+                {% if docente and docente.sede_id == sede.id %}
+                    selected
+                {% endif %}>
+
+                {{ sede.nombre }}
+
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+</div>
 
             {% if docente %}
             <div class="col-12">

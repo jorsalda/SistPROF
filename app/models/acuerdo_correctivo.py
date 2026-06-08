@@ -4,13 +4,29 @@ from datetime import datetime
 
 class AcuerdoCorrectivo(db.Model):
     __tablename__ = "acuerdos_correctivos"
-    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    descripcion = db.Column(db.Text, nullable=False)
-    compromiso = db.Column(db.Text, nullable=True)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow)
-    estado = db.Column(db.String(20), default="ACTIVO")
+
+    compromisos = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    fecha = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    cumplido = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    estudiante_id = db.Column(
+        db.Integer,
+        db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
+        nullable=False
+    )
 
     novedad_id = db.Column(
         db.Integer,
@@ -18,15 +34,19 @@ class AcuerdoCorrectivo(db.Model):
         nullable=False,
         unique=True
     )
-    estudiante_id = db.Column(
-        db.Integer,
-        db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
-        nullable=False
+
+    estudiante = db.relationship(
+        "Estudiante",
+        backref="acuerdos_correctivos"
     )
 
-    # Relaciones
-    novedad = db.relationship("Novedad", backref="acuerdos_correctivos", lazy=True)
-    estudiante = db.relationship("Estudiante", backref="acuerdos_correctivos", lazy=True)
+    novedad = db.relationship(
+        "Novedad",
+        backref=db.backref(
+            "acuerdo_correctivo",
+            uselist=False
+        )
+    )
 
     def __repr__(self):
-        return f'<AcuerdoCorrectivo {self.novedad_id} - {self.estado}>'
+        return f"<AcuerdoCorrectivo {self.id}>"

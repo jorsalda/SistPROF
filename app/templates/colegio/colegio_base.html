@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -26,9 +25,9 @@
         <div class="sidebar-header">
             <h2>
                 <i class="bi bi-building"></i>
-                {{ current_user.colegio.nombre }}
+                {{ current_user.colegio.nombre if current_user.colegio else 'SistPROF' }}
             </h2>
-            <p>SistPROF</p>
+            <p>Panel Administrativo</p>
         </div>
 
         <!-- Menú -->
@@ -38,64 +37,129 @@
             <li class="menu-item">
                 <a href="{{ url_for('colegio.dashboard') }}"
                    class="menu-link {% if request.endpoint == 'colegio.dashboard' %}active{% endif %}">
-                    <i class="bi bi-speedometer2"></i>
-                    Dashboard
+                    <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
 
             <!-- Sedes -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.sedes') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.sedes' or request.endpoint == 'colegio.editar_colegio' %}active{% endif %}">
-                    <i class="bi bi-building-gear"></i>
-                    Sedes
+                   class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede'] %}active{% endif %}">
+                    <i class="bi bi-building-gear"></i> Sedes
                 </a>
             </li>
 
             <!-- Docentes -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_docentes') }}"
-                   class="menu-link {% if request.endpoint in [
-                        'colegio.lista_docentes',
-                        'colegio.nuevo_docente',
-                        'colegio.editar_docente'
-                   ] %}active{% endif %}">
-                    <i class="bi bi-people"></i>
-                    Docentes
+                   class="menu-link {% if request.endpoint in ['colegio.lista_docentes', 'colegio.nuevo_docente', 'colegio.editar_docente'] %}active{% endif %}">
+                    <i class="bi bi-people"></i> Docentes
+                </a>
+            </li>
+
+            <!-- Coordinadores -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.lista_coordinadores') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.lista_coordinadores' %}active{% endif %}">
+                    <i class="bi bi-person-workspace"></i> Coordinadores
+                </a>
+            </li>
+
+            <!-- Estudiantes -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.lista_estudiantes') }}"
+                   class="menu-link {% if request.endpoint in ['colegio.lista_estudiantes', 'colegio.nuevo_estudiante'] %}active{% endif %}">
+                    <i class="bi bi-mortarboard-fill"></i> Estudiantes
+                </a>
+            </li>
+
+            <!-- Acudientes -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.lista_acudientes') }}"
+                   class="menu-link {% if request.endpoint in ['colegio.lista_acudientes'] %}active{% endif %}">
+                    <i class="bi bi-person-heart"></i> Acudientes
                 </a>
             </li>
 
             <!-- Permisos -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_permisos') }}"
-                   class="menu-link {% if request.endpoint in [
-                        'colegio.lista_permisos',
-                        'colegio.nuevo_permiso',
-                        'colegio.permisos_docente'
-                   ] %}active{% endif %}">
-                    <i class="bi bi-clipboard-check"></i>
-                    Permisos
+                   class="menu-link {% if request.endpoint in ['colegio.lista_permisos', 'colegio.nuevo_permiso'] %}active{% endif %}">
+                    <i class="bi bi-clipboard-check"></i> Permisos
                 </a>
             </li>
 
+            <!-- Observador -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.observador') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.observador' %}active{% endif %}">
+                    <i class="bi bi-eye-fill"></i> Observador
+                </a>
+            </li>
+
+            <!-- Citaciones -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.citaciones') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.citaciones' %}active{% endif %}">
+                    <i class="bi bi-calendar-event-fill"></i> Citaciones
+                </a>
+            </li>
+
+            <!-- Convivencia -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.convivencia') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.convivencia' %}active{% endif %}">
+                    <i class="bi bi-heart-fill"></i> Convivencia
+                </a>
+            </li>
+
+            <!-- Seguimiento Académico -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.seguimiento') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.seguimiento' %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i> Seguimiento Académico
+                </a>
+            </li>
+
+            <!-- PIAR -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.piar') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.piar' %}active{% endif %}">
+                    <i class="bi bi-file-earmark-medical-fill"></i> PIAR
+                </a>
+            </li>
+            <!-- Configuración del Sistema -->
+                <li class="menu-item">
+    <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
+        <i class="bi bi-sliders2"></i> Configuración
+        <i class="bi bi-chevron-right"></i>
+    </a>
+    <ul class="collapse sub-menu" id="configSubmenu">
+        <li class="menu-item">
+            <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
+                Llegadas Tarde
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="{{ url_for('colegio.configuracion_escalamiento') }}" class="menu-link">
+                Escalamiento
+            </a>
+        </li>
+    </ul>
+</li>
             <!-- Mi Cuenta -->
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}"
                    class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
-                    <i class="bi bi-person-badge"></i>
-                    Mi Cuenta
+                    <i class="bi bi-person-badge"></i> Mi Cuenta
                 </a>
             </li>
 
         </ul>
 
         <!-- Botón Cerrar Sesión -->
-        <button
-            onclick="window.location.href='{{ url_for('auth.logout') }}'"
-            class="logout-btn"
-        >
-            <i class="bi bi-box-arrow-right"></i>
-            Cerrar Sesión
+        <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
         </button>
 
     </aside>
@@ -105,7 +169,6 @@
 
         <!-- Header -->
         <header class="colegio-header">
-
             <h1>
                 {% block colegio_page_title %}
                     Dashboard Institucional
@@ -116,7 +179,6 @@
                 <i class="bi bi-person-circle"></i>
                 {{ current_user.email }}
             </div>
-
         </header>
 
         <!-- Contenido -->
@@ -126,15 +188,9 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show"
-                             role="alert">
-
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                             {{ message }}
-
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="alert">
-                            </button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -155,4 +211,3 @@
 
 </body>
 </html>
-```

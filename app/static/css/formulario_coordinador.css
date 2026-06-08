@@ -1,0 +1,195 @@
+/* ============================================
+   FORMULARIO COORDINADOR - SistPROF
+   Estilos complementarios para Bootstrap 5
+   ============================================ */
+
+/* Fondo de página */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Card principal del formulario */
+.card-coordinador {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    background: white;
+    overflow: hidden;
+}
+
+/* Header con gradiente */
+.card-header-custom {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 2rem 1.5rem;
+    text-align: center;
+}
+
+.card-header-custom h3 {
+    margin: 0.5rem 0 0 0;
+    font-weight: 700;
+    font-size: 1.75rem;
+}
+
+.card-header-custom p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+/* Icono del header */
+.card-header-custom .bi-person-badge {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* Labels de formulario */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-label i {
+    color: #0d6efd;
+}
+
+/* Inputs y selects */
+.form-control,
+.form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+    background-color: #fff;
+}
+
+.form-control:hover,
+.form-select:hover {
+    border-color: #adb5bd;
+}
+
+/* Textos de ayuda */
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.4rem;
+}
+
+/* Alertas */
+.alert {
+    border: none;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.alert-dismissible .btn-close {
+    padding: 1rem;
+}
+
+/* Botón Guardar */
+.btn-guardar {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    border: none;
+    padding: 0.875rem 2.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
+}
+
+.btn-guardar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(13, 110, 253, 0.3);
+    background: linear-gradient(135deg, #0b5ed7 0%, #084298 100%);
+}
+
+.btn-guardar:active {
+    transform: translateY(0);
+}
+
+/* Botón Volver */
+.btn-volver {
+    padding: 0.875rem 2.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #6c757d;
+    transition: all 0.2s ease;
+}
+
+.btn-volver:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    transform: translateY(-1px);
+}
+
+/* Contenedor de botones */
+.d-grid.gap-2 {
+    gap: 1rem !important;
+}
+
+/* Info adicional */
+.text-muted small {
+    font-size: 0.85rem;
+    color: #6c757d !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-header-custom {
+        padding: 1.5rem 1rem;
+    }
+
+    .card-header-custom h3 {
+        font-size: 1.5rem;
+    }
+
+    .card-body {
+        padding: 1.5rem 1rem !important;
+    }
+
+    .btn-guardar,
+    .btn-volver {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-coordinador {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Focus visible para accesibilidad */
+.form-control:focus-visible,
+.form-select:focus-visible,
+button:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+}

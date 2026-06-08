@@ -1,21 +1,56 @@
-{% extends "base.html" %}
+{% extends "colegio/colegio_base.html" %}
 
-{% block title %}{{ titulo }} - SistPRO{% endblock %}
+{% block title %}{{ titulo }} | SistPROF{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">{{ titulo }}</h4>
+        <div class="col-12 col-lg-10 col-xl-9">
+
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('estudiante.listar') }}">Estudiantes</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {{ titulo }}
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Card Principal -->
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-person-badge fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="mb-0 fw-bold">{{ titulo }}</h3>
+                            <p class="mb-0 opacity-75">
+                                {% if edit_mode %}
+                                    Actualice la información del estudiante
+                                {% else %}
+                                    Registre un nuevo estudiante en el sistema
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <!-- Mensajes flash -->
+
+                <div class="card-body p-5">
+
+                    <!-- Alertas Flash -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
                             {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
                                     {{ message }}
                                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                 </div>
@@ -23,113 +58,233 @@
                         {% endif %}
                     {% endwith %}
 
-                    <form method="POST">
-                        <!-- Nombre -->
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label required">Nombre completo *</label>
-                            <input type="text" 
-                                   name="nombre" 
-                                   id="nombre" 
-                                   class="form-control" 
-                                   value="{{ estudiante.nombre if estudiante else '' }}"
-                                   placeholder="Ej: Juan Pérez García"
-                                   required>
-                        </div>
+                    <form method="POST" action="{{ url_for('estudiante.editar', id=estudiante.id) if edit_mode else url_for('estudiante.nuevo') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- Grado y Grupo -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="grado" class="form-label required">Grado *</label>
-                                <select name="grado" id="grado" class="form-select" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="Preescolar" {% if estudiante and estudiante.grado == 'Preescolar' %}selected{% endif %}>Preescolar</option>
-                                    <option value="1°" {% if estudiante and estudiante.grado == '1°' %}selected{% endif %}>1°</option>
-                                    <option value="2°" {% if estudiante and estudiante.grado == '2°' %}selected{% endif %}>2°</option>
-                                    <option value="3°" {% if estudiante and estudiante.grado == '3°' %}selected{% endif %}>3°</option>
-                                    <option value="4°" {% if estudiante and estudiante.grado == '4°' %}selected{% endif %}>4°</option>
-                                    <option value="5°" {% if estudiante and estudiante.grado == '5°' %}selected{% endif %}>5°</option>
-                                    <option value="6°" {% if estudiante and estudiante.grado == '6°' %}selected{% endif %}>6°</option>
-                                    <option value="7°" {% if estudiante and estudiante.grado == '7°' %}selected{% endif %}>7°</option>
-                                    <option value="8°" {% if estudiante and estudiante.grado == '8°' %}selected{% endif %}>8°</option>
-                                    <option value="9°" {% if estudiante and estudiante.grado == '9°' %}selected{% endif %}>9°</option>
-                                    <option value="10°" {% if estudiante and estudiante.grado == '10°' %}selected{% endif %}>10°</option>
-                                    <option value="11°" {% if estudiante and estudiante.grado == '11°' %}selected{% endif %}>11°</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="grupo" class="form-label">Grupo</label>
-                                <input type="text" 
-                                       name="grupo" 
-                                       id="grupo" 
-                                       class="form-control" 
-                                       value="{{ estudiante.grupo if estudiante else '' }}"
-                                       placeholder="Ej: A, B, C">
+                        <!-- SECCIÓN 1: Información Personal -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom">
+                            <i class="bi bi-person-circle me-2"></i>Información Personal
+                        </h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    Nombre completo <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="nombre"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: Juan Carlos Pérez García"
+                                           value="{{ estudiante.nombre if edit_mode else '' }}"
+                                           required>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Sede -->
-                        <div class="mb-3">
-                            <label for="sede_id" class="form-label">Sede</label>
-                            <select name="sede_id" id="sede_id" class="form-select">
-                                <option value="">Seleccionar sede...</option>
-                                {% for sede in sedes %}
-                                <option value="{{ sede.id }}" 
-                                        {% if estudiante and estudiante.sede_id == sede.id %}selected{% endif %}>
-                                    {{ sede.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Dirección <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="direccion"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: Calle 123 #45-67"
+                                           value="{{ estudiante.direccion if edit_mode else '' }}"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 300 123 4567"
+                                           value="{{ estudiante.telefono if edit_mode else '' }}"
+                                           required>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Jornada -->
-                        <div class="mb-3">
-                            <label for="jornada_id" class="form-label">Jornada</label>
-                            <select name="jornada_id" id="jornada_id" class="form-select">
-                                <option value="">Seleccionar jornada...</option>
-                                {% for jornada in jornadas %}
-                                <option value="{{ jornada.id }}" 
-                                        {% if estudiante and estudiante.jornada_id == jornada.id %}selected{% endif %}>
-                                    {{ jornada.nombre }} ({{ jornada.hora_inicio }} - {{ jornada.hora_fin }})
-                                </option>
-                                {% endfor %}
-                            </select>
+                        <!-- SECCIÓN 2: Información Académica -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
+                            <i class="bi bi-book me-2"></i>Información Académica
+                        </h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Sede <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-building text-muted"></i>
+                                    </span>
+                                    <select name="sede_id"
+                                            id="sedeSelect"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required
+                                            onchange="cargarGrupos()">
+                                        <option value="">Seleccione sede</option>
+                                        {% for sede in sedes %}
+                                        <option value="{{ sede.id }}"
+                                                {% if edit_mode and estudiante.sede_id == sede.id %}selected{% endif %}>
+                                            {{ sede.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Jornada <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-clock text-muted"></i>
+                                    </span>
+                                    <select name="jornada_id"
+                                            id="jornadaSelect"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required
+                                            onchange="cargarGrupos()">
+                                        <option value="">Seleccione jornada</option>
+                                        {% for jornada in jornadas %}
+                                        <option value="{{ jornada.id }}"
+                                                {% if edit_mode and estudiante.jornada_id == jornada.id %}selected{% endif %}>
+                                            {{ jornada.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Grupo <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-people text-muted"></i>
+                                    </span>
+                                    <select name="grupo_id"
+                                            id="grupoSelect"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required>
+                                        <option value="">Seleccione grupo</option>
+                                        {% if edit_mode and estudiante.grupo_rel %}
+                                        <option value="{{ estudiante.grupo_rel.id }}" selected>
+                                            {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre }}
+                                        </option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Docente Tutor -->
-                        <div class="mb-3">
-                            <label for="docente_id" class="form-label">Docente Tutor / Director de Grupo</label>
-                            <select name="docente_id" id="docente_id" class="form-select">
-                                <option value="">Seleccionar docente...</option>
-                                {% for docente in docentes %}
-                                <option value="{{ docente.id }}" 
-                                        {% if estudiante and estudiante.docente_id == docente.id %}selected{% endif %}>
-                                    {{ docente.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Docente Director de Grupo
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person-check text-muted"></i>
+                                    </span>
+                                    <select name="docente_id"
+                                            class="form-select border-start-0 ps-0 form-control-lg">
+                                        <option value="">Sin asignar</option>
+                                        {% for docente in docentes %}
+                                        <option value="{{ docente.id }}"
+                                                {% if edit_mode and estudiante.docente_id == docente.id %}selected{% endif %}>
+                                            {{ docente.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Opcional - Se puede asignar después
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Estado (solo en edición) -->
-                        {% if estudiante %}
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" 
-                                   name="activo" 
-                                   id="activo" 
-                                   class="form-check-input"
-                                   {% if estudiante.activo %}checked{% endif %}>
-                            <label for="activo" class="form-check-label">Estudiante activo</label>
-                        </div>
-                        {% endif %}
+                        <!-- SECCIÓN 3: Acudiente -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
+                            <i class="bi bi-shield-person me-2"></i>Acudiente Principal
+                        </h5>
 
-                        <!-- Botones -->
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ url_for('estudiante.listar') }}" class="btn btn-secondary">
-                                ← Cancelar
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    Acudiente Principal <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person-heart text-muted"></i>
+                                    </span>
+                                    <select name="acudiente_principal_id"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required>
+                                        <option value="">Seleccione acudiente</option>
+                                        {% for acudiente in acudientes %}
+                                        <option value="{{ acudiente.id }}"
+                                                {% if edit_mode and estudiante.acudiente_principal_id == acudiente.id %}selected{% endif %}>
+                                            {{ acudiente.nombre }} - {{ acudiente.parentesco or 'N/A' }} ({{ acudiente.telefono }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> El acudiente debe estar registrado previamente
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información Adicional -->
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>Información importante</strong><br>
+                                    <small>
+                                        • Todos los campos marcados con <span class="text-danger">*</span> son obligatorios.<br>
+                                        • El estudiante podrá acceder al sistema si se le crea un usuario.<br>
+                                        • El QR de acceso se genera automáticamente al guardar.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                            <a href="{{ url_for('estudiante.listar') }}"
+                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                💾 Guardar Estudiante
+                            <button type="submit"
+                                    class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-save me-2"></i>{{ 'Actualizar' if edit_mode else 'Guardar Estudiante' }}
                             </button>
                         </div>
+
                     </form>
                 </div>
             </div>
@@ -138,9 +293,53 @@
 </div>
 
 <style>
-    .required::after {
-        content: " *";
-        color: #dc3545;
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .form-control-lg, .form-select-lg {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
     }
 </style>
+
+<script>
+function cargarGrupos() {
+    const sedeId = document.getElementById('sedeSelect').value;
+    const jornadaId = document.getElementById('jornadaSelect').value;
+    const grupoSelect = document.getElementById('grupoSelect');
+
+    if (sedeId && jornadaId) {
+        fetch(`/estudiantes/api/grupos/${sedeId}?jornada=${jornadaId}`)
+            .then(response => response.json())
+            .then(grupos => {
+                grupoSelect.innerHTML = '<option value="">Seleccione grupo</option>';
+                grupos.forEach(grupo => {
+                    const option = document.createElement('option');
+                    option.value = grupo.id;
+                    option.textContent = `${grupo.grado}${grupo.nombre}`;
+                    grupoSelect.appendChild(option);
+                });
+            });
+    }
+}
+</script>
+
 {% endblock %}

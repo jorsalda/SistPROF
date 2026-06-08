@@ -1,0 +1,598 @@
+{% extends "acudiente/acudiente_base.html" %}
+
+{% block title %}Detalle de Estudiante - {{ estudiante.nombre }}{% endblock %}
+
+{% block header_title %}
+<div class="flex items-center gap-3">
+    <a href="{{ url_for('acudiente.mis_estudiantes') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <i class="fas fa-user-graduate mr-2"></i>{{ estudiante.nombre }}
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+    <!-- Tarjeta de perfil del estudiante -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="relative h-40 bg-gradient-to-r from-blue-500 to-purple-600">
+            <div class="absolute -bottom-12 left-6">
+                <div class="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                    <i class="fas fa-user-graduate text-blue-600 text-5xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="pt-16 pb-6 px-6">
+            <div class="flex flex-wrap justify-between items-start gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">{{ estudiante.nombre }}</h2>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                            <i class="fas fa-graduation-cap mr-1"></i>Grado: {{ estudiante.grado }}
+                        </span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                            <i class="fas fa-users mr-1"></i>Grupo: {{ estudiante.grupo }}
+                        </span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                            <i class="fas fa-clock mr-1"></i>Jornada: {{ estudiante.jornada|default('Mañana') }}
+                        </span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                            <i class="fas fa-id-card mr-1"></i>ID: {{ estudiante.id }}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="reportarFalta()" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition">
+                        <i class="fas fa-flag mr-1"></i> Reportar Novedad
+                    </button>
+                    <button onclick="solicitarReunion()" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition">
+                        <i class="fas fa-calendar-plus mr-1"></i> Solicitar Reunión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de navegación -->
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="border-b border-gray-200">
+            <nav class="flex flex-wrap gap-2 px-4" id="tabNav">
+                <button onclick="switchTab(this, 'academico')" class="tab-btn active px-4 py-3 text-sm font-medium border-b-2 border-blue-500 text-blue-600">
+                    <i class="fas fa-star mr-1"></i>Rendimiento Académico
+                </button>
+                <button onclick="switchTab(this, 'asistencia')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-calendar-check mr-1"></i>Asistencia
+                </button>
+                <button onclick="switchTab(this, 'examenes')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-pen-to-square mr-1"></i>Exámenes
+                </button>
+                <button onclick="switchTab(this, 'novedades')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-bell mr-1"></i>Novedades
+                </button>
+                <button onclick="switchTab(this, 'citaciones')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-envelope mr-1"></i>Citaciones
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab 1: Rendimiento Académico -->
+        <div id="tab-academico" class="tab-content p-6">
+            <div class="mb-6 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-chart-line text-green-500 mr-2"></i>Calificaciones por Materia
+                </h3>
+                <select id="periodoSelector" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    {% for periodo in periodos %}
+                    <option value="{{ periodo.id }}" {% if periodo.activo %}selected{% endif %}>
+                        {{ periodo.nombre }} {{ periodo.anio_lectivo }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Materia</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-600">Calificación</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-600">Desempeño</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calificacionesTable">
+                        {% for cal in calificaciones %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="px-4 py-3 text-gray-800">{{ cal.materia }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-block px-2 py-1 rounded-lg text-sm font-bold
+                                    {% if cal.calificacion >= 4.6 %}bg-green-100 text-green-700
+                                    {% elif cal.calificacion >= 3.9 %}bg-blue-100 text-blue-700
+                                    {% elif cal.calificacion >= 3.0 %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-red-100 text-red-700{% endif %}">
+                                    {{ "%.2f"|format(cal.calificacion) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="text-sm
+                                    {% if cal.calificacion >= 4.6 %}text-green-600 font-semibold
+                                    {% elif cal.calificacion >= 3.9 %}text-blue-600
+                                    {% elif cal.calificacion >= 3.0 %}text-yellow-600
+                                    {% else %}text-red-600{% endif %}">
+                                    {{ cal.desempeno }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-500">{{ cal.observacion|default('-') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-gray-700">Promedio General del Período</span>
+                    <span class="text-3xl font-bold
+                        {% if promedio_general >= 4 %}text-green-600
+                        {% elif promedio_general >= 3 %}text-yellow-600
+                        {% else %}text-red-600{% endif %}">
+                        {{ "%.2f"|format(promedio_general|default(0)) }}
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div class="h-2 rounded-full
+                        {% if promedio_general >= 4 %}bg-green-500
+                        {% elif promedio_general >= 3 %}bg-yellow-500
+                        {% else %}bg-red-500{% endif %}"
+                        style="width: {{ (promedio_general|default(0) / 5 * 100)|round }}%">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Asistencia -->
+        <div id="tab-asistencia" class="tab-content hidden p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="bg-green-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-600">Porcentaje de Asistencia</p>
+                    <p class="text-3xl font-bold text-green-600">{{ asistencia_stats.porcentaje|default(0) }}%</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-600">Días Presente</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ asistencia_stats.presente|default(0) }}</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-600">Inasistencias</p>
+                    <p class="text-3xl font-bold text-red-600">{{ asistencia_stats.ausente|default(0) }}</p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Fecha</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Materia</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-600">Estado</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="asistenciaTable">
+                        {% for asis in asistencias %}
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-3 text-gray-800">{{ asis.fecha }}</td>
+                            <td class="px-4 py-3 text-gray-800">{{ asis.materia }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                    {% if asis.estado == 'presente' %}bg-green-100 text-green-700
+                                    {% elif asis.estado == 'tarde' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-red-100 text-red-700{% endif %}">
+                                    {{ asis.estado|upper }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-500">{{ asis.observacion|default('-') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Exámenes -->
+        <div id="tab-examenes" class="tab-content hidden p-6">
+            <div class="grid gap-4">
+                {% for examen in examenes %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ examen.titulo }}</h4>
+                            <p class="text-sm text-gray-500 mt-1">{{ examen.descripcion|default('Sin descripción') }}</p>
+                            <div class="flex gap-3 mt-2 text-xs text-gray-500">
+                                <span><i class="far fa-calendar mr-1"></i>{{ examen.fecha }}</span>
+                                <span><i class="fas fa-clock mr-1"></i>{{ examen.tiempo_limite_minutos }} min</span>
+                                <span><i class="fas fa-question-circle mr-1"></i>{{ examen.total_preguntas }} preguntas</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            {% if examen.resultado %}
+                            <span class="text-2xl font-bold
+                                {% if examen.resultado.porcentaje >= 80 %}text-green-600
+                                {% elif examen.resultado.porcentaje >= 60 %}text-yellow-600
+                                {% else %}text-red-600{% endif %}">
+                                {{ "%.1f"|format(examen.resultado.porcentaje) }}%
+                            </span>
+                            <p class="text-xs text-gray-500">Calificación: {{ "%.2f"|format(examen.resultado.nota_numerica) }}</p>
+                            {% else %}
+                            <span class="text-sm text-gray-400">No presentado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tab 4: Novedades -->
+        <div id="tab-novedades" class="tab-content hidden p-6">
+            <div class="space-y-4">
+                {% for nov in novedades %}
+                <div class="border-l-4
+                    {% if nov.gravedad == 'Tipo 3' %}border-red-500
+                    {% elif nov.gravedad == 'Tipo 2' %}border-yellow-500
+                    {% else %}border-blue-500{% endif %}
+                    bg-white p-4 rounded-r-lg shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                    {% if nov.gravedad == 'Tipo 3' %}bg-red-100 text-red-700
+                                    {% elif nov.gravedad == 'Tipo 2' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-blue-100 text-blue-700{% endif %}">
+                                    {{ nov.gravedad }}
+                                </span>
+                                <span class="text-xs text-gray-500">{{ nov.fecha }} - {{ nov.hora }}</span>
+                            </div>
+                            <p class="text-gray-700">{{ nov.informe }}</p>
+                            {% if nov.respuesta %}
+                            <div class="mt-2 p-2 bg-gray-50 rounded">
+                                <p class="text-xs text-gray-500"><i class="fas fa-reply mr-1"></i>Respuesta del acudiente:</p>
+                                <p class="text-sm text-gray-700">{{ nov.respuesta }}</p>
+                            </div>
+                            {% else %}
+                            <button onclick="responderNovedad({{ nov.id }})"
+                                    class="mt-2 text-sm text-blue-500 hover:text-blue-600">
+                                <i class="fas fa-reply mr-1"></i>Responder
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tab 5: Citaciones -->
+        <div id="tab-citaciones" class="tab-content hidden p-6">
+            <div class="space-y-4">
+                {% for cit in citaciones %}
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">Citación: {{ cit.motivo }}</h4>
+                            <p class="text-sm text-gray-500 mt-1">
+                                <i class="far fa-calendar-alt mr-1"></i>{{ cit.fecha_citacion }}
+                            </p>
+                            <p class="text-sm text-gray-600 mt-2">{{ cit.observaciones|default('Sin observaciones adicionales') }}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if cit.estado == 'pendiente' %}bg-yellow-100 text-yellow-700
+                                {% elif cit.estado == 'confirmada' %}bg-green-100 text-green-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ cit.estado|upper }}
+                            </span>
+                            {% if cit.estado == 'pendiente' %}
+                            <button onclick="confirmarCitacion({{ cit.id }})"
+                                    class="mt-2 w-full text-sm bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600">
+                                Confirmar Asistencia
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Cambiar entre tabs
+    function switchTab(btn, tabName) {
+        // Ocultar todos los contenidos
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        // Mostrar el seleccionado
+        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+        // Actualizar estilos de botones
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+            button.classList.add('text-gray-500');
+        });
+        btn.classList.add('active', 'border-blue-500', 'text-blue-600');
+        btn.classList.remove('text-gray-500');
+    }
+
+    // Cambiar período académico
+    document.getElementById('periodoSelector')?.addEventListener('change', async function(e) {
+        const periodoId = e.target.value;
+        try {
+            const response = await fetch(`/api/acudiente/estudiante/{{ estudiante.id }}/calificaciones?periodo=${periodoId}`);
+            if (response.ok) {
+                const data = await response.json();
+                actualizarTablaCalificaciones(data.calificaciones, data.promedio_general);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    function actualizarTablaCalificaciones(calificaciones, promedio) {
+        const tbody = document.getElementById('calificacionesTable');
+        tbody.innerHTML = '';
+
+        calificaciones.forEach(cal => {
+            const row = tbody.insertRow();
+            row.className = 'border-b border-gray-100 hover:bg-gray-50';
+
+            row.insertCell(0).innerHTML = `<td class="px-4 py-3 text-gray-800">${cal.materia}</td>`;
+            row.insertCell(1).innerHTML = `
+                <td class="px-4 py-3 text-center">
+                    <span class="inline-block px-2 py-1 rounded-lg text-sm font-bold
+                        ${cal.calificacion >= 4.6 ? 'bg-green-100 text-green-700' :
+                          cal.calificacion >= 3.9 ? 'bg-blue-100 text-blue-700' :
+                          cal.calificacion >= 3.0 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'}">
+                        ${cal.calificacion.toFixed(2)}
+                    </span>
+                </td>`;
+            row.insertCell(2).innerHTML = `
+                <td class="px-4 py-3 text-center">
+                    <span class="text-sm ${cal.calificacion >= 4.6 ? 'text-green-600 font-semibold' :
+                                          cal.calificacion >= 3.9 ? 'text-blue-600' :
+                                          cal.calificacion >= 3.0 ? 'text-yellow-600' :
+                                          'text-red-600'}">
+                        ${cal.desempeno}
+                    </span>
+                </td>`;
+            row.insertCell(3).innerHTML = `<td class="px-4 py-3 text-sm text-gray-500">${cal.observacion || '-'}</td>`;
+        });
+
+        const promedioContainer = document.querySelector('#tab-academico .mt-6.p-4');
+        if (promedioContainer) {
+            promedioContainer.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-gray-700">Promedio General del Período</span>
+                    <span class="text-3xl font-bold
+                        ${promedio >= 4 ? 'text-green-600' :
+                          promedio >= 3 ? 'text-yellow-600' :
+                          'text-red-600'}">
+                        ${promedio.toFixed(2)}
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div class="h-2 rounded-full
+                        ${promedio >= 4 ? 'bg-green-500' :
+                          promedio >= 3 ? 'bg-yellow-500' :
+                          'bg-red-500'}"
+                        style="width: ${(promedio / 5 * 100)}%">
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async function responderNovedad(novedadId) {
+        const { value: respuesta } = await Swal.fire({
+            title: 'Responder a la Novedad',
+            input: 'textarea',
+            inputPlaceholder: 'Escribe tu respuesta aquí...',
+            inputAttributes: {
+                'aria-label': 'Escribe tu respuesta'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Enviar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (respuesta) {
+            try {
+                const response = await fetch(`/api/acudiente/novedades/${novedadId}/responder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ respuesta })
+                });
+
+                if (response.ok) {
+                    Swal.fire('Respuesta enviada', 'La novedad ha sido respondida', 'success');
+                    location.reload();
+                } else {
+                    Swal.fire('Error', 'No se pudo enviar la respuesta', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Ocurrió un error', 'error');
+            }
+        }
+    }
+
+    async function confirmarCitacion(citacionId) {
+        const result = await Swal.fire({
+            title: '¿Confirmar asistencia?',
+            text: '¿Confirmas que asistirás a esta citación?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, confirmar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/api/acudiente/citaciones/${citacionId}/confirmar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    Swal.fire('Confirmada', 'Has confirmado tu asistencia', 'success');
+                    location.reload();
+                } else {
+                    Swal.fire('Error', 'No se pudo confirmar', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Ocurrió un error', 'error');
+            }
+        }
+    }
+
+    async function reportarFalta() {
+        const result = await Swal.fire({
+            title: 'Reportar Novedad',
+            html: `
+                <div class="text-left">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Novedad</label>
+                    <select id="tipoNovedad" class="w-full p-2 border border-gray-300 rounded-lg mb-3">
+                        <option value="DISCIPLINA">Disciplina</option>
+                        <option value="ACADEMICO">Académico</option>
+                        <option value="LLEGADA_TARDE">Llegada Tarde</option>
+                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <textarea id="informe" class="w-full p-2 border border-gray-300 rounded-lg"
+                              rows="4" placeholder="Describe la novedad..."></textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Enviar Reporte',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const tipo = document.getElementById('tipoNovedad').value;
+                const informe = document.getElementById('informe').value;
+                if (!informe) {
+                    Swal.showValidationMessage('Por favor describe la novedad');
+                    return false;
+                }
+                return { tipo, informe };
+            }
+        });
+
+        if (result.isConfirmed && result.value) {
+            Swal.fire({
+                title: 'Enviando...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const response = await fetch('/api/acudiente/novedades/reportar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        estudiante_id: {{ estudiante.id }},
+                        tipo_novedad: result.value.tipo,
+                        informe: result.value.informe
+                    })
+                });
+
+                Swal.close();
+
+                if (response.ok) {
+                    Swal.fire({
+                        title: '¡Reportado!',
+                        text: 'La novedad ha sido registrada correctamente',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    const error = await response.json();
+                    Swal.fire({
+                        title: 'Error',
+                        text: error.mensaje || 'No se pudo reportar la novedad',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                Swal.close();
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ocurrió un error de conexión',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                console.error('Error:', error);
+            }
+        }
+    }
+
+    async function solicitarReunion() {
+        Swal.fire({
+            title: 'Solicitar Reunión',
+            html: `
+                <input type="date" id="fecha" class="w-full p-2 border border-gray-300 rounded-lg mb-3">
+                <select id="motivo" class="w-full p-2 border border-gray-300 rounded-lg mb-3">
+                    <option value="academico">Rendimiento Académico</option>
+                    <option value="disciplina">Disciplina</option>
+                    <option value="general">Reunión General</option>
+                </select>
+                <textarea id="mensaje" class="w-full p-2 border border-gray-300 rounded-lg"
+                          rows="3" placeholder="Motivo de la reunión..."></textarea>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Solicitar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const fecha = document.getElementById('fecha').value;
+                const motivo = document.getElementById('motivo').value;
+                const mensaje = document.getElementById('mensaje').value;
+                if (!fecha) {
+                    Swal.showValidationMessage('Selecciona una fecha');
+                }
+                return { fecha, motivo, mensaje };
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch('/api/acudiente/reuniones/solicitar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            estudiante_id: {{ estudiante.id }},
+                            ...result.value
+                        })
+                    });
+
+                    if (response.ok) {
+                        Swal.fire('Solicitud enviada', 'Te contactaremos pronto', 'success');
+                    } else {
+                        Swal.fire('Error', 'No se pudo enviar la solicitud', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error', 'Ocurrió un error', 'error');
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

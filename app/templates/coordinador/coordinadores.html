@@ -1,0 +1,154 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Lista de Coordinadores{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Lista de Coordinadores</h1>
+        <a href="{{ url_for('colegio.nuevo_coordinador') }}"
+   class="btn btn-primary">
+    <i class="bi bi-person-plus"></i>
+    Nuevo Coordinador
+</a>
+    </div>
+
+    <!-- Filtro por sede -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Filtrar por sede</label>
+                    <select name="sede_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">Todas las sedes</option>
+                        {% for sede in sedes %}
+                        <option value="{{ sede.id }}" {% if sede_actual_id== sede.id %}selected{% endif %}>
+                            {{ sede.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de coordinadores -->
+
+    <!-- Tabla de coordinadores -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Sede</th>
+                        <th>Cargo</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for coordinador in coordinadores %}
+                    <tr>
+
+                        <td>
+                            {{ coordinador.usuario.nombre if coordinador.usuario else 'N/A' }}
+                        </td>
+
+                        <td>
+                            {{ coordinador.usuario.email if coordinador.usuario else 'N/A' }}
+                        </td>
+
+                        <td>
+                            {{ coordinador.sede.nombre if coordinador.sede else 'N/A' }}
+                        </td>
+
+                        <td>
+                            {{ coordinador.cargo or 'Coordinador Académico' }}
+                        </td>
+
+                        <td>
+                            {% if coordinador.usuario and coordinador.usuario.is_active %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+
+                            <!-- Editar  y eliminar-->
+
+                        <td>
+                            <a href="{{ url_for('colegio.editar_coordinador',  coordinador_id=coordinador.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            {% if coordinador.usuario.is_active %}
+
+                            <a href="{{ url_for('colegio.cambiar_estado_coordinador',
+                        coordinador_id=coordinador.id) }}"
+                               class="btn btn-sm btn-outline-warning"
+                               title="Desactivar">
+                                <i class="bi bi-pause-circle"></i>
+                            </a>
+
+                            {% else %}
+
+                            <a href="{{ url_for('colegio.cambiar_estado_coordinador',
+                        coordinador_id=coordinador.id) }}"
+                               class="btn btn-sm btn-outline-success"
+                               title="Activar">
+                                <i class="bi bi-play-circle"></i>
+                            </a>
+
+                            {% endif %}
+
+                            <a href="{{ url_for('colegio.cambiar_password_coordinador',
+                    coordinador_id=coordinador.id) }}"
+                               class="btn btn-sm btn-outline-dark"
+                               title="Cambiar contraseña">
+                                <i class="bi bi-key"></i>
+                            </a>
+
+
+                         <a href="{{ url_for('colegio.eliminar_coordinador',
+        coordinador_id=coordinador.id) }}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('¿Está seguro de eliminar este coordinador?')"
+                           title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        </td>
+
+                        </td>
+
+
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            No hay coordinadores registrados en este colegio.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistPROF | Plataforma Educativa Integral</title>
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .presentation {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .slide {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .slide:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.15);
+        }
+
+        .slide-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px 30px;
+            color: white;
+        }
+
+        .slide-header h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slide-header h2 i {
+            font-size: 32px;
+        }
+
+        .slide-header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .slide-content {
+            padding: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .slide-text {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .slide-text p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        .slide-image {
+            flex: 1;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .slide-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .slide-image img:hover {
+            transform: scale(1.02);
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 60px 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 20px;
+            opacity: 0.95;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .pricing-table {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pricing-card {
+            flex: 1;
+            min-width: 200px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .pricing-card h3 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .pricing-card .price {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin: 15px 0;
+        }
+
+        .pricing-card ul {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .pricing-card ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .benefit-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-item:hover {
+            background: #e9ecef;
+            transform: translateY(-3px);
+        }
+
+        .benefit-item i {
+            font-size: 40px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .benefit-item h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .slide-content {
+                flex-direction: column;
+            }
+
+            .slide-header h2 {
+                font-size: 22px;
+            }
+
+            .presentation {
+                padding: 10px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: white;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        <!-- Slide Hero - Presentación -->
+        <div class="hero">
+            <h1><i class="fas fa-graduation-cap"></i> SistPROF</h1>
+            <p>Plataforma integral para instituciones educativas que optimiza la gestión académica, disciplinaria y administrativa</p>
+        </div>
+
+        <!-- 1. Gestión académica -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-book-open"></i> Gestión Académica</h2>
+                <p>Automatización inteligente del proceso educativo</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>La gestión académica se configura como un proceso pedagógico integral que, partiendo del registro organizado de estudiantes, docentes y asignaturas, orienta la evaluación hacia el desarrollo de competencias e indicadores de aprendizaje.</p>
+                    <p>Mediante la automatización en la generación de boletines y la elaboración de informes alineados con los lineamientos del Ministerio de Educación Nacional (MEN), se optimiza el seguimiento del progreso estudiantil con rigor, coherencia y transparencia institucional.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/bruchure/gestion_academica.png" alt="Gestión académica">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Control de asistencia -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-qrcode"></i> Control de Asistencia</h2>
+                <p>Registro con QR para mayor seguridad y eficiencia</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>La gestión de la asistencia se configura como un instrumento pedagógico estratégico que, mediante el registro de ingreso y salida con código QR, optimiza la seguridad y libera tiempo institucional para priorizar el acompañamiento estudiantil.</p>
+                    <p>Integrado a un historial individual por estudiante, este seguimiento transforma un dato administrativo en evidencia formativa, facilitando la identificación de patrones y promoviendo la responsabilidad y puntualidad.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/bruchure/image3.png" alt="Control de asistencia">
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Gestión disciplinaria -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-gavel"></i> Gestión Disciplinaria</h2>
+                <p>Convivencia escolar formativa y restaurativa</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Mediante el registro sistemático de novedades clasificadas por su nivel de incidencia (Tipo 1, 2 y 3), permite una intervención oportuna, proporcional y contextualizada. La generación automática de citaciones y las alertas inteligentes agilizan la comunicación con la comunidad educativa.</p>
+                    <p>La disciplina trasciende su carácter meramente sancionatorio para convertirse en una práctica didáctica intencionada que fortalece las competencias ciudadanas.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image4.png" alt="Gestión disciplinaria">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Inclusión educativa (PIAR) -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-hand-holding-heart"></i> Inclusión Educativa (PIAR)</h2>
+                <p>Educación para todos, adaptaciones personalizadas</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Gestión de la inclusión educativa como compromiso pedagógico ético y didáctico, partiendo del registro sistemático de estudiantes con necesidades educativas especiales. Construcción colaborativa del Plan Individual de Ajustes Razonables (PIAR).</p>
+                    <p>Las alertas especiales para casos prioritarios operan como mecanismos de intervención temprana que activan redes de apoyo institucional.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image5.png" alt="Inclusión educativa">
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Evaluación docente -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-chalkboard-teacher"></i> Evaluación Docente</h2>
+                <p>Retroalimentación formativa y desarrollo profesional</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>La gestión de la evaluación se configura como un proceso pedagógico formativo y dialógico que, mediante la creación de acuerdos de evaluación, establece corresponsabilidad y transparencia entre docente y estudiante.</p>
+                    <p>El ciclo evaluativo deja de ser un trámite de calificación para convertirse en una herramienta didáctica intencionada, justa y formativa.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image6.png" alt="Evaluación docente">
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Gestión de permisos docentes -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-calendar-alt"></i> Gestión de Permisos Docentes</h2>
+                <p>Cuidado institucional y continuidad pedagógica</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Registro sistemático de ausencias, licencias y permisos especiales que garantiza la estabilidad académica y el bienestar integral del cuerpo docente. Control preciso de fechas y duración para planificación anticipada de sustituciones.</p>
+                    <p>El historial individual por docente aporta una visión longitudinal que orienta decisiones de gestión del talento humano con equidad.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image7.png" alt="Permisos docentes">
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Natillera docente -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-piggy-bank"></i> Natillera Docente</h2>
+                <p>Ahorro interno y bienestar institucional</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Gestión de aportes y recursos docentes como pilar de bienestar institucional. Registro sistemático de contribuciones que garantiza el reconocimiento formal y económico del trabajo educativo.</p>
+                    <p>Control preciso de pagos y saldos que promueve la estabilidad económica del docente, reduciendo factores de estrés laboral.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image8.png" alt="Natillera docente">
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Beneficios para la institución -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-chart-line"></i> Beneficios para la Institución</h2>
+                <p>Transformación digital con impacto real</p>
+            </div>
+            <div class="slide-content">
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <i class="fas fa-clock"></i>
+                        <h4>Ahorro de tiempo</h4>
+                        <p>Reducción de procesos manuales y tareas repetitivas</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-chart-simple"></i>
+                        <h4>Seguimiento en tiempo real</h4>
+                        <p>Información oportuna para toma de decisiones</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-comments"></i>
+                        <h4>Comunicación efectiva</h4>
+                        <p>Puentes de corresponsabilidad familia-escuela</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-trophy"></i>
+                        <h4>Evaluación objetiva</h4>
+                        <p>Criterios claros para desarrollo profesional continuo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. Modalidad del servicio -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Modalidad del Servicio</h2>
+                <p>Ecosistema digital accesible desde cualquier dispositivo</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Plataforma web accesible desde cualquier dispositivo que elimina barreras de conectividad y tiempo. Acceso diferenciado por perfiles: administrador, docente, estudiante y acudiente.</p>
+                    <p>Toda la información se almacena de manera centralizada y protegida bajo rigurosos protocolos de seguridad y privacidad.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image10.png" alt="Modalidad del servicio">
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. Propuesta de implementación -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-rocket"></i> Propuesta de Implementación</h2>
+                <p>Proceso formativo y colaborativo de transformación institucional</p>
+            </div>
+            <div class="slide-content">
+                <div class="slide-text">
+                    <p>Configuración inicial del sistema, carga estructurada de datos, capacitación al personal, puesta en marcha y acompañamiento continuo. Un itinerario estructurado que garantiza la adopción consciente y la autonomía institucional.</p>
+                </div>
+                <div class="slide-image">
+                    <img src="docs/brochure/image11.png" alt="Propuesta de implementación">
+                </div>
+            </div>
+        </div>
+
+        <!-- 11. Planes y precios -->
+        <div class="slide">
+            <div class="slide-header">
+                <h2><i class="fas fa-tags"></i> Planes y Precios</h2>
+                <p>Elige el plan que mejor se adapte a las necesidades de tu institución</p>
+            </div>
+            <div class="slide-content">
+                <div class="pricing-table">
+                    <div class="pricing-card">
+                        <h3>Básico</h3>
+                        <div class="price">$</div>
+                        <ul>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Gestión académica</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Control de asistencia</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card">
+                        <h3>Intermedio</h3>
+                        <div class="price">$$</div>
+                        <ul>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Todo el plan Básico</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Gestión disciplinaria</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Inclusión educativa (PIAR)</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card">
+                        <h3>Premium</h3>
+                        <div class="price">$$$</div>
+                        <ul>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Todo el sistema completo</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Permisos docentes</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Natillera (ahorro interno)</li>
+                            <li><i class="fas fa-check" style="color:#28a745;"></i> Exámenes tipo ICFES</li>
+                        </ul>
+                        <span class="badge">Recomendado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><i class="fas fa-graduation-cap"></i> SistPROF - Transformando la gestión educativa</p>
+            <p>Plataforma desarrollada con Flask, PostgreSQL y tecnologías modernas</p>
+        </div>
+    </div>
+</body>
+</html>

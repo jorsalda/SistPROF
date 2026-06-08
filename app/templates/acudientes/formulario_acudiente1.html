@@ -1,0 +1,173 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+{{ titulo }}
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-person-plus"></i>
+                    {{ titulo }}
+                </h2>
+                <a href="{{ url_for('colegio.lista_acudientes') }}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Volver a la lista
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show"
+                 role="alert">
+                {{ message }}
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label fw-semibold">
+                                Nombre completo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="nombre"
+                                   name="nombre"
+                                   value="{{ acudiente.nombre if acudiente else '' }}"
+                                   required
+                                   placeholder="Ej: María González">
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-semibold">
+                                Correo electrónico <span class="text-danger">*</span>
+                            </label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   name="email"
+                                   value="{{ acudiente.email if acudiente else '' }}"
+                                   required
+                                   placeholder="ejemplo@correo.com">
+                            <div class="form-text">
+                                Este correo será usado para iniciar sesión
+                            </div>
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label fw-semibold">
+                                Teléfono
+                            </label>
+                            <input type="tel"
+                                   class="form-control"
+                                   id="telefono"
+                                   name="telefono"
+                                   value="{{ acudiente.telefono if acudiente else '' }}"
+                                   placeholder="Ej: 3001234567">
+                        </div>
+
+                        <!-- Dirección -->
+                        <div class="mb-3">
+                            <label for="direccion" class="form-label fw-semibold">
+                                Dirección
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="direccion"
+                                   name="direccion"
+                                   value="{{ acudiente.direccion if acudiente else '' }}"
+                                   placeholder="Ej: Calle 123 #45-67">
+                        </div>
+
+                        <!-- Parentesco -->
+                        <div class="mb-3">
+                            <label for="parentesco" class="form-label fw-semibold">
+                                Parentesco
+                            </label>
+                            <select class="form-select"
+                                    id="parentesco"
+                                    name="parentesco">
+                                <option value="">Seleccione...</option>
+                                <option value="Padre" {% if acudiente and acudiente.parentesco =='Padre' %}selected{% endif %}>
+                                Padre
+                                </option>
+                                <option value="Madre" {% if acudiente and acudiente.parentesco =='Madre' %}selected{% endif %}>
+                                Madre
+                                </option>
+                                <option value="Abuelo(a)" {% if acudiente and acudiente.parentesco =='Abuelo(a)' %}selected{% endif %}>
+                                Abuelo(a)
+                                </option>
+                                <option value="Tío(a)" {% if acudiente and acudiente.parentesco =='Tío(a)' %}selected{% endif %}>
+                                Tío(a)
+                                </option>
+                                <option value="Hermano(a)" {% if acudiente and acudiente.parentesco =='Hermano(a)' %}selected{% endif %}>
+                                Hermano(a)
+                                </option>
+                                <option value="Otro" {% if acudiente and acudiente.parentesco =='Otro' %}selected{% endif %}>
+                                Otro
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Contraseña (solo para nuevo acudiente) -->
+                        {% if not acudiente %}
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-semibold">
+                                Contraseña <span class="text-danger">*</span>
+                            </label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password"
+                                   name="password"
+                                   required
+                                   minlength="6"
+                                   placeholder="Mínimo 6 caracteres">
+                            <div class="form-text">
+                                El acudiente usará esta contraseña para iniciar sesión
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Botones -->
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i>
+                                {{ 'Actualizar' if acudiente else 'Registrar' }}
+                            </button>
+                            <a href="{{ url_for('colegio.lista_acudientes') }}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i>
+                                Cancelar
+                            </a>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

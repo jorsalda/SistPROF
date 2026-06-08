@@ -34,5 +34,16 @@ class Periodo(db.Model):
         default=True
     )
 
+    # =========================
+    # RELACIONES
+    # =========================
+
+    evaluaciones = db.relationship(
+        "EvaluacionEstudiante",
+        back_populates="periodo",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<Periodo {self.nombre}>"

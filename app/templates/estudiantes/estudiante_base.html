@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}SistPROF | Estudiante{% endblock %}
+
+{% block content %}
+
+<!-- Sidebar + contenido principal al estilo del docente -->
+<div class="d-flex" style="min-height: calc(100vh - 200px);">
+
+    <!-- Sidebar -->
+    <div class="bg-dark text-white" style="width: 280px; min-height: 100%;">
+        <div class="p-3">
+            <h5 class="text-center mb-4">
+                <i class="bi bi-backpack"></i>
+                Panel Estudiante
+            </h5>
+            <hr class="border-secondary">
+
+            <nav class="nav flex-column nav-pills">
+                <a class="nav-link text-white {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active bg-primary{% endif %}"
+                   href="{{ url_for('estudiante.dashboard_estudiante') }}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a class="nav-link text-white"
+                   href="{{ url_for('estudiante.examen') }}">
+                    <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
+                </a>
+                <a class="nav-link text-white"
+                   href="{{ url_for('estudiante.mis_resultados') }}">
+                    <i class="bi bi-bar-chart-line"></i> Mis Resultados
+                </a>
+                <hr class="border-secondary">
+                <a class="nav-link text-white" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Salir
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="flex-grow-1 bg-light p-4">
+        <div class="container-fluid">
+            {% block estudiante_content %}{% endblock %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Registrar Coordinador | SistPROF{% endblock %}
+
+{% block colegio_content %}
+<h1>HOLA COORDINADOR</h1>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card card-coordinador">
+                <div class="card-header card-header-custom text-center">
+                    <i class="bi bi-person-badge fs-2"></i>
+                    <h3 class="mb-0 mt-2">Registrar Coordinador</h3>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" action="{{ url_for('colegio.nuevo_coordinador') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-4">
+                            <label for="nombre" class="form-label">Nombre Completo</label>
+                            <input type="text" class="form-control form-control-lg" id="nombre" name="nombre" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control form-control-lg" id="email" name="email" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Contraseña Temporal</label>
+                            <input type="password" class="form-control form-control-lg" id="password" name="password" required minlength="6">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="sede_id" class="form-label">Sede Asignada</label>
+                            <select class="form-select form-select-lg" id="sede_id" name="sede_id" required>
+                                <option value="" selected disabled>-- Seleccione una sede --</option>
+                                {% for sede in sedes %}
+                                    <option value="{{ sede.id }}">{{ sede.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-5">
+                            <button type="submit" class="btn btn-primary btn-lg btn-guardar">Guardar Coordinador</button>
+                            <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary btn-lg btn-volver">Volver al Dashboard</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/formulario_coordinador.css') }}">
+{% endblock %}

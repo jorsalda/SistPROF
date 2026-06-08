@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - SistPRO{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ titulo }}</h4>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- Mensajes flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="alert">
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+
+                        <!-- NOMBRE -->
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label required">
+                                Nombre completo
+                            </label>
+
+                            <input type="text"
+                                   name="nombre"
+                                   id="nombre"
+                                   class="form-control"
+                                   value="{{ estudiante.nombre if estudiante else '' }}"
+                                   placeholder="Ej: Juan Pérez García"
+                                   required>
+                        </div>
+
+                        <!-- GRUPO -->
+                        <div class="mb-3">
+
+                            <label for="grupo_id" class="form-label required">
+                                Grupo
+                            </label>
+
+                            <select name="grupo_id"
+                                    id="grupo_id"
+                                    class="form-select"
+                                    required>
+
+                                <option value="">
+                                    Seleccionar grupo...
+                                </option>
+
+                                {% for grupo in grupos %}
+
+                                <option value="{{ grupo.id }}"
+                                    {% if estudiante and estudiante.grupo_id == grupo.id %}
+                                        selected
+                                    {% endif %}>
+
+                                    {{ grupo.grado }} - {{ grupo.nombre }}
+
+                                    {% if grupo.sede %}
+                                        | {{ grupo.sede.nombre }}
+                                    {% endif %}
+
+                                    {% if grupo.jornada %}
+                                        | {{ grupo.jornada.nombre }}
+                                    {% endif %}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                        <!-- DOCENTE -->
+                        <div class="mb-3">
+
+                            <label for="docente_id" class="form-label">
+                                Docente Tutor
+                            </label>
+
+                            <select name="docente_id"
+                                    id="docente_id"
+                                    class="form-select">
+
+                                <option value="">
+                                    Seleccionar docente...
+                                </option>
+
+                                {% for docente in docentes %}
+
+                                <option value="{{ docente.id }}"
+                                    {% if estudiante and estudiante.docente_id == docente.id %}
+                                        selected
+                                    {% endif %}>
+
+                                    {{ docente.nombre }}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                        <!-- ESTADO -->
+                        {% if estudiante %}
+
+                        <div class="mb-3 form-check">
+
+                            <input type="checkbox"
+                                   name="activo"
+                                   id="activo"
+                                   class="form-check-input"
+                                   {% if estudiante.activo %}checked{% endif %}>
+
+                            <label for="activo"
+                                   class="form-check-label">
+
+                                Estudiante activo
+
+                            </label>
+
+                        </div>
+
+                        {% endif %}
+
+                        <!-- BOTONES -->
+                        <div class="d-flex justify-content-between mt-4">
+
+                            <a href="{{ url_for('estudiante.listar') }}"
+                               class="btn btn-secondary">
+
+                                ← Cancelar
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+
+                                💾 Guardar Estudiante
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+</style>
+
+{% endblock %}

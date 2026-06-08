@@ -16,9 +16,7 @@ class EstudianteAcudiente(db.Model):
         primary_key=True
     )
 
-    # Relaciones helper
-    estudiante = db.relationship("Estudiante", backref="acudientes_relacion", lazy=True)
-    acudiente = db.relationship("Acudiente", backref="estudiantes_relacion", lazy=True)
+
 
     def __repr__(self):
         return f'<EstudianteAcudiente {self.estudiante_id}-{self.acudiente_id}>'

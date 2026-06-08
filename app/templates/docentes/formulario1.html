@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ titulo }}</h5>
+                </div>
+
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo *</label>
+                            <input
+                                type="text"
+                                name="nombre"
+                                class="form-control"
+                                required
+                                value="{{ docente.nombre if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Documento de identidad</label>
+                            <input
+                                type="text"
+                                name="documento"
+                                class="form-control"
+                                value="{{ docente.documento if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input
+                                type="tel"
+                                name="telefono"
+                                class="form-control"
+                                value="{{ docente.telefono if docente else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input
+                                type="email"
+                                name="email"
+                                class="form-control"
+                                value="{{ docente.email if docente else '' }}"
+                            >
+                        </div>
+
+                        {% if docente %}
+                        <div class="form-check mb-3">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="activo"
+                                id="activo"
+                                {% if docente.activo %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="activo">
+                                Docente activo
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('docente.listar') }}" class="btn btn-secondary">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "coordinador/coordinador_base.html" %}
+
+{% block coordinador_page_title %}
+Seleccione una Sede
+{% endblock %}
+
+{% block coordinador_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-building"></i> Sedes Disponibles</h2>
+        <p class="text-muted mb-0">Haga clic en una sede para ver sus estudiantes y docentes.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for sede in sedes %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card shadow-sm border-0 h-100 hover-card">
+            <div class="card-body text-center">
+                <i class="bi bi-building-fill text-primary fs-1 mb-3"></i>
+                <h5 class="fw-bold text-dark">{{ sede.nombre }}</h5>
+                <p class="text-muted">{{ sede.direccion }}</p>
+
+                <!-- Al hacer clic, guarda la sede y lo lleva a Estudiantes -->
+                <a href="{{ url_for('coordinador.seleccionar_sede', sede_id=sede.id) }}" class="btn btn-primary w-100 mt-2">
+                    <i class="bi bi-mortarboard-fill"></i> Ver Estudiantes de esta Sede
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-warning">No hay sedes asignadas.</div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .hover-card { transition: all 0.2s ease-in-out; cursor: pointer; }
+    .hover-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; border-color: #0d6efd !important; }
+</style>
+{% endblock %}

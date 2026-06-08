@@ -6,42 +6,23 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from .extensions import db, login_manager, mail
+from app.routes.examen_routes import examen_bp
 
 # Blueprints
-from .routes.estudiantes_routes import estudiante_bp
+from app.routes.estudiantes_routes import estudiante_bp
+from app.routes.coordinador_routes import coordinador_bp
+
 
 # Modelos
-from .models.usuario import Usuario
-from .models.colegio import Colegio
-from .models.docente import Docente
-from .models.permiso import Permiso
-from .models.estudiante import Estudiante
-from .models.sede import Sede
-from .models.jornada import Jornada
-from .models.acudiente import Acudiente
-from .models.clase import Clase
-from .models.clase_estudiante import ClaseEstudiante
-from .models.asistencia import Asistencia
-from .models.novedad import Novedad
-from .models.citacion_acudiente import CitacionAcudiente
-from .models.estudiante_acudiente import EstudianteAcudiente
-from .models.piar import PIAR
-from .models.alerta import Alerta
-from .models.ingreso_colegio import IngresoColegio
-from .models.evaluacion_estudiante import EvaluacionEstudiante
-from .models.descargo_estudiante import DescargoEstudiante
-from .models.acuerdo_correctivo import AcuerdoCorrectivo
-from .models.resultado_examen import ResultadoExamen
-from .models.materia import Materia
-from .models.periodo import Periodo
-from .models.competencia_materia import CompetenciaMateria
-from .models.indicador_logro import IndicadorLogro
+from .models import *
 
 migrate = Migrate()
 
 
 def create_app():
+
     base_dir = os.path.abspath(os.path.dirname(__file__))
+
     static_dir = os.path.join(
         base_dir,
         "..",
@@ -63,11 +44,15 @@ def create_app():
         x_host=1
     )
 
+    # -----------------------------------------
     # Inicializar extensiones
+    # -----------------------------------------
+
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
+
     CSRFProtect(app)
 
     limiter = Limiter(
@@ -80,23 +65,34 @@ def create_app():
         storage_uri="memory://"
     )
 
-    # Crear tablas
-    # Las tablas se crean con migraciones:
-    # flask db upgrade
+    # -----------------------------------------
+    # Login manager
+    # -----------------------------------------
 
     @login_manager.user_loader
     def load_user(user_id):
+
         return db.session.get(
             Usuario,
             int(user_id)
         )
 
+    # -----------------------------------------
     # Blueprints
+    # -----------------------------------------
+
     from .routes.auth_routes import auth_bp
     from .routes.permiso_routes import permiso_bp
     from .routes.docente_routes import docente_bp
     from .routes.admin_routes import admin_bp
     from .routes.colegio_routes import colegio_bp
+    from app.routes.api_examen_bp import api_examen_bp
+
+    from .routes.acudiente import acudiente_bp
+    from .routes.api_acudiente import api_acudiente_bp
+
+    # ... dentro de create_app(), donde están los otros registros:
+
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(permiso_bp)
@@ -104,7 +100,59 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(colegio_bp)
     app.register_blueprint(estudiante_bp)
-
+    app.register_blueprint(coordinador_bp)
+    app.register_blueprint(examen_bp)
+    app.register_blueprint(api_examen_bp)
+    app.register_blueprint(acudiente_bp)
+    app.register_blueprint(api_acudiente_bp)
     app.limiter = limiter
+
+    # ==========================================
+    # Scheduler de notificaciones
+    # ==========================================
+
+    from apscheduler.schedulers.background import (
+        BackgroundScheduler
+    )
+
+    from datetime import datetime
+
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    scheduler = BackgroundScheduler(
+        timezone='America/Bogota'
+    )
+
+    try:
+
+        from app.services.notification_worker import (
+            process_pending_citaciones
+        )
+
+        scheduler.add_job(
+            func=process_pending_citaciones,
+            trigger='interval',
+            minutes=3,
+            id='citacion_notifier',
+            replace_existing=True,
+            kwargs={'app': app},
+            next_run_time=datetime.now()
+        )
+
+        scheduler.start()
+
+        print(
+            "⏰ Scheduler de notificaciones INICIADO."
+        )
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Scheduler no iniciado: {str(e)}"
+        )
+
+    # ==========================================
 
     return app

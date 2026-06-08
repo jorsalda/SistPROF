@@ -1,0 +1,129 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Configuración de Escalamiento{% endblock %}
+
+{% block colegio_content %}
+<div class="container py-4">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold mb-1">
+                <i class="bi bi-diagram-3 text-primary"></i> Configuración de Escalamiento
+            </h1>
+            <p class="text-muted">Define cómo escalan las faltas según su gravedad y acumulación</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Tarjetas de reglas -->
+        {% set tipos = ['Tipo 1', 'Tipo 2', 'Tipo 3'] %}
+        {% set colores = ['success', 'warning', 'danger'] %}
+        {% set iconos = ['bi-emoji-smile', 'bi-emoji-neutral', 'bi-emoji-angry'] %}
+
+        {% for origen in tipos %}
+        {% set config_item = configuraciones|selectattr('tipo_origen', 'equalto', origen)|first %}
+        {% set color = colores[loop.index0] %}
+        {% set icono = iconos[loop.index0] %}
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="{{ icono }} fs-3 text-{{ color }}"></i>
+                        <h5 class="fw-bold mb-0">{{ origen }} → <span class="text-{{ color }}">¿?</span></h5>
+                    </div>
+                    <p class="text-muted small mt-1">Configuración de escalamiento</p>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('colegio.guardar_configuracion_escalamiento') }}" class="d-flex flex-column h-100">
+                        <input type="hidden" name="tipo_origen" value="{{ origen }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-sort-numeric-down"></i> Cantidad
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-hash text-muted"></i>
+                                </span>
+                                <input type="number"
+                                       name="cantidad"
+                                       class="form-control bg-light border-start-0"
+                                       value="{{ config_item.cantidad if config_item else 3 }}"
+                                       min="1" max="10" required>
+                                <span class="input-group-text bg-light">faltas</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-arrow-right-circle"></i> Escalar a
+                            </label>
+                            <select name="tipo_destino" class="form-select bg-light" required>
+                                <option value="">Seleccionar</option>
+                                {% for destino in tipos %}
+                                <option value="{{ destino }}"
+                                        {% if config_item and config_item.tipo_destino == destino %}selected{% endif %}>
+                                    {{ destino }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mt-auto pt-3">
+                            <button type="submit" class="btn btn-{{ color }} w-100">
+                                <i class="bi bi-save"></i> Guardar regla
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-white border-0 pb-4">
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Al acumular <strong>{{ config_item.cantidad if config_item else 'X' }} faltas {{ origen }}</strong>, pasan a <strong>{{ config_item.tipo_destino if config_item else 'destino' }}</strong>.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Tabla de configuraciones actuales -->
+    <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-header bg-white border-0 pt-4">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-table"></i> Configuraciones actuales
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="bi bi-tag"></i> Tipo Origen</th>
+                            <th><i class="bi bi-sort-numeric-down"></i> Cantidad</th>
+                            <th><i class="bi bi-arrow-right"></i> Escala a</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for config in configuraciones %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ config.tipo_origen }}</span></td>
+                            <td><span class="fw-bold">{{ config.cantidad }}</span> faltas</td>
+                            <td><span class="badge bg-primary">{{ config.tipo_destino }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay configuraciones de escalamiento
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

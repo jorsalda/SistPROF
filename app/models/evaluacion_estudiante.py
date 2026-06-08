@@ -3,16 +3,12 @@ from app.extensions import db
 
 class EvaluacionEstudiante(db.Model):
     __tablename__ = "evaluaciones_estudiante"
-    __table_args__ = {"extend_existing": True}
 
-    id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
+    id = db.Column(db.Integer, primary_key=True)
 
-    calificacion = db.Column(
-        db.Numeric(4, 2),
-        nullable=True
+    nota = db.Column(
+        db.Float,
+        nullable=False
     )
 
     observacion = db.Column(
@@ -22,71 +18,36 @@ class EvaluacionEstudiante(db.Model):
 
     estudiante_id = db.Column(
         db.Integer,
-        db.ForeignKey("estudiantes.id"),
+        db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
         nullable=False
-    )
-
-    clase_id = db.Column(
-        db.Integer,
-        db.ForeignKey("clases.id"),
-        nullable=True
-    )
-
-    competencia_id = db.Column(
-        db.Integer,
-        db.ForeignKey("competencias_materia.id"),
-        nullable=True
     )
 
     indicador_id = db.Column(
         db.Integer,
-        db.ForeignKey(
-            "indicadores_logro.id",
-            ondelete="CASCADE"
-        ),
-        nullable=True
+        db.ForeignKey("indicadores_logro.id", ondelete="CASCADE"),
+        nullable=False
     )
 
     periodo_id = db.Column(
         db.Integer,
-        db.ForeignKey("periodos.id"),
-        nullable=True
+        db.ForeignKey("periodos.id", ondelete="CASCADE"),
+        nullable=False
     )
 
-    # Relaciones
     estudiante = db.relationship(
         "Estudiante",
-        backref="evaluaciones",
-        lazy=True
-    )
-
-    clase = db.relationship(
-        "Clase",
-        backref="evaluaciones",
-        lazy=True
-    )
-
-    competencia = db.relationship(
-        "CompetenciaMateria",
-        backref="evaluaciones",
-        lazy=True
+        back_populates="evaluaciones"
     )
 
     indicador = db.relationship(
         "IndicadorLogro",
-        backref="evaluaciones",
-        lazy=True
+        back_populates="evaluaciones"
     )
 
     periodo = db.relationship(
         "Periodo",
-        backref="evaluaciones",
-        lazy=True
+        back_populates="evaluaciones"
     )
 
     def __repr__(self):
-        return (
-            f"<EvaluacionEstudiante "
-            f"{self.estudiante_id} "
-            f"- {self.calificacion}>"
-        )
+        return f"<EvaluacionEstudiante {self.id}>"

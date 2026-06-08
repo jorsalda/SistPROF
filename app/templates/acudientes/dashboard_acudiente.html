@@ -1,0 +1,360 @@
+{% extends "acudientes/acudiente_base.html" %}
+
+{% block title %}Dashboard - Acudiente{% endblock %}
+
+{% block header_title %}Panel de Control{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+    <!-- Bienvenida -->
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+        <h2 class="text-2xl font-bold">¡Bienvenido, {{ current_user.nombre }}!</h2>
+        <p class="text-blue-100 mt-1">Aquí encontrarás toda la información académica y disciplinaria de tus hijos.</p>
+    </div>
+
+    <!-- Selector de estudiante (si tiene múltiples hijos) -->
+    {% if estudiantes|length > 1 %}
+    <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-child text-blue-500 text-xl"></i>
+            <select id="estudianteSelector" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Selecciona un estudiante</option>
+                {% for est in estudiantes %}
+                <option value="{{ est.id }}" data-nombre="{{ est.nombre }}">
+                    {{ est.nombre }} - {{ est.grado }} {{ est.grupo }}
+                </option>
+                {% endfor %}
+            </select>
+            <button id="verEstudianteBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                <i class="fas fa-eye"></i> Ver Detalle
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tarjetas de resumen para cada estudiante -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="estudiantesContainer">
+        {% for est in estudiantes %}
+        <div class="card bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer" onclick="verEstudiante({{ est.id }})">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-graduate text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">{{ est.nombre }}</h3>
+                            <p class="text-sm text-gray-500">Grado: {{ est.grado }} - {{ est.grupo }}</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+
+                <!-- Promedio general -->
+                <div class="border-t border-gray-100 pt-3 mt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-gray-600">Promedio General</span>
+                        <span class="text-2xl font-bold {% if est.promedio_general >= 4 %}text-green-600{% elif est.promedio_general >= 3 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ "%.1f"|format(est.promedio_general|default(0)) }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full {% if est.promedio_general >= 4 %}bg-green-500{% elif est.promedio_general >= 3 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                             style="width: {{ (est.promedio_general|default(0) / 5 * 100)|round }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Stats rápidos -->
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">Asistencia</p>
+                        <p class="font-semibold text-gray-800">{{ est.asistencia|default(0) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-gray-500">Novedades</p>
+                        <p class="font-semibold text-gray-800">{{ est.total_novedades|default(0) }}</p>
+                    </div>
+                </div>
+
+                <!-- Alertas/Recomendaciones -->
+                {% if est.alerta %}
+                <div class="mt-3 p-2 {% if est.alerta.tipo == 'warning' %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-red-50 border-l-4 border-red-500{% endif %} rounded">
+                    <p class="text-xs {{ 'text-yellow-700' if est.alerta.tipo == 'warning' else 'text-red-700' }}">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        {{ est.alerta.mensaje }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Sección de novedades recientes y citaciones -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Novedades recientes -->
+        <div class="bg-white rounded-xl shadow-sm">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">
+                    <i class="fas fa-bell text-yellow-500 mr-2"></i>Últimas Novedades
+                </h3>
+                <a href="{{ url_for('acudiente.novedades') }}" class="text-sm text-blue-500 hover:text-blue-600">
+                    Ver todas <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            <div class="divide-y divide-gray-100" id="novedadesContainer">
+                {% if novedades_recientes %}
+                    {% for nov in novedades_recientes %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full
+                                {% if nov.gravedad == 'Tipo 3' %}bg-red-100
+                                {% elif nov.gravedad == 'Tipo 2' %}bg-yellow-100
+                                {% else %}bg-blue-100{% endif %}
+                                flex items-center justify-center">
+                                <i class="fas
+                                    {% if nov.tipo_novedad == 'DISCIPLINA' %}fa-gavel
+                                    {% elif nov.tipo_novedad == 'ACADEMICO' %}fa-book
+                                    {% else %}fa-clock{% endif %}
+                                    text-sm
+                                    {% if nov.gravedad == 'Tipo 3' %}text-red-600
+                                    {% elif nov.gravedad == 'Tipo 2' %}text-yellow-600
+                                    {% else %}text-blue-600{% endif %}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">{{ nov.estudiante_nombre }}</p>
+                                <p class="text-sm text-gray-600">{{ nov.informe[:100] }}{% if nov.informe|length > 100 %}...{% endif %}</p>
+                                <p class="text-xs text-gray-400 mt-1">{{ nov.fecha }} - {{ nov.hora }}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full
+                                {% if nov.gravedad == 'Tipo 3' %}bg-red-100 text-red-700
+                                {% elif nov.gravedad == 'Tipo 2' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                                {{ nov.gravedad }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-check-circle text-4xl mb-2 text-green-400"></i>
+                        <p>No hay novedades recientes</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Próximas citaciones -->
+        <div class="bg-white rounded-xl shadow-sm">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">
+                    <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>Próximas Citaciones
+                </h3>
+                <a href="{{ url_for('acudiente.citaciones') }}" class="text-sm text-blue-500 hover:text-blue-600">
+                    Ver todas <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            <div class="divide-y divide-gray-100" id="citacionesContainer">
+                {% if citaciones_pendientes %}
+                    {% for cit in citaciones_pendientes %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-envelope text-purple-600 text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">{{ cit.estudiante_nombre }}</p>
+                                <p class="text-sm text-gray-600">{{ cit.motivo }}</p>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    <i class="far fa-calendar-alt mr-1"></i>{{ cit.fecha_citacion }}
+                                    <span class="mx-1">•</span>
+                                    <span class="{% if cit.estado == 'pendiente' %}text-yellow-600{% else %}text-green-600{% endif %}">
+                                        {{ cit.estado|capitalize }}
+                                    </span>
+                                </p>
+                            </div>
+                            <button onclick="confirmarCitacion({{cit.id}})"
+                                    class="text-xs bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition">
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>No hay citaciones pendientes</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de rendimiento académico -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-green-500 mr-2"></i>Rendimiento por Materia
+        </h3>
+        <div class="relative h-80">
+            <canvas id="rendimientoChart"></canvas>
+        </div>
+        <p class="text-xs text-gray-400 text-center mt-4">Selecciona un estudiante para ver su rendimiento detallado</p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variable global para el gráfico
+    let rendimientoChart = null;
+    let estudianteActual = null;
+
+    // Función para ver detalle del estudiante
+    function verEstudiante(estudianteId) {
+        window.location.href = `/acudiente/estudiante/${estudianteId}`;
+    }
+
+    // Función para cargar rendimiento del estudiante seleccionado
+    async function cargarRendimiento(estudianteId) {
+        if (estudianteActual === estudianteId) return;
+        estudianteActual = estudianteId;
+
+        const chartCanvas = document.getElementById('rendimientoChart');
+        if (chartCanvas) {
+            chartCanvas.style.opacity = '0.5';
+        }
+
+        try {
+            const response = await fetch(`/api/acudiente/estudiante/${estudianteId}/rendimiento`);
+            if (response.ok) {
+                const data = await response.json();
+                actualizarGrafico(data.materias || [], data.calificaciones || []);
+            } else {
+                console.error('Error al cargar rendimiento');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            if (chartCanvas) {
+                chartCanvas.style.opacity = '1';
+            }
+        }
+    }
+
+    // Función para actualizar el gráfico
+    function actualizarGrafico(materias, calificaciones) {
+        if (rendimientoChart) {
+            rendimientoChart.destroy();
+        }
+
+        const ctx = document.getElementById('rendimientoChart').getContext('2d');
+        rendimientoChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: materias,
+                datasets: [{
+                    label: 'Calificación Promedio',
+                    data: calificaciones,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 5,
+                        title: {
+                            display: true,
+                            text: 'Calificación'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let value = context.raw;
+                                let nivel = '';
+                                if (value >= 4.6) nivel = ' (Superior)';
+                                else if (value >= 3.9) nivel = ' (Alto)';
+                                else if (value >= 3.0) nivel = ' (Básico)';
+                                else nivel = ' (Bajo)';
+                                return `${label}: ${value}${nivel}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Confirmar citación
+    async function confirmarCitacion(citacionId) {
+        const result = await Swal.fire({
+            title: '¿Confirmar asistencia?',
+            text: '¿Confirmas que asistirás a esta citación?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, confirmar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/api/acudiente/citaciones/${citacionId}/confirmar`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    Swal.fire('Confirmada', 'Has confirmado tu asistencia', 'success');
+                    location.reload();
+                } else {
+                    Swal.fire('Error', 'No se pudo confirmar la citación', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Ocurrió un error', 'error');
+            }
+        }
+    }
+
+    // Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    const selector = document.getElementById('estudianteSelector');
+    const verBtn = document.getElementById('verEstudianteBtn');
+
+    if (selector && verBtn) {
+        verBtn.addEventListener('click', () => {
+            const estudianteId = selector.value;
+            if (estudianteId) {
+                window.location.href = `/acudiente/estudiante/${estudianteId}`;
+            } else {
+                Swal.fire('Selecciona un estudiante', 'Por favor selecciona un estudiante', 'info');
+            }
+        });
+    }
+
+    // ✅ CORREGIDO: usar |length en Jinja2
+    {% if estudiantes and estudiantes|length > 0 %}
+    setTimeout(function() {
+        cargarRendimiento({{ estudiantes[0].id|tojson }});
+    }, 500);
+    {% endif %}
+});
+</script>
+{% endblock %}

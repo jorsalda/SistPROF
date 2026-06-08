@@ -1,0 +1,137 @@
+/* ============================================
+   COORDINADOR - SistPROF
+   ============================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f9;
+}
+
+.coordinador-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Oscuro */
+.coordinador-sidebar {
+    width: 260px;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 25px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-header p {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+/* Quitar viñetas y dar estilo al menú */
+.sidebar-menu {
+    list-style: none; /* Esto elimina los puntos de la lista */
+    padding: 15px 0;
+    flex: 1;
+}
+
+.menu-item { margin: 2px 0; }
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none; /* Quita el subrayado */
+    transition: all 0.3s;
+    font-size: 0.95rem;
+}
+
+.menu-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.menu-link.active {
+    background: #3b82f6;
+    color: white;
+    border-left: 4px solid #60a5fa;
+}
+
+.menu-link i {
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+}
+
+.logout-btn {
+    margin: 20px;
+    padding: 12px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.logout-btn:hover { background: #dc2626; }
+
+/* Contenido Principal */
+.coordinador-content {
+    flex: 1;
+    margin-left: 260px;
+    display: flex;
+    flex-direction: column;
+}
+
+.coordinador-header {
+    background: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.coordinador-header h1 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.coordinador-main-content {
+    padding: 30px;
+    flex: 1;
+}

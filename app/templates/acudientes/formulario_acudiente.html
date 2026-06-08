@@ -1,0 +1,302 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}{{ titulo }} | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.lista_acudientes') }}">Acudientes</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {{ titulo }}
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Card Principal -->
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-person-plus fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="mb-0 fw-bold">{{ titulo }}</h3>
+                            <p class="mb-0 opacity-75">
+                                {% if acudiente %}
+                                    Actualice la información del acudiente
+                                {% else %}
+                                    Registre un nuevo acudiente en el sistema
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-5">
+
+                    <!-- Alertas Flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- FILA 1: Nombre y Email (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Nombre completo <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="nombre"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: María González Pérez"
+                                           value="{{ acudiente.nombre if acudiente else '' }}"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Correo electrónico <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-envelope text-muted"></i>
+                                    </span>
+                                    <input type="email"
+                                           name="email"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: acudiente@correo.com"
+                                           value="{{ acudiente.email if acudiente else '' }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 2: Teléfono y Dirección (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 300 123 4567"
+                                           value="{{ acudiente.telefono if acudiente else '' }}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Dirección
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="direccion"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: Calle 123 #45-67"
+                                           value="{{ acudiente.direccion if acudiente else '' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 3: Parentesco y Contraseña (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Parentesco
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-people text-muted"></i>
+                                    </span>
+                                    <select name="parentesco" class="form-select border-start-0 ps-0 form-control-lg">
+                                        <option value="">Seleccione...</option>
+                                        <option value="Padre" {% if acudiente and acudiente.parentesco == 'Padre' %}selected{% endif %}>
+                                            Padre
+                                        </option>
+                                        <option value="Madre" {% if acudiente and acudiente.parentesco == 'Madre' %}selected{% endif %}>
+                                            Madre
+                                        </option>
+                                        <option value="Abuelo(a)" {% if acudiente and acudiente.parentesco == 'Abuelo(a)' %}selected{% endif %}>
+                                            Abuelo(a)
+                                        </option>
+                                        <option value="Tío(a)" {% if acudiente and acudiente.parentesco == 'Tío(a)' %}selected{% endif %}>
+                                            Tío(a)
+                                        </option>
+                                        <option value="Hermano(a)" {% if acudiente and acudiente.parentesco == 'Hermano(a)' %}selected{% endif %}>
+                                            Hermano(a)
+                                        </option>
+                                        <option value="Otro" {% if acudiente and acudiente.parentesco == 'Otro' %}selected{% endif %}>
+                                            Otro
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Contraseña (solo para nuevo acudiente) -->
+                            {% if not acudiente %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Contraseña <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-key text-muted"></i>
+                                    </span>
+                                    <input type="password"
+                                           name="password"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Mínimo 6 caracteres"
+                                           required
+                                           minlength="6">
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> La contraseña debe tener al menos 6 caracteres
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Contraseña
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-lock text-muted"></i>
+                                    </span>
+                                    <input type="password"
+                                           disabled
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           value="••••••••"
+                                           readonly>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Para cambiar la contraseña, use la opción correspondiente
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Información Adicional -->
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>Información importante</strong><br>
+                                    <small>
+                                        {% if acudiente %}
+                                            • Los cambios se guardarán inmediatamente.<br>
+                                            • El acudiente puede acceder al sistema con su correo y contraseña.<br>
+                                            • Puede cambiar la contraseña desde el perfil del acudiente.
+                                        {% else %}
+                                            • El acudiente podrá acceder al sistema con su correo y contraseña.<br>
+                                            • El acudiente podrá ver la información académica de sus estudiantes.<br>
+                                            • Puede cambiar la contraseña más tarde desde la lista de acudientes.
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                            <a href="{{ url_for('colegio.lista_acudientes') }}"
+                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-{{ 'save' if not acudiente else 'check-lg' }} me-2"></i>
+                                {{ 'Guardar Acudiente' if not acudiente else 'Actualizar Acudiente' }}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .form-control-lg, .form-select-lg {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+    .input-group-text {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0;
+    }
+    .breadcrumb-item a {
+        color: #667eea;
+        text-decoration: none;
+    }
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+{% endblock %}

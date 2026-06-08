@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Estudiantes{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Dashboard de Estudiantes</h1>
+        <p class="text-gray-600 mt-2">Vista consolidada y estadísticas</p>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total Estudiantes -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Estudiantes</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ estadisticas.total }}</p>
+                </div>
+                <div class="bg-blue-100 p-3 rounded-full">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Por Grado -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div>
+                <p class="text-gray-500 text-sm">Grados Activos</p>
+                <p class="text-3xl font-bold text-green-600">{{ estadisticas.por_grado|length }}</p>
+                <p class="text-sm text-gray-400 mt-1">
+                    {% for grado, count in estadisticas.por_grado.items() %}
+                        {{ grado }}: {{ count }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Por Grupo -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <div>
+                <p class="text-gray-500 text-sm">Grupos Activos</p>
+                <p class="text-3xl font-bold text-purple-600">{{ estadisticas.por_grupo|length }}</p>
+                <p class="text-sm text-gray-400 mt-1">
+                    {% for grupo, count in estadisticas.por_grupo.items() %}
+                        {{ grupo }}: {{ count }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <form method="GET" action="{{ url_for('estudiante.dashboard_admin') }}" class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-64">
+                <input type="text" name="search" value="{{ search }}" 
+                       placeholder="Buscar por nombre..."
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <select name="grado" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Todos los grados</option>
+                {% for grado in grados_lista %}
+                <option value="{{ grado }}" {% if current_grado == grado %}selected{% endif %}>
+                    Grado {{ grado }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <select name="grupo_id" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Todos los grupos</option>
+                {% for grupo in grupos %}
+                <option value="{{ grupo.id }}" {% if current_grupo_id == grupo.id %}selected{% endif %}>
+                    {{ grupo.grado }}{{ grupo.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                Filtrar
+            </button>
+            
+            <a href="{{ url_for('estudiante.dashboard_admin') }}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition">
+                Limpiar
+            </a>
+        </form>
+    </div>
+
+    <!-- Botón Nuevo Estudiante -->
+    <div class="mb-6">
+        <a href="{{ url_for('estudiante.nuevo') }}" 
+           class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md inline-flex items-center gap-2 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Estudiante
+        </a>
+    </div>
+
+    <!-- Tabla de Estudiantes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grado/Grupo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acudiente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for estudiante in estudiantes %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ estudiante.nombre }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {{ estudiante.grado }}{{ estudiante.grupo }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ estudiante.telefono }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ estudiante.acudiente_principal.nombre if estudiante.acudiente_principal else 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if estudiante.activo %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Activo
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Inactivo
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{{ url_for('estudiante.ver', id=estudiante.id) }}" 
+                           class="text-blue-600 hover:text-blue-900 mr-3">Ver</a>
+                        <a href="{{ url_for('estudiante.editar', id=estudiante.id) }}" 
+                           class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        No hay estudiantes registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if pagination.pages > 1 %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('estudiante.dashboard_admin', page=pagination.current_page - 1, search=search, grado=current_grado, grupo_id=current_grupo_id) }}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Anterior</a>
+            {% endif %}
+            
+            {% for page_num in range(1, pagination.pages + 1) %}
+            <a href="{{ url_for('estudiante.dashboard_admin', page=page_num, search=search, grado=current_grado, grupo_id=current_grupo_id) }}" 
+               class="px-4 py-2 rounded-lg {% if page_num == pagination.current_page %}bg-blue-600 text-white{% else %}bg-white border border-gray-300 hover:bg-gray-50{% endif %}">
+                {{ page_num }}
+            </a>
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <a href="{{ url_for('estudiante.dashboard_admin', page=pagination.current_page + 1, search=search, grado=current_grado, grupo_id=current_grupo_id) }}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Siguiente</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
