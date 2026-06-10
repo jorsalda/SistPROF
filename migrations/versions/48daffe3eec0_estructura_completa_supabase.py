@@ -120,7 +120,7 @@ def upgrade():
     sa.Column('documento', sa.String(length=20), nullable=True),
     sa.Column('telefono', sa.String(length=20), nullable=True),
     sa.ForeignKeyConstraint(['colegio_id'], ['colegios.id'], ),
-    sa.ForeignKeyConstraint(['sede_id', 'colegio_id'], ['sedes.id', 'sedes.colegio_id'], ),
+    sa.ForeignKeyConstraint(['sede_id'], ['sedes.id'], ),  # ✅ CORREGIDO: eliminada la FK compuesta
     sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('usuario_id')
