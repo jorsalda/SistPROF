@@ -47,11 +47,14 @@ logs/
 
 # 🔐 Configuraciones sensibles (CRÍTICO)
 .env
-*.env
-.env.*
+.env*
 .secrets
 *.pem
 *.key
+
+# Archivos de configuración con credenciales
+config1.py
+*.env1
 
 # 🌐 Flask specific
 webassets-cache/
