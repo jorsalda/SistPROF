@@ -1,0 +1,373 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Detalle de Sede
+{% endblock %}
+
+{% block colegio_content %}
+
+<!-- ENCABEZADO -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+
+        <h2 class="fw-bold mb-1">
+
+            <i class="bi bi-building"></i>
+            {{ sede.nombre }}
+
+        </h2>
+
+        <p class="text-muted mb-0">
+
+            <i class="bi bi-geo-alt"></i>
+            {{ sede.direccion or "Sin dirección registrada" }}
+
+            <span class="mx-2">|</span>
+
+            <i class="bi bi-telephone"></i>
+            {{ sede.telefono or "Sin teléfono" }}
+
+        </p>
+
+    </div>
+
+    <div class="d-flex gap-2">
+
+        <a href="{{ url_for('colegio.editar_sede', sede_id=sede.id) }}"
+           class="btn btn-outline-primary">
+
+            <i class="bi bi-pencil-square"></i>
+            Editar
+
+        </a>
+
+        <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}"
+           class="btn btn-outline-success">
+
+            <i class="bi bi-clock-history"></i>
+            Jornadas
+
+        </a>
+
+        <a href="{{ url_for('colegio.sedes') }}"
+           class="btn btn-outline-secondary">
+
+            <i class="bi bi-arrow-left"></i>
+            Volver
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- ESTADO -->
+
+<div class="mb-4">
+
+    {% if sede.activo %}
+
+        <span class="badge bg-success fs-6">
+            Activa
+        </span>
+
+    {% else %}
+
+        <span class="badge bg-danger fs-6">
+            Inactiva
+        </span>
+
+    {% endif %}
+
+</div>
+
+
+<!-- ESTADÍSTICAS -->
+
+<div class="row g-4 mb-4">
+
+    <!-- DOCENTES -->
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <i class="bi bi-person-badge display-5 text-primary"></i>
+
+                <h3 class="fw-bold mt-3">
+                    {{ sede.docentes_sede|length }}
+                </h3>
+
+                <p class="text-muted mb-0">
+                    Docentes
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ESTUDIANTES -->
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <i class="bi bi-people display-5 text-success"></i>
+
+                <h3 class="fw-bold mt-3">
+                    {{ sede.estudiantes|length }}
+                </h3>
+
+                <p class="text-muted mb-0">
+                    Estudiantes
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- JORNADAS -->
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <i class="bi bi-clock-history display-5 text-warning"></i>
+
+                <h3 class="fw-bold mt-3">
+                    {{ sede.jornadas|length }}
+                </h3>
+
+                <p class="text-muted mb-0">
+                    Jornadas
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- JORNADAS REGISTRADAS -->
+
+<!-- INFORMACIÓN DETALLADA  JORNADAS -->
+
+<div class="row g-4">
+
+    <!-- DOCENTES ASIGNADOS -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-light border-0">
+
+                <h5 class="fw-bold mb-0">
+
+                    <i class="bi bi-person-badge"></i>
+                    Docentes asignados
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                {% if sede.docentes_sede %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for docente in sede.docentes_sede[:5] %}
+
+                            <div class="list-group-item border-0 px-0">
+
+                                <div class="fw-semibold">
+                                    {{ docente.nombre }}
+                                </div>
+
+                                <small class="text-muted">
+
+                                    {{ docente.email or "Sin correo" }}
+
+                                </small>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="text-center py-4">
+
+                        <i class="bi bi-person-badge display-5 text-muted"></i>
+
+                        <p class="text-muted mt-3 mb-0">
+
+                            No hay docentes asignados.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ESTUDIANTES -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-light border-0">
+
+                <h5 class="fw-bold mb-0">
+
+                    <i class="bi bi-people"></i>
+                    Estudiantes
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                {% if sede.estudiantes %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for estudiante in sede.estudiantes[:5] %}
+
+                            <div class="list-group-item border-0 px-0">
+
+                                <div class="fw-semibold">
+                                    {{ estudiante.nombre }}
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="text-center py-4">
+
+                        <i class="bi bi-people display-5 text-muted"></i>
+
+                        <p class="text-muted mt-3 mb-0">
+
+                            No hay estudiantes registrados.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- JORNADAS -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-light border-0">
+
+                <h5 class="fw-bold mb-0">
+
+                    <i class="bi bi-clock-history"></i>
+                    Jornadas registradas
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                {% if sede.jornadas %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for jornada in sede.jornadas[:5] %}
+
+                            <div class="list-group-item border-0 px-0">
+
+                                <div class="fw-semibold">
+                                    {{ jornada.nombre }}
+                                </div>
+
+                                <small class="text-muted">
+
+                                    {{ jornada.hora_inicio }}
+                                    -
+                                    {{ jornada.hora_fin }}
+
+                                </small>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="text-center py-4">
+
+                        <i class="bi bi-clock-history display-5 text-muted"></i>
+
+                        <p class="text-muted mt-3 mb-0">
+
+                            No hay jornadas registradas.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+{% endblock %}

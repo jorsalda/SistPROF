@@ -8,8 +8,8 @@ from app.models.docente import Docente
 from app.models.sede import Sede
 from app.models.jornada import Jornada
 from app.models.grupo import Grupo
-from app.models.acudiente import Acudiente  # 🔥 AGREGADO
-
+from app.models.acudiente import Acudiente
+from sqlalchemy import or_
 import secrets
 from datetime import datetime
 
@@ -40,7 +40,12 @@ def listar():
 
     # Aplicar filtros
     if search:
-        consulta = consulta.filter(Estudiante.nombre.ilike(f'%{search}%'))
+        consulta = consulta.filter(
+            or_(
+                Estudiante.nombre.ilike(f"%{search}%"),
+                Estudiante.apellido.ilike(f"%{search}%")
+            )
+        )
 
     if sede_id:
         consulta = consulta.filter_by(sede_id=sede_id)
@@ -88,6 +93,32 @@ def listar():
 
 
 # =========================================================
+# API: OBTENER JORNADAS POR SEDE (AJAX)
+# =========================================================
+
+@estudiante_bp.route("/api/jornadas/<int:sede_id>")
+@login_required
+def api_jornadas_por_sede(sede_id):
+    """
+    Endpoint AJAX para cargar jornadas filtradas por sede
+    """
+    jornadas = Jornada.query.filter_by(
+        sede_id=sede_id,
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(Jornada.nombre).all()
+
+    return jsonify([
+        {
+            "id": j.id,
+            "nombre": j.nombre
+        }
+        for j in jornadas
+    ])
+
+
+
+# =========================================================
 # NUEVO ESTUDIANTE
 # =========================================================
 @estudiante_bp.route("/nuevo", methods=["GET", "POST"])
@@ -97,19 +128,13 @@ def nuevo():
     if request.method == "POST":
 
         nombre = request.form.get("nombre", "").strip()
-
+        apellido = request.form.get("apellido", "").strip()
         grupo_id = request.form.get("grupo_id", type=int)
-
         sede_id = request.form.get("sede_id", type=int)
-
         jornada_id = request.form.get("jornada_id", type=int)
-
         docente_id = request.form.get("docente_id", type=int)
-
         direccion = request.form.get("direccion", "").strip()
-
         telefono = request.form.get("telefono", "").strip()
-
         acudiente_principal_id = request.form.get(
             "acudiente_principal_id",
             type=int
@@ -121,6 +146,10 @@ def nuevo():
 
         if not nombre:
             flash("El nombre del estudiante es requerido", "danger")
+            return redirect(url_for("estudiante.nuevo"))
+
+        if not apellido:
+            flash("El apellido del estudiante es requerido", "danger")
             return redirect(url_for("estudiante.nuevo"))
 
         if not grupo_id:
@@ -154,6 +183,7 @@ def nuevo():
 
         existe = Estudiante.query.filter_by(
             nombre=nombre,
+            apellido=apellido,
             grupo_id=grupo_id,
             colegio_id=current_user.colegio_id
         ).first()
@@ -179,35 +209,25 @@ def nuevo():
         # =================================================
 
         estudiante = Estudiante(
-
             nombre=nombre,
-
+            apellido=apellido,
             direccion=direccion,
-
             telefono=telefono,
-
             acudiente_principal_id=acudiente_principal_id,
-
             grupo_id=grupo_obj.id,
-
             colegio_id=current_user.colegio_id,
-
             sede_id=(
                 sede_id
                 if sede_id
                 else grupo_obj.sede_id
             ),
-
             jornada_id=(
                 jornada_id
                 if jornada_id
                 else grupo_obj.jornada_id
             ),
-
             docente_id=docente_id,
-
             qr_token=qr_token,
-
             activo=True
         )
 
@@ -215,7 +235,7 @@ def nuevo():
         db.session.commit()
 
         flash(
-            f"Estudiante '{nombre}' registrado correctamente",
+            f"Estudiante '{nombre} {apellido}' registrado correctamente",
             "success"
         )
 
@@ -261,7 +281,7 @@ def nuevo():
         jornadas=jornadas,
         docentes=docentes,
         grupos=grupos,
-        acudientes=acudientes  # ← AGREGADO
+        acudientes=acudientes
     )
 
 
@@ -280,25 +300,17 @@ def editar(id):
     if request.method == "POST":
 
         nombre = request.form.get("nombre", "").strip()
-
+        apellido = request.form.get("apellido", "").strip()
         grupo_id = request.form.get("grupo_id", type=int)
-
         sede_id = request.form.get("sede_id", type=int)
-
         jornada_id = request.form.get("jornada_id", type=int)
-
         docente_id = request.form.get("docente_id", type=int)
-
         direccion = request.form.get("direccion", "").strip()
-
         telefono = request.form.get("telefono", "").strip()
-
         acudiente_principal_id = request.form.get(
             "acudiente_principal_id",
             type=int
         )
-
-        activo = request.form.get("activo") == "on"
 
         # =================================================
         # VALIDACIONES
@@ -306,6 +318,10 @@ def editar(id):
 
         if not nombre:
             flash("El nombre es obligatorio", "danger")
+            return redirect(url_for("estudiante.editar", id=id))
+
+        if not apellido:
+            flash("El apellido es obligatorio", "danger")
             return redirect(url_for("estudiante.editar", id=id))
 
         if not grupo_id:
@@ -339,6 +355,7 @@ def editar(id):
 
         existe = Estudiante.query.filter(
             Estudiante.nombre == nombre,
+            Estudiante.apellido == apellido,
             Estudiante.grupo_id == grupo_id,
             Estudiante.colegio_id == current_user.colegio_id,
             Estudiante.id != id
@@ -356,35 +373,31 @@ def editar(id):
         # =================================================
 
         estudiante.nombre = nombre
-
+        estudiante.apellido = apellido
         estudiante.direccion = direccion
-
         estudiante.telefono = telefono
-
         estudiante.acudiente_principal_id = acudiente_principal_id
-
         estudiante.grupo_id = grupo_obj.id
-
         estudiante.sede_id = (
             sede_id
             if sede_id
             else grupo_obj.sede_id
         )
-
         estudiante.jornada_id = (
             jornada_id
             if jornada_id
             else grupo_obj.jornada_id
         )
-
         estudiante.docente_id = docente_id
 
-        estudiante.activo = activo
+        # ✅ CORRECCIÓN: No modificar activo si no viene en el formulario
+        if 'activo' in request.form:
+            estudiante.activo = request.form.get("activo") == "on"
 
         db.session.commit()
 
         flash(
-            f"Estudiante '{nombre}' actualizado correctamente",
+            f"Estudiante '{nombre} {apellido}' actualizado correctamente",
             "success"
         )
 
@@ -430,7 +443,8 @@ def editar(id):
         jornadas=jornadas,
         docentes=docentes,
         grupos=grupos,
-        acudientes=acudientes  # ← AGREGADO
+        acudientes=acudientes,
+        edit_mode=True
     )
 
 
@@ -820,21 +834,33 @@ def dashboard_admin():
 @estudiante_bp.route("/api/grupos/<int:sede_id>")
 @login_required
 def api_grupos_por_sede(sede_id):
-    """
-    Endpoint AJAX para cargar grupos filtrados por sede
-    """
-    grupos = Grupo.query.filter_by(
+
+    jornada_id = request.args.get("jornada", type=int)
+
+    consulta = Grupo.query.filter_by(
         sede_id=sede_id,
         colegio_id=current_user.colegio_id,
         activo=True
-    ).order_by(Grupo.grado, Grupo.nombre).all()
+    )
 
-    return jsonify([{
-        'id': g.id,
-        'grado': g.grado,
-        'nombre': g.nombre,
-        'director': g.director_docente.nombre if g.director_docente else None
-    } for g in grupos])
+    if jornada_id:
+        consulta = consulta.filter_by(
+            jornada_id=jornada_id
+        )
+
+    grupos = consulta.order_by(
+        Grupo.grado,
+        Grupo.nombre
+    ).all()
+
+    return jsonify([
+        {
+            "id": g.id,
+            "grado": g.grado,
+            "nombre": g.nombre
+        }
+        for g in grupos
+    ])
 
 
 # =========================================================

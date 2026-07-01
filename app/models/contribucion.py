@@ -1,10 +1,14 @@
 from app.extensions import db
+from .competencia_contribucion import competencia_contribucion
 
 
 class Contribucion(db.Model):
     __tablename__ = "contribuciones"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     descripcion = db.Column(
         db.Text,
@@ -23,6 +27,14 @@ class Contribucion(db.Model):
     criterio = db.relationship(
         "CriterioEvaluacion",
         backref="contribuciones"
+    )
+
+    # Relación N:M con CompetenciaDocente
+    competencias = db.relationship(
+        "CompetenciaDocente",
+        secondary=competencia_contribucion,
+        back_populates="contribuciones",
+        lazy=True
     )
 
     def __repr__(self):

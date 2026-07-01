@@ -1,0 +1,113 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+{% if area %}Editar Área{% else %}Nueva Área{% endif %}
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+    
+    <!-- HEADER CON DEGRADADO MORADO -->
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="bi bi-book" style="font-size: 2rem;"></i>
+            </div>
+            <div>
+                <h3 class="mb-0 fw-bold">
+                    {% if area %}Editar Área{% else %}Nueva Área{% endif %}
+                </h3>
+                <small class="opacity-75">
+                    {% if area %}
+                        Modifique los datos del área
+                    {% else %}
+                        Registre una nueva área en el sistema
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- NOMBRE DEL ÁREA -->
+            <div class="mb-3">
+                <label for="nombre" class="form-label fw-bold">
+                    Nombre del área <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-tag"></i>
+                    </span>
+                    <input type="text" 
+                           id="nombre" 
+                           name="nombre" 
+                           class="form-control" 
+                           placeholder="Ej: Matemáticas, Español, Ciencias Naturales"
+                           value="{{ area.nombre if area else '' }}" 
+                           required>
+                </div>
+            </div>
+
+            <!-- PORCENTAJE -->
+            <div class="mb-4">
+                <label for="porcentaje" class="form-label fw-bold">
+                    Porcentaje <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-percent"></i>
+                    </span>
+                    <input type="number" 
+                           id="porcentaje" 
+                           name="porcentaje" 
+                           class="form-control" 
+                           min="0" 
+                           max="100" 
+                           step="0.01"
+                           placeholder="Ej: 20"
+                           value="{{ area.porcentaje if area else '' }}" 
+                           required>
+                </div>
+                <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Porcentaje que representa esta área en la evaluación total (0-100%).
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE INFORMACIÓN IMPORTANTE -->
+            <div class="alert alert-info border-0" style="background-color: #e7f3ff; border-radius: 8px;">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="bi bi-info-circle-fill text-primary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Información Importante</h6>
+                        <ul class="mb-0 small">
+                            <li>Las áreas son las materias o asignaturas del colegio.</li>
+                            <li>El porcentaje define cuánto vale esta área en el promedio final.</li>
+                            <li>La suma de todos los porcentajes debe ser 100%.</li>
+                            <li>Puede activar o desactivar áreas sin eliminarlas.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTONES DE ACCIÓN -->
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                <a href="{{ url_for('colegio.lista_areas') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancelar
+                </a>
+                <button type="submit" class="btn text-white" style="background-color: #764ba2;">
+                    <i class="bi bi-save"></i> 
+                    {% if area %}Actualizar Área{% else %}Guardar Área{% endif %}
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

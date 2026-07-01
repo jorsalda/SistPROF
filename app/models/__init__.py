@@ -8,8 +8,9 @@ from .materia import Materia
 from .clase import Clase
 from .clase_estudiante import ClaseEstudiante
 from .asistencia import Asistencia
+from .CompetenciaEstudiante import CompetenciaEstudiante
+from .CompetenciaDocente import CompetenciaDocente
 
-from .competencia_materia import CompetenciaMateria
 from .indicador_logro import IndicadorLogro
 from .evaluacion_estudiante import EvaluacionEstudiante
 
@@ -50,8 +51,8 @@ from .tipo_examen import TipoExamen
 
 from .examen import Examen
 from .resultado_examen import ResultadoExamen
-
-from .competencias import Competencia
+from .docente_area import DocenteAreas
+from .grupo import Grupo, GrupoAreas, DirectoresGrupo
 
 
 # Agrega esta línea al final de app/models/__init__.py

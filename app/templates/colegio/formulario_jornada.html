@@ -1,45 +1,160 @@
 {% extends "colegio/colegio_base.html" %}
 
 {% block colegio_page_title %}
-Nueva Jornada
+{% if jornada %}Editar Jornada{% else %}Nueva Jornada{% endif %}
 {% endblock %}
 
 {% block colegio_content %}
 
-<div class="card shadow-sm">
-    <div class="card-body">
+<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
 
-        <h2>
-            Nueva Jornada para {{ sede.nombre }}
-        </h2>
+    <!-- HEADER CON DEGRADADO MORADO -->
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
+            </div>
+            <div>
+                <h3 class="mb-0 fw-bold">
+                    {% if jornada %}Editar Jornada{% else %}Nueva Jornada{% endif %}
+                </h3>
+                <small class="opacity-75">
+                    {% if jornada %}
+                        Modifique los datos de la jornada
+                    {% else %}
+                        Registre una nueva jornada en el sistema
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
 
-        <form method="POST">
+    <div class="card-body p-4">
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <input type="hidden"
-                   name="csrf_token"
-                   value="{{ csrf_token() }}">
+            <!-- FILA 1: Nombre y Tolerancia -->
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label fw-bold">
+                        Nombre de la jornada <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-tag"></i>
+                        </span>
+                        <input type="text"
+                               id="nombre"
+                               name="nombre"
+                               class="form-control"
+                               placeholder="Ej: Mañana, Tarde, Única"
+                               value="{{ jornada.nombre if jornada else '' }}"
+                               required>
+                    </div>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">
-                    Nombre de la jornada
-                </label>
-
-                <input
-                    type="text"
-                    name="nombre"
-                    class="form-control"
-                    required
-                >
+                <div class="col-md-6 mb-3">
+                    <label for="tolerancia_minutos" class="form-label fw-bold">
+                        Tolerancia (minutos)
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-stopwatch"></i>
+                        </span>
+                        <input type="number"
+                               id="tolerancia_minutos"
+                               name="tolerancia_minutos"
+                               class="form-control"
+                               min="0"
+                               placeholder="Ej: 10"
+                               value="{{ jornada.tolerancia_minutos if jornada else 0 }}">
+                    </div>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Minutos de gracia permitidos antes de marcar tardanza.
+                    </div>
+                </div>
             </div>
 
-            <button
-                type="submit"
-                class="btn btn-primary">
-                Guardar
-            </button>
+            <!-- FILA 2: Hora Inicio y Hora Fin -->
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label for="hora_inicio" class="form-label fw-bold">
+                        Hora de inicio <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-play-circle"></i>
+                        </span>
+                        <input type="time"
+                               id="hora_inicio"
+                               name="hora_inicio"
+                               class="form-control"
+                               value="{{ jornada.hora_inicio.strftime('%H:%M') if jornada and jornada.hora_inicio else '' }}"
+                               required>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="hora_fin" class="form-label fw-bold">
+                        Hora de fin <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-stop-circle"></i>
+                        </span>
+                        <input type="time"
+                               id="hora_fin"
+                               name="hora_fin"
+                               class="form-control"
+                               value="{{ jornada.hora_fin.strftime('%H:%M') if jornada and jornada.hora_fin else '' }}"
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 3: Estado Activo -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="activo"
+                           name="activo"
+                           {% if not jornada or jornada.activo %}checked{% endif %}>
+                    <label class="form-check-label fw-bold" for="activo">
+                        Jornada activa
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE INFORMACIÓN IMPORTANTE -->
+            <div class="alert alert-info border-0" style="background-color: #e7f3ff; border-radius: 8px;">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="bi bi-info-circle-fill text-primary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Información Importante</h6>
+                        <ul class="mb-0 small">
+                            <li>La jornada define el horario general de la sede (ej: Mañana 6:30-12:30).</li>
+                            <li>Los bloques específicos de clase se programarán en una fase posterior.</li>
+                            <li>La tolerancia permite minutos de gracia antes de marcar tardanza.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTONES DE ACCIÓN -->
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancelar
+                </a>
+                <button type="submit" class="btn text-white" style="background-color: #764ba2;">
+                    <i class="bi bi-save"></i>
+                    {% if jornada %}Actualizar Jornada{% else %}Guardar Jornada{% endif %}
+                </button>
+            </div>
 
         </form>
-
     </div>
 </div>
 

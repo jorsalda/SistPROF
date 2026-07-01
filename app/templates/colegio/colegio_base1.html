@@ -80,13 +80,7 @@
                     <i class="bi bi-person-heart"></i> Acudientes
                 </a>
             </li>
-            <!-- Áreas -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.lista_areas') }}"
-                   class="menu-link {% if request.endpoint in ['colegio.lista_areas', 'colegio.nueva_area', 'colegio.editar_area'] %}active{% endif %}">
-                    <i class="bi bi-book"></i> Áreas
-                </a>
-            </li>
+
             <!-- Permisos -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_permisos') }}"
@@ -135,24 +129,24 @@
                 </a>
             </li>
             <!-- Configuración del Sistema -->
-            <li class="menu-item">
-                <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
-                    <i class="bi bi-sliders2"></i> Configuración
-                    <i class="bi bi-chevron-right"></i>
-                </a>
-                <ul class="collapse sub-menu" id="configSubmenu">
-                    <li class="menu-item">
-                        <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
-                            Llegadas Tarde
-                        </a>
-                    </li>
-                    <li class="menu-item">
-                        <a href="{{ url_for('colegio.configuracion_escalamiento') }}" class="menu-link">
-                            Escalamiento
-                        </a>
-                    </li>
-                </ul>
-            </li>
+                <li class="menu-item">
+    <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
+        <i class="bi bi-sliders2"></i> Configuración
+        <i class="bi bi-chevron-right"></i>
+    </a>
+    <ul class="collapse sub-menu" id="configSubmenu">
+        <li class="menu-item">
+            <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
+                Llegadas Tarde
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="{{ url_for('colegio.configuracion_escalamiento') }}" class="menu-link">
+                Escalamiento
+            </a>
+        </li>
+    </ul>
+</li>
             <!-- Mi Cuenta -->
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}"
@@ -177,7 +171,7 @@
         <header class="colegio-header">
             <h1>
                 {% block colegio_page_title %}
-                Dashboard Institucional
+                    Dashboard Institucional
                 {% endblock %}
             </h1>
 
@@ -192,14 +186,14 @@
 
             <!-- Flash messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-            {% endif %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
             {% endwith %}
 
             <!-- Contenido dinámico -->

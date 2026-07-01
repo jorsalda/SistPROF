@@ -1,0 +1,265 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}{{ 'Editar' if grupo else 'Nuevo' }} Grupo | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.sedes') }}">Sedes</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.detalle_sede', sede_id=sede.id) }}">{{ sede.nombre }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}">Jornadas</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.lista_grupos', sede_id=sede.id, jornada_id=jornada.id) }}">
+                            {{ jornada.nombre }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {{ 'Editar' if grupo else 'Nuevo' }} Grupo
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Card Principal -->
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-people-fill fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="mb-0 fw-bold">{{ 'Editar' if grupo else 'Nuevo' }} Grupo</h3>
+                            <p class="mb-0 opacity-75">
+                                {% if grupo %}
+                                    Actualice la información del grupo {{ grupo.grado }}{{ grupo.nombre }}
+                                {% else %}
+                                    Registre un nuevo grupo para {{ sede.nombre }} - {{ jornada.nombre }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-5">
+
+                    <!-- Alertas Flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- SECCIÓN 1: Información del Grupo -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom">
+                            <i class="bi bi-book me-2"></i>Información del Grupo
+                        </h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Grado <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-layers text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="grado"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 6, 11, Primaria"
+                                           value="{{ grupo.grado if grupo else '' }}"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Ej: 6, 7, 8, 10, 11, Primaria, Secundaria
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Nombre/Letra <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-fonts text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="nombre"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: A, B, 01, 02"
+                                           value="{{ grupo.nombre if grupo else '' }}"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Ej: A, B, C, 01, 02
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Capacidad Máxima
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-people text-muted"></i>
+                                    </span>
+                                    <input type="number"
+                                           name="capacidad_maxima"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 40"
+                                           value="{{ grupo.capacidad_maxima if grupo else '40' }}"
+                                           min="1"
+                                           max="100">
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Máximo estudiantes permitidos
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 2: Director de Grupo -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
+                            <i class="bi bi-person-check me-2"></i>Director de Grupo
+                        </h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    Docente Director
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person-badge text-muted"></i>
+                                    </span>
+                                    <select name="director_docente_id"
+                                            class="form-select border-start-0 ps-0 form-control-lg">
+                                        <option value="">Sin asignar</option>
+                                        {% for docente in docentes %}
+                                        <option value="{{ docente.id }}"
+                                                {% if grupo and grupo.director_docente_id == docente.id %}selected{% endif %}>
+                                            {{ docente.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Opcional - Puede asignarse después
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información de Contexto -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <div class="alert alert-light border rounded-3 mb-0">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="bi bi-building text-primary fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <strong class="d-block mb-1">Sede</strong>
+                                            <span class="text-muted">{{ sede.nombre }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-light border rounded-3 mb-0">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="bi bi-clock text-primary fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <strong class="d-block mb-1">Jornada</strong>
+                                            <span class="text-muted">{{ jornada.nombre }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información Adicional -->
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>Información importante</strong><br>
+                                    <small>
+                                        • El grado y nombre formarán el identificador del grupo (Ej: 6A, 11B).<br>
+                                        • Un docente solo puede ser director de un grupo activo.<br>
+                                        • El año lectivo se asigna automáticamente al año actual.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                            <a href="{{ url_for('colegio.lista_grupos', sede_id=sede.id, jornada_id=jornada.id) }}"
+                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="bi bi-save me-2"></i>{{ 'Actualizar' if grupo else 'Guardar Grupo' }}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+    }
+    .form-control-lg, .form-select-lg {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+</style>
+
+{% endblock %}

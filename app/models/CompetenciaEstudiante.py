@@ -1,7 +1,7 @@
 from app.extensions import db
 
 
-class CompetenciaMateria(db.Model):
+class CompetenciaEstudiante(db.Model):
     __tablename__ = "competencias_materia"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -40,4 +40,4 @@ class CompetenciaMateria(db.Model):
     )
 
     def __repr__(self):
-        return f"<CompetenciaMateria {self.nombre}>"
+        return f"<CompetenciaEstudiante {self.nombre}>"

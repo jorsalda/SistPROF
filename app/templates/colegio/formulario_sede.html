@@ -1,127 +1,144 @@
 {% extends "colegio/colegio_base.html" %}
 
 {% block colegio_page_title %}
-{% if sede %}
-Editar Sede
-{% else %}
-Nueva Sede
-{% endif %}
+{% if sede %}Editar Sede{% else %}Nueva Sede{% endif %}
 {% endblock %}
 
 {% block colegio_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
 
-    <h2>
-        <i class="bi bi-building"></i>
-
-        {% if sede %}
-            Editar Sede
-        {% else %}
-            Nueva Sede
-        {% endif %}
-    </h2>
-
-    <a href="{{ url_for('colegio.sedes') }}"
-       class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i>
-        Volver
-    </a>
-
-</div>
-
-<div class="card shadow-sm border-0">
+    <!-- HEADER CON DEGRADADO MORADO -->
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="bi bi-building" style="font-size: 2rem;"></i>
+            </div>
+            <div>
+                <h3 class="mb-0 fw-bold">
+                    {% if sede %}Editar Sede{% else %}Nueva Sede{% endif %}
+                </h3>
+                <small class="opacity-75">
+                    {% if sede %}
+                        Modifique los datos de la sede
+                    {% else %}
+                        Registre una nueva sede en el sistema
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
 
     <div class="card-body p-4">
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <form method="POST">
-                <input type="hidden"
-           name="csrf_token"
-           value="{{ csrf_token() }}">
+            <!-- FILA 1: Nombre y Teléfono -->
+            <div class="row mb-3">
+                <div class="col-md-8 mb-3">
+                    <label for="nombre" class="form-label fw-bold">
+                        Nombre de la sede <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-tag"></i>
+                        </span>
+                        <input type="text"
+                               id="nombre"
+                               name="nombre"
+                               class="form-control"
+                               placeholder="Ej: Sede Principal, Sede Norte, LA INDIA"
+                               value="{{ sede.nombre if sede else '' }}"
+                               required>
+                    </div>
+                </div>
 
-            <div class="mb-3">
-
-                <label class="form-label fw-semibold">
-                    Nombre de la sede
-                </label>
-
-                <input type="text"
-                       name="nombre"
-                       class="form-control"
-                       value="{{ sede.nombre if sede else '' }}"
-                       required>
-
+                <div class="col-md-4 mb-3">
+                    <label for="telefono" class="form-label fw-bold">
+                        Teléfono
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-telephone"></i>
+                        </span>
+                        <input type="tel"
+                               id="telefono"
+                               name="telefono"
+                               class="form-control"
+                               placeholder="Ej: 300 123 4567"
+                               value="{{ sede.telefono if sede else '' }}">
+                    </div>
+                </div>
             </div>
 
+            <!-- FILA 2: Dirección -->
             <div class="mb-3">
-
-                <label class="form-label fw-semibold">
+                <label for="direccion" class="form-label fw-bold">
                     Dirección
                 </label>
-
-                <input type="text"
-                       name="direccion"
-                       class="form-control"
-                       value="{{ sede.direccion if sede else '' }}">
-
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-geo-alt"></i>
+                    </span>
+                    <input type="text"
+                           id="direccion"
+                           name="direccion"
+                           class="form-control"
+                           placeholder="Ej: Calle 10 # 5-20, Barrio Centro"
+                           value="{{ sede.direccion if sede else '' }}">
+                </div>
+                <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Dirección física de la sede (opcional pero recomendada).
+                </div>
             </div>
 
-            <div class="mb-3">
-
-                <label class="form-label fw-semibold">
-                    Teléfono
-                </label>
-
-                <input type="text"
-                       name="telefono"
-                       class="form-control"
-                       value="{{ sede.telefono if sede else '' }}">
-
+            <!-- FILA 3: Estado Activo -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="activo"
+                           name="activo"
+                           {% if not sede or sede.activo %}checked{% endif %}>
+                    <label class="form-check-label fw-bold" for="activo">
+                        Sede activa
+                    </label>
+                </div>
+                <div class="form-text">
+                    Las sedes inactivas no aparecerán en los listados principales ni podrán asignarse a nuevos docentes o estudiantes.
+                </div>
             </div>
 
-            <div class="form-check mb-4">
-
-                <input class="form-check-input"
-                       type="checkbox"
-                       name="activo"
-                       id="activo"
-                       {% if sede and sede.activo %}checked{% endif %}>
-
-                <label class="form-check-label"
-                       for="activo">
-                    Sede activa
-                </label>
-
+            <!-- SECCIÓN DE INFORMACIÓN IMPORTANTE -->
+            <div class="alert alert-info border-0" style="background-color: #e7f3ff; border-radius: 8px;">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="bi bi-info-circle-fill text-primary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Información Importante</h6>
+                        <ul class="mb-0 small">
+                            <li>Cada sede puede tener una o varias jornadas (Mañana, Tarde, etc.).</li>
+                            <li>Los docentes y estudiantes se asignarán a una sede específica.</li>
+                            <li>El nombre de la sede debe ser único dentro del colegio.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <div class="d-flex gap-2">
-
-                <button type="submit"
-                        class="btn btn-primary">
-
-                    <i class="bi bi-save"></i>
-
-                    {% if sede %}
-                        Actualizar sede
-                    {% else %}
-                        Guardar sede
-                    {% endif %}
-
-                </button>
-
-                <a href="{{ url_for('colegio.sedes') }}"
-                   class="btn btn-outline-secondary">
-
-                    Cancelar
-
+            <!-- BOTONES DE ACCIÓN -->
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                <a href="{{ url_for('colegio.sedes') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancelar
                 </a>
-
+                <button type="submit" class="btn text-white" style="background-color: #764ba2;">
+                    <i class="bi bi-save"></i>
+                    {% if sede %}Actualizar Sede{% else %}Guardar Sede{% endif %}
+                </button>
             </div>
 
         </form>
-
     </div>
-
 </div>
 
 {% endblock %}

@@ -18,7 +18,7 @@ class IndicadorLogro(db.Model):
     )
 
     competencia = db.relationship(
-        "CompetenciaMateria",
+        "CompetenciaEstudiante",
         back_populates="indicadores"
     )
 

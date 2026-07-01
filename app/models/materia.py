@@ -27,7 +27,7 @@ class Materia(db.Model):
 
     # Competencias de la materia
     competencias = db.relationship(
-        "CompetenciaMateria",
+        "CompetenciaEstudiante",
         back_populates="materia",
         lazy=True,
         cascade="all, delete-orphan"

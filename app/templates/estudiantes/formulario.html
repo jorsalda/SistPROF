@@ -6,10 +6,10 @@
 
 <div class="container-fluid px-4 py-4">
     <div class="row justify-content-center">
-        <div class="col-12 col-lg-10 col-xl-9">
+        <div class="col-12 col-lg-11 col-xl-9">
 
             <!-- Breadcrumb -->
-            <nav aria-label="breadcrumb" class="mb-4">
+            <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
                         <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
@@ -24,68 +24,94 @@
             </nav>
 
             <!-- Card Principal -->
-            <div class="card border-0 shadow-lg rounded-4">
-                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-gradient-primary text-white rounded-top-3 p-4">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-person-badge fs-1"></i>
+                            <i class="bi bi-person-badge fs-2"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h3 class="mb-0 fw-bold">{{ titulo }}</h3>
-                            <p class="mb-0 opacity-75">
+                            <p class="mb-0 opacity-75 small">
                                 {% if edit_mode %}
-                                    Actualice la información del estudiante
+                                Actualice la información del estudiante
                                 {% else %}
-                                    Registre un nuevo estudiante en el sistema
+                                Registre un nuevo estudiante en el sistema
                                 {% endif %}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="card-body p-5">
+                <div class="card-body p-4">
 
                     <!-- Alertas Flash -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4" role="alert">
-                                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-3" role="alert">
+                        <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
                     {% endwith %}
 
-                    <form method="POST" action="{{ url_for('estudiante.editar', id=estudiante.id) if edit_mode else url_for('estudiante.nuevo') }}">
+                    <form method="POST"
+                          action="{{ url_for('estudiante.editar', id=estudiante.id) if edit_mode else url_for('estudiante.nuevo') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- SECCIÓN 1: Información Personal -->
-                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom">
+                        <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom">
                             <i class="bi bi-person-circle me-2"></i>Información Personal
                         </h5>
 
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-12">
+                        <div class="row g-3 mb-3">
+
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Nombre completo <span class="text-danger">*</span>
+                                    Nombre <span class="text-danger">*</span>
                                 </label>
+
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-person text-muted"></i>
-                                    </span>
-                                    <input type="text"
-                                           name="nombre"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: Juan Carlos Pérez García"
-                                           value="{{ estudiante.nombre if edit_mode else '' }}"
-                                           required>
+            <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-person text-muted"></i>
+            </span>
+
+                                    <input
+                                            type="text"
+                                            name="nombre"
+                                            class="form-control border-start-0 ps-0"
+                                            placeholder="Ej: Juan Carlos"
+                                            value="{{ estudiante.nombre if edit_mode else '' }}"
+                                            required>
                                 </div>
                             </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Apellido <span class="text-danger">*</span>
+                                </label>
+
+                                <div class="input-group">
+            <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-person-vcard text-muted"></i>
+            </span>
+
+                                    <input
+                                            type="text"
+                                            name="apellido"
+                                            class="form-control border-start-0 ps-0"
+                                            placeholder="Ej: Pérez García"
+                                            value="{{ estudiante.apellido if edit_mode else '' }}"
+                                            required>
+                                </div>
+                            </div>
+
                         </div>
 
-                        <div class="row g-4 mb-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Dirección <span class="text-danger">*</span>
@@ -96,7 +122,7 @@
                                     </span>
                                     <input type="text"
                                            name="direccion"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           class="form-control border-start-0 ps-0"
                                            placeholder="Ej: Calle 123 #45-67"
                                            value="{{ estudiante.direccion if edit_mode else '' }}"
                                            required>
@@ -113,7 +139,7 @@
                                     </span>
                                     <input type="tel"
                                            name="telefono"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           class="form-control border-start-0 ps-0"
                                            placeholder="Ej: 300 123 4567"
                                            value="{{ estudiante.telefono if edit_mode else '' }}"
                                            required>
@@ -122,11 +148,11 @@
                         </div>
 
                         <!-- SECCIÓN 2: Información Académica -->
-                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
+                        <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom mt-4">
                             <i class="bi bi-book me-2"></i>Información Académica
                         </h5>
 
-                        <div class="row g-4 mb-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">
                                     Sede <span class="text-danger">*</span>
@@ -137,13 +163,13 @@
                                     </span>
                                     <select name="sede_id"
                                             id="sedeSelect"
-                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            class="form-select border-start-0 ps-0"
                                             required
-                                            onchange="cargarGrupos()">
+                                            onchange="cargarJornadas()">
                                         <option value="">Seleccione sede</option>
                                         {% for sede in sedes %}
                                         <option value="{{ sede.id }}"
-                                                {% if edit_mode and estudiante.sede_id == sede.id %}selected{% endif %}>
+                                                {% if edit_mode and estudiante.sede_id== sede.id %}selected{% endif %}>
                                             {{ sede.nombre }}
                                         </option>
                                         {% endfor %}
@@ -161,16 +187,15 @@
                                     </span>
                                     <select name="jornada_id"
                                             id="jornadaSelect"
-                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            class="form-select border-start-0 ps-0"
                                             required
                                             onchange="cargarGrupos()">
                                         <option value="">Seleccione jornada</option>
-                                        {% for jornada in jornadas %}
-                                        <option value="{{ jornada.id }}"
-                                                {% if edit_mode and estudiante.jornada_id == jornada.id %}selected{% endif %}>
-                                            {{ jornada.nombre }}
+                                        {% if edit_mode and estudiante.jornada_id %}
+                                        <option value="{{ estudiante.jornada_id }}" selected>
+                                            {{ estudiante.jornada.nombre if estudiante.jornada else '' }}
                                         </option>
-                                        {% endfor %}
+                                        {% endif %}
                                     </select>
                                 </div>
                             </div>
@@ -185,7 +210,7 @@
                                     </span>
                                     <select name="grupo_id"
                                             id="grupoSelect"
-                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            class="form-select border-start-0 ps-0"
                                             required>
                                         <option value="">Seleccione grupo</option>
                                         {% if edit_mode and estudiante.grupo_rel %}
@@ -198,7 +223,7 @@
                             </div>
                         </div>
 
-                        <div class="row g-4 mb-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Docente Director de Grupo
@@ -208,11 +233,12 @@
                                         <i class="bi bi-person-check text-muted"></i>
                                     </span>
                                     <select name="docente_id"
-                                            class="form-select border-start-0 ps-0 form-control-lg">
+                                            class="form-select border-start-0 ps-0">
                                         <option value="">Sin asignar</option>
                                         {% for docente in docentes %}
                                         <option value="{{ docente.id }}"
-                                                {% if edit_mode and estudiante.docente_id == docente.id %}selected{% endif %}>
+                                                {% if edit_mode and estudiante.docente_id== docente.id %}selected{%
+                                                endif %}>
                                             {{ docente.nombre }}
                                         </option>
                                         {% endfor %}
@@ -225,11 +251,11 @@
                         </div>
 
                         <!-- SECCIÓN 3: Acudiente -->
-                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
+                        <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom mt-4">
                             <i class="bi bi-shield-person me-2"></i>Acudiente Principal
                         </h5>
 
-                        <div class="row g-4 mb-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-12">
                                 <label class="form-label fw-semibold">
                                     Acudiente Principal <span class="text-danger">*</span>
@@ -239,13 +265,15 @@
                                         <i class="bi bi-person-heart text-muted"></i>
                                     </span>
                                     <select name="acudiente_principal_id"
-                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            class="form-select border-start-0 ps-0"
                                             required>
                                         <option value="">Seleccione acudiente</option>
                                         {% for acudiente in acudientes %}
                                         <option value="{{ acudiente.id }}"
-                                                {% if edit_mode and estudiante.acudiente_principal_id == acudiente.id %}selected{% endif %}>
-                                            {{ acudiente.nombre }} - {{ acudiente.parentesco or 'N/A' }} ({{ acudiente.telefono }})
+                                                {% if edit_mode and estudiante.acudiente_principal_id== acudiente.id
+                                                %}selected{% endif %}>
+                                            {{ acudiente.nombre }} - {{ acudiente.parentesco or 'N/A' }} ({{
+                                            acudiente.telefono }})
                                         </option>
                                         {% endfor %}
                                     </select>
@@ -258,15 +286,15 @@
 
                         <!-- Información Adicional -->
                         <div class="alert alert-info rounded-3 mb-4">
-                            <div class="d-flex">
+                            <div class="d-flex align-items-start">
                                 <div class="flex-shrink-0">
-                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                    <i class="bi bi-info-circle-fill text-primary fs-5"></i>
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <strong>Información importante</strong><br>
                                     <small>
-                                        • Todos los campos marcados con <span class="text-danger">*</span> son obligatorios.<br>
-                                        • El estudiante podrá acceder al sistema si se le crea un usuario.<br>
+                                        • Todos los campos marcados con <span class="text-danger">*</span> son
+                                        obligatorios.<br>
                                         • El QR de acceso se genera automáticamente al guardar.
                                     </small>
                                 </div>
@@ -276,11 +304,11 @@
                         <!-- Botones de Acción -->
                         <div class="d-flex gap-3 justify-content-end pt-3 border-top">
                             <a href="{{ url_for('estudiante.listar') }}"
-                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                               class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
                             <button type="submit"
-                                    class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                    class="btn btn-primary">
                                 <i class="bi bi-save me-2"></i>{{ 'Actualizar' if edit_mode else 'Guardar Estudiante' }}
                             </button>
                         </div>
@@ -296,50 +324,146 @@
     .bg-gradient-primary {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
+
     .form-control:focus, .form-select:focus {
         border-color: #667eea;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
+
     .btn-primary {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
     }
+
     .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    .btn-outline-secondary:hover {
-        transform: translateY(-2px);
-    }
-    .card {
-        transition: transform 0.3s ease;
-    }
-    .form-control-lg, .form-select-lg {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
+
+    .input-group .form-control,
+    .input-group .form-select {
+        font-size: 0.95rem;
     }
 </style>
 
 <script>
-function cargarGrupos() {
-    const sedeId = document.getElementById('sedeSelect').value;
-    const jornadaId = document.getElementById('jornadaSelect').value;
-    const grupoSelect = document.getElementById('grupoSelect');
+    // Cargar jornadas cuando cambia la sede
+    function cargarJornadas() {
+        const sedeId = document.getElementById('sedeSelect').value;
+        const jornadaSelect = document.getElementById('jornadaSelect');
+        const grupoSelect = document.getElementById('grupoSelect');
 
-    if (sedeId && jornadaId) {
-        fetch(`/estudiantes/api/grupos/${sedeId}?jornada=${jornadaId}`)
-            .then(response => response.json())
-            .then(grupos => {
-                grupoSelect.innerHTML = '<option value="">Seleccione grupo</option>';
-                grupos.forEach(grupo => {
-                    const option = document.createElement('option');
-                    option.value = grupo.id;
-                    option.textContent = `${grupo.grado}${grupo.nombre}`;
-                    grupoSelect.appendChild(option);
+        // Limpiar selects dependientes
+        jornadaSelect.innerHTML = '<option value="">Seleccione jornada</option>';
+        grupoSelect.innerHTML = '<option value="">Seleccione sede y jornada primero</option>';
+
+        if (sedeId) {
+            fetch(`/estudiantes/api/jornadas/${sedeId}`)
+                .then(response => response.json())
+                .then(jornadas => {
+                    if (jornadas.length === 0) {
+                        jornadaSelect.innerHTML = '<option value="">No hay jornadas disponibles</option>';
+                        return;
+                    }
+
+                    jornadas.forEach(jornada => {
+                        const option = document.createElement('option');
+                        option.value = jornada.id;
+                        option.textContent = jornada.nombre;
+                        jornadaSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando jornadas:', error);
+                    jornadaSelect.innerHTML = '<option value="">Error al cargar jornadas</option>';
                 });
-            });
+        }
     }
-}
+
+    // Cargar grupos cuando cambia la jornada
+    function cargarGrupos(grupoIdSeleccionado = null) {
+        const sedeId = document.getElementById('sedeSelect').value;
+        const jornadaId = document.getElementById('jornadaSelect').value;
+        const grupoSelect = document.getElementById('grupoSelect');
+
+        // Limpiar select de grupos
+        grupoSelect.innerHTML = '<option value="">Seleccione grupo</option>';
+
+        if (sedeId && jornadaId) {
+            fetch(`/estudiantes/api/grupos/${sedeId}?jornada=${jornadaId}`)
+                .then(response => response.json())
+                .then(grupos => {
+                    if (grupos.length === 0) {
+                        grupoSelect.innerHTML = '<option value="">No hay grupos disponibles</option>';
+                        return;
+                    }
+
+                    grupos.forEach(grupo => {
+                        const option = document.createElement('option');
+                        option.value = grupo.id;
+                        option.textContent = `${grupo.grado}${grupo.nombre}`;
+
+                        // Si hay un grupo seleccionado (modo edición), seleccionarlo
+                        if (grupoIdSeleccionado && grupo.id == grupoIdSeleccionado) {
+                            option.selected = true;
+                        }
+
+                        grupoSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando grupos:', error);
+                    grupoSelect.innerHTML = '<option value="">Error al cargar grupos</option>';
+                });
+        }
+    }
+
+    // Cargar datos automáticamente en modo edición
+    document.addEventListener('DOMContentLoaded', function() {
+        const sedeSelect = document.getElementById('sedeSelect');
+        const jornadaSelect = document.getElementById('jornadaSelect');
+        const grupoSelect = document.getElementById('grupoSelect');
+
+        const sedeId = sedeSelect.value;
+        const jornadaId = jornadaSelect.value;
+
+        // Obtener el ID del grupo actual (si existe)
+        const grupoIdActual = grupoSelect.querySelector('option[selected]')?.value || null;
+
+        if (sedeId) {
+            // Cargar jornadas primero
+            fetch(`/estudiantes/api/jornadas/${sedeId}`)
+                .then(response => response.json())
+                .then(jornadas => {
+                    // Guardar la selección actual de jornada
+                    const jornadaSeleccionada = jornadaId;
+
+                    // Limpiar y recargar jornadas
+                    jornadaSelect.innerHTML = '<option value="">Seleccione jornada</option>';
+
+                    jornadas.forEach(jornada => {
+                        const option = document.createElement('option');
+                        option.value = jornada.id;
+                        option.textContent = jornada.nombre;
+
+                        // Si es la jornada seleccionada (modo edición), marcarla
+                        if (jornadaSeleccionada && jornada.id == jornadaSeleccionada) {
+                            option.selected = true;
+                        }
+
+                        jornadaSelect.appendChild(option);
+                    });
+
+                    // Si hay jornada seleccionada, cargar grupos
+                    if (jornadaSeleccionada) {
+                        cargarGrupos(grupoIdActual);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando datos iniciales:', error);
+                });
+        }
+    });
 </script>
 
 {% endblock %}

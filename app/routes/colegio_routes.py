@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash
-
+from app.models.areas_gestion import AreaGestion
 from app import Coordinador
 from app.extensions import db
 from app.models.colegio import Colegio
@@ -12,6 +12,7 @@ from app.models.sede import Sede
 from app.models.estudiante import Estudiante
 from app.models.jornada import Jornada
 from app.models.usuario import Usuario
+from app.models.grupo import Grupo
 
 colegio_bp = Blueprint(
     "colegio",
@@ -184,12 +185,46 @@ def jornadas_sede(sede_id):
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/nueva", methods=["GET", "POST"])
 @login_required
 def nueva_jornada(sede_id):
-    sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
     if request.method == "POST":
-        nombre = request.form.get("nombre")
+
+        nombre = request.form.get("nombre", "").strip()
         hora_inicio = request.form.get("hora_inicio")
         hora_fin = request.form.get("hora_fin")
-        tolerancia_minutos = request.form.get("tolerancia_minutos", 0)
+        tolerancia_minutos = request.form.get(
+            "tolerancia_minutos",
+            type=int,
+            default=0
+        )
+
+        # ======================================
+        # VALIDAR JORNADA DUPLICADA (CORREGIDO)
+        # ======================================
+
+        jornada_existente = Jornada.query.filter(
+            Jornada.colegio_id == current_user.colegio_id,
+            Jornada.sede_id == sede.id,  # ✅ Filtrar por sede
+            db.func.lower(Jornada.nombre) == nombre.lower()
+        ).first()
+
+        if jornada_existente:
+
+            flash(
+                f'La jornada "{nombre}" ya existe.',
+                "danger"
+            )
+
+            return redirect(request.url)
+
+        # ======================================
+        # CREAR JORNADA
+        # ======================================
+
         jornada = Jornada(
             nombre=nombre,
             hora_inicio=hora_inicio,
@@ -199,16 +234,520 @@ def nueva_jornada(sede_id):
             colegio_id=current_user.colegio_id,
             activo=True
         )
+
         db.session.add(jornada)
         db.session.commit()
-        flash("Jornada registrada correctamente", "success")
+
+        flash(
+            "Jornada registrada correctamente.",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "colegio.jornadas_sede",
+                sede_id=sede.id
+            )
+        )
+
+    return render_template(
+        "colegio/formulario_jornada.html",
+        sede=sede
+    )
+@colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_jornada(sede_id, jornada_id):
+    # Verificar que la jornada pertenezca a la sede y al colegio del usuario
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
+
+    if request.method == "POST":
+        jornada.nombre = request.form.get("nombre", "").strip()
+        jornada.hora_inicio = request.form.get("hora_inicio")
+        jornada.hora_fin = request.form.get("hora_fin")
+        jornada.tolerancia_minutos = int(request.form.get("tolerancia_minutos", 0))
+        jornada.activo = request.form.get("activo") == "on"
+
+        db.session.commit()
+        flash("Jornada actualizada correctamente", "success")
         return redirect(url_for("colegio.jornadas_sede", sede_id=sede.id))
-    return render_template("colegio/formulario_jornada.html", sede=sede)
+
+    return render_template("colegio/formulario_jornada.html", sede=sede, jornada=jornada)
 
 
-# ==========================================================
-# DOCENTES
-# ==========================================================
+@colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/cambiar-estado", methods=["POST"])
+@login_required
+def cambiar_estado_jornada(sede_id, jornada_id):
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada.activo = not jornada.activo
+    db.session.commit()
+
+    estado = "activada" if jornada.activo else "desactivada"
+    flash(f"Jornada '{jornada.nombre}' {estado} correctamente", "success" if jornada.activo else "warning")
+    return redirect(url_for("colegio.jornadas_sede", sede_id=sede_id))
+
+
+@colegio_bp.route(
+    "/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos"
+)
+@login_required
+def lista_grupos(sede_id, jornada_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    grupos = Grupo.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        sede_id=sede.id,
+        jornada_id=jornada.id,
+        activo=True
+    ).order_by(
+        Grupo.grado,
+        Grupo.nombre
+    ).all()
+
+    return render_template(
+        "colegio/grupos.html",
+        sede=sede,
+        jornada=jornada,
+        grupos=grupos
+    )
+
+@colegio_bp.route(
+    "/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/nuevo",
+    methods=["GET", "POST"]
+)
+
+@login_required
+def nuevo_grupo(sede_id, jornada_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    docentes = Docente.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        sede_id=sede.id,
+        activo=True
+    ).order_by(Docente.nombre).all()
+
+    if request.method == "POST":
+
+        grado = request.form.get("grado")
+        nombre = request.form.get("nombre")
+
+        director_docente_id = (
+            request.form.get("director_docente_id")
+            or None
+        )
+
+        anio_lectivo = datetime.now().year
+
+        # ==================================================
+        # VALIDAR GRUPO DUPLICADO
+        # ==================================================
+
+        grupo_duplicado = Grupo.query.filter_by(
+            colegio_id=current_user.colegio_id,
+            sede_id=sede.id,
+            jornada_id=jornada.id,
+            anio_lectivo=anio_lectivo,
+            grado=grado,
+            nombre=nombre
+        ).first()
+
+        if grupo_duplicado:
+
+            flash(
+                f"El grupo {grado}{nombre} ya existe en esta jornada.",
+                "danger"
+            )
+
+            return render_template(
+                "colegio/formulario_grupo.html",
+                sede=sede,
+                jornada=jornada,
+                docentes=docentes,
+                grupo=None
+            )
+
+        # ==================================================
+        # VALIDAR DIRECTOR DE GRUPO
+        # ==================================================
+
+        if director_docente_id:
+
+            grupo_existente = Grupo.query.filter(
+                Grupo.director_docente_id == director_docente_id,
+                Grupo.activo == True,
+                Grupo.colegio_id == current_user.colegio_id
+            ).first()
+
+            if grupo_existente:
+
+                flash(
+                    f"El docente ya dirige el grupo "
+                    f"{grupo_existente.grado}{grupo_existente.nombre}",
+                    "danger"
+                )
+
+                return render_template(
+                    "colegio/formulario_grupo.html",
+                    sede=sede,
+                    jornada=jornada,
+                    docentes=docentes,
+                    grupo=None
+                )
+
+        # ==================================================
+        # CREAR GRUPO
+        # ==================================================
+
+        grupo = Grupo(
+            grado=grado,
+            nombre=nombre,
+            capacidad_maxima=request.form.get(
+                "capacidad_maxima",
+                type=int
+            ),
+            director_docente_id=director_docente_id,
+            anio_lectivo=anio_lectivo,
+            colegio_id=current_user.colegio_id,
+            sede_id=sede.id,
+            jornada_id=jornada.id,
+            activo=True
+        )
+
+        db.session.add(grupo)
+        db.session.commit()
+
+        flash(
+            "Grupo creado correctamente",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "colegio.lista_grupos",
+                sede_id=sede.id,
+                jornada_id=jornada.id
+            )
+        )
+
+    return render_template(
+        "colegio/formulario_grupo.html",
+        sede=sede,
+        jornada=jornada,
+        docentes=docentes,
+        grupo=None
+    )
+
+@colegio_bp.route(
+    "/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/editar",
+    methods=["GET", "POST"]
+)
+@login_required
+def editar_grupo(sede_id, jornada_id, grupo_id):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        jornada_id=jornada.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    docentes = Docente.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(
+        Docente.nombre
+    ).all()
+
+    # ==========================================
+    # GRUPOS DISPONIBLES PARA FUSIÓN
+    # ==========================================
+
+    grupos_fusion = Grupo.query.filter(
+        Grupo.id != grupo.id,
+        Grupo.grado == grupo.grado,
+        Grupo.jornada_id == jornada.id,
+        Grupo.colegio_id == current_user.colegio_id,
+        Grupo.activo == True
+    ).order_by(
+        Grupo.nombre
+    ).all()
+
+    if request.method == "POST":
+
+        grupo.grado = request.form.get("grado")
+        grupo.nombre = request.form.get("nombre")
+
+        grupo.capacidad_maxima = request.form.get(
+            "capacidad_maxima",
+            type=int
+        )
+
+        grupo.director_docente_id = (
+            request.form.get("director_docente_id")
+            or None
+        )
+
+        db.session.commit()
+
+        flash(
+            "Grupo actualizado correctamente",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "colegio.lista_grupos",
+                sede_id=sede.id,
+                jornada_id=jornada.id
+            )
+        )
+    grupos_inactivos = Grupo.query.filter(
+        Grupo.grado == grupo.grado,
+        Grupo.jornada_id == jornada.id,
+        Grupo.colegio_id == current_user.colegio_id,
+        Grupo.activo == False
+    ).order_by(
+        Grupo.nombre
+    ).all()
+    return render_template(
+        "colegio/formulario_grupo.html",
+        grupo=grupo,
+        sede=sede,
+        jornada=jornada,
+        docentes=docentes,
+        grupos_fusion=grupos_fusion,
+        grupos_inactivos=grupos_inactivos
+    )
+
+@colegio_bp.route(
+    '/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/dividir',
+    methods=['GET', 'POST']
+)
+@login_required
+def dividir_grupo(
+    sede_id,
+    jornada_id,
+    grupo_id
+):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        jornada_id=jornada.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    # ==========================================
+    # GRUPOS INACTIVOS DEL MISMO GRADO
+    # (posibles candidatos para reactivar)
+    # ==========================================
+
+    grupos_inactivos = Grupo.query.filter(
+        Grupo.grado == grupo.grado,
+        Grupo.jornada_id == jornada.id,
+        Grupo.colegio_id == current_user.colegio_id,
+        Grupo.activo == False
+    ).order_by(
+        Grupo.nombre
+    ).all()
+    # ==========================================
+    # LETRA SUGERIDA PARA EL NUEVO GRUPO
+    # ==========================================
+
+    grupos_activos = Grupo.query.filter(
+        Grupo.grado == grupo.grado,
+        Grupo.jornada_id == jornada.id,
+        Grupo.colegio_id == current_user.colegio_id,
+        Grupo.activo == True
+    ).all()
+
+    letras_usadas = {
+        g.nombre.upper()
+        for g in grupos_activos
+    }
+
+    sugerencia = "A"
+
+    for letra in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        if letra not in letras_usadas:
+            sugerencia = letra
+            break
+    # ==========================================
+    # SI EL USUARIO PULSÓ CONTINUAR
+    # ==========================================
+
+    if request.method == "POST":
+
+        print("=" * 60)
+        print("FORMULARIO:", request.form)
+        print("=" * 60)
+
+        opcion = request.form.get("opcion")
+
+        print("opcion =", opcion)
+
+        grupo_destino = None
+
+        # ==========================================
+        # REACTIVAR GRUPO
+        # ==========================================
+
+        if opcion and opcion.startswith("reactivar_"):
+
+            grupo_destino_id = int(opcion.split("_")[1])
+
+            grupo_destino = Grupo.query.filter_by(
+                id=grupo_destino_id,
+                colegio_id=current_user.colegio_id
+            ).first_or_404()
+
+            grupo_destino.activo = True
+
+        # ==========================================
+        # CREAR GRUPO NUEVO
+        # ==========================================
+
+        elif opcion == "nuevo":
+
+            nombre_grupo = (
+                    request.form.get("nombre_grupo") or ""
+            ).strip().upper()
+
+            grupo_destino = Grupo(
+                colegio_id=current_user.colegio_id,
+                sede_id=sede.id,
+                jornada_id=jornada.id,
+                grado=grupo.grado,
+                nombre=nombre_grupo,
+                capacidad_maxima=grupo.capacidad_maxima,
+                director_docente_id=None,
+                anio_lectivo=grupo.anio_lectivo,
+                activo=True
+            )
+
+            db.session.add(grupo_destino)
+
+        # ==========================================
+        # NO SELECCIONÓ NADA
+        # ==========================================
+
+        else:
+
+            flash(
+                "Debe seleccionar una opción.",
+                "warning"
+            )
+
+            return redirect(request.url)
+
+        db.session.commit()
+
+        print("grupo_destino =", grupo_destino.id)
+
+        return redirect(
+            url_for(
+                "colegio.redistribuir_estudiantes",
+                sede_id=sede.id,
+                jornada_id=jornada.id,
+                grupo_origen_id=grupo.id,
+                grupo_destino_id=grupo_destino.id
+            )
+        )
+
+
+    return render_template(
+        "colegio/dividir_grupo.html",
+        sede=sede,
+        jornada=jornada,
+        grupo=grupo,
+        grupos_inactivos=grupos_inactivos,
+        sugerencia=sugerencia
+    )
+@colegio_bp.route(
+    '/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_origen_id>/redistribuir/<int:grupo_destino_id>'
+)
+@login_required
+def redistribuir_estudiantes(
+    sede_id,
+    jornada_id,
+    grupo_origen_id,
+    grupo_destino_id
+    ):
+
+    grupo_origen = Grupo.query.get_or_404(grupo_origen_id)
+
+    grupo_destino = Grupo.query.get_or_404(grupo_destino_id)
+    estudiantes = Estudiante.query.filter_by(
+        grupo_id=grupo_origen.id,
+        activo=True
+    ).order_by(
+        Estudiante.apellido,
+        Estudiante.nombre
+    ).all()
+    estudiantes_destino = Estudiante.query.filter_by(
+        grupo_id=grupo_destino.id,
+        activo=True
+    ).order_by(
+        Estudiante.apellido,
+        Estudiante.nombre
+    ).all()
+    return render_template(
+        "colegio/redistribuir_estudiantes.html",
+        grupo_origen=grupo_origen,
+        grupo_destino=grupo_destino,
+        estudiantes=estudiantes,
+        estudiantes_destino=estudiantes_destino
+    )
 # ==========================================================
 # DOCENTES (CORREGIDO - CON USUARIO Y CONTRASEÑA)
 # ==========================================================
@@ -299,6 +838,7 @@ def nuevo_docente():
             db.session.rollback()
             flash(f"Error al registrar docente: {str(e)}", "danger")
             return redirect(url_for("colegio.nuevo_docente"))
+
 
     # ✅ Corregido: apunta a docentes/formulario.html
     return render_template("docentes/formulario.html", docente=None, titulo="Nuevo Docente", sedes=sedes)
@@ -1087,3 +1627,252 @@ def seguimiento():
 def piar():
     flash("El módulo de PIAR está en construcción.", "info")
     return redirect(url_for('colegio.dashboard'))
+
+
+# ==========================================================
+# ÁREAS DE GESTIÓN
+# ==========================================================
+@colegio_bp.route("/areas")
+@login_required
+def lista_areas():
+    """Lista todas las áreas del colegio"""
+    areas = AreaGestion.query.filter_by(
+        colegio_id=current_user.colegio_id
+    ).order_by(AreaGestion.nombre).all()
+
+    return render_template(
+        "colegio/areas.html",
+        areas=areas
+    )
+
+
+@colegio_bp.route("/areas/nueva", methods=["GET", "POST"])
+@login_required
+def nueva_area():
+    """Crear una nueva área de gestión"""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    if request.method == "POST":
+        try:
+            nombre = request.form.get("nombre", "").strip()
+            porcentaje = request.form.get("porcentaje", type=float)
+
+            # Validaciones
+            if not nombre:
+                flash("El nombre del área es obligatorio", "danger")
+                return redirect(url_for("colegio.nueva_area"))
+
+            if porcentaje is None or porcentaje <= 0 or porcentaje > 100:
+                flash("El porcentaje debe estar entre 0 y 100", "danger")
+                return redirect(url_for("colegio.nueva_area"))
+
+            # Verificar nombre duplicado
+            existe = AreaGestion.query.filter_by(
+                nombre=nombre,
+                colegio_id=current_user.colegio_id
+            ).first()
+
+            if existe:
+                flash("Ya existe un área con ese nombre", "warning")
+                return redirect(url_for("colegio.nueva_area"))
+
+            # Crear área
+            area = AreaGestion(
+                nombre=nombre,
+                porcentaje=porcentaje,
+                colegio_id=current_user.colegio_id,
+                activo=True
+            )
+            db.session.add(area)
+            db.session.commit()
+
+            flash(f"Área '{nombre}' registrada correctamente", "success")
+            return redirect(url_for("colegio.lista_areas"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al registrar área: {str(e)}", "danger")
+            return redirect(url_for("colegio.nueva_area"))
+
+    return render_template("colegio/formulario_area.html", area=None)
+
+
+@colegio_bp.route("/areas/<int:area_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_area(area_id):
+    """Editar un área existente"""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    area = AreaGestion.query.filter_by(
+        id=area_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    if request.method == "POST":
+        try:
+            nombre = request.form.get("nombre", "").strip()
+            porcentaje = request.form.get("porcentaje", type=float)
+
+            # Validaciones
+            if not nombre:
+                flash("El nombre del área es obligatorio", "danger")
+                return redirect(url_for("colegio.editar_area", area_id=area.id))
+
+            if porcentaje is None or porcentaje <= 0 or porcentaje > 100:
+                flash("El porcentaje debe estar entre 0 y 100", "danger")
+                return redirect(url_for("colegio.editar_area", area_id=area.id))
+
+            # Verificar nombre duplicado (excluyendo el actual)
+            existe = AreaGestion.query.filter(
+                AreaGestion.nombre == nombre,
+                AreaGestion.colegio_id == current_user.colegio_id,
+                AreaGestion.id != area.id
+            ).first()
+
+            if existe:
+                flash("Ya existe otra área con ese nombre", "warning")
+                return redirect(url_for("colegio.editar_area", area_id=area.id))
+
+            # Actualizar
+            area.nombre = nombre
+            area.porcentaje = porcentaje
+
+            db.session.commit()
+            flash("Área actualizada correctamente", "success")
+            return redirect(url_for("colegio.lista_areas"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar área: {str(e)}", "danger")
+            return redirect(url_for("colegio.editar_area", area_id=area.id))
+
+    return render_template("colegio/formulario_area.html", area=area)
+
+
+@colegio_bp.route("/areas/<int:area_id>/cambiar-estado", methods=["POST"])
+@login_required
+def cambiar_estado_area(area_id):
+    """Activar o desactivar un área"""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    area = AreaGestion.query.filter_by(
+        id=area_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    try:
+        area.activo = not area.activo
+        db.session.commit()
+
+        estado = "activada" if area.activo else "desactivada"
+        flash(f"Área '{area.nombre}' {estado} correctamente", "success" if area.activo else "warning")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error: {str(e)}", "danger")
+
+    return redirect(url_for("colegio.lista_areas"))
+
+@colegio_bp.route(
+    "/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/fusionar",
+    methods=["GET", "POST"]
+)
+@login_required
+def fusionar_grupo(
+    sede_id,
+    jornada_id,
+    grupo_id
+):
+
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        sede_id=sede.id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).first_or_404()
+
+    # Solo grupos del mismo grado
+    grupos_destino = Grupo.query.filter(
+        Grupo.id != grupo.id,
+        Grupo.grado == grupo.grado,
+        Grupo.jornada_id == jornada.id,
+        Grupo.activo == True,
+        Grupo.colegio_id == current_user.colegio_id
+    ).order_by(
+        Grupo.nombre
+    ).all()
+
+    if request.method == "POST":
+
+        grupo_destino_id = request.form.get(
+            "grupo_destino_id",
+            type=int
+        )
+
+        grupo_destino = Grupo.query.filter_by(
+            id=grupo_destino_id,
+            colegio_id=current_user.colegio_id,
+            activo=True
+        ).first()
+
+        if not grupo_destino:
+
+            flash(
+                "Debe seleccionar un grupo destino.",
+                "danger"
+            )
+
+            return redirect(request.url)
+
+        # ====================================
+        # MOVER ESTUDIANTES
+        # ====================================
+
+        for estudiante in grupo.estudiantes:
+
+            estudiante.grupo_id = grupo_destino.id
+
+        # ====================================
+        # DESACTIVAR GRUPO ORIGEN
+        # ====================================
+
+        grupo.activo = False
+
+        db.session.commit()
+
+        flash(
+            f"Grupo {grupo.grado}{grupo.nombre} "
+            f"fusionado con "
+            f"{grupo_destino.grado}{grupo_destino.nombre}",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "colegio.lista_grupos",
+                sede_id=sede.id,
+                jornada_id=jornada.id
+            )
+        )
+
+    return render_template(
+        "colegio/fusionar_grupo.html",
+        sede=sede,
+        jornada=jornada,
+        grupo=grupo,
+        grupos_destino=grupos_destino
+    )
+

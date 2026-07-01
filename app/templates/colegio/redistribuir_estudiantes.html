@@ -1,0 +1,269 @@
+{% extends "colegio/colegio_base.html" %}
+{% block colegio_page_title %}
+Redistribuir Estudiantes
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid">
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-header">
+
+            <h4 class="mb-0">
+                <i class="bi bi-people-fill"></i>
+                Redistribuir Estudiantes
+            </h4>
+
+            <small class="text-muted">
+
+                {{ grupo_origen.grado }}{{ grupo_origen.nombre }}
+
+                →
+
+                {{ grupo_destino.grado }}{{ grupo_destino.nombre }}
+
+            </small>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="alert alert-info">
+
+                Seleccione los estudiantes que desea mover al
+                nuevo grupo.
+
+            </div>
+
+            <div class="row">
+
+                <!-- ====================================== -->
+                <!-- GRUPO ORIGEN -->
+                <!-- ====================================== -->
+
+                <div class="col-lg-5">
+
+                    <div class="card h-100">
+
+                        <div class="card-header bg-primary text-white">
+
+                            <strong>
+
+                                {{ grupo_origen.grado }}{{ grupo_origen.nombre }}
+
+                            </strong>
+
+                            <span class="float-end">
+
+                                {{ estudiantes|length }}
+
+                            </span>
+
+                        </div>
+
+                        <div class="card-body p-0">
+
+                            <table class="table table-hover mb-0">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th width="40"></th>
+
+                                        <th>Apellido</th>
+
+                                        <th>Nombre</th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {% for estudiante in estudiantes %}
+
+                                    <tr>
+
+                                        <td>
+
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                value="{{ estudiante.id }}">
+
+                                        </td>
+
+                                        <td>
+
+                                            {{ estudiante.apellido }}
+
+                                        </td>
+
+                                        <td>
+
+                                            {{ estudiante.nombre }}
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ====================================== -->
+                <!-- BOTONES -->
+                <!-- ====================================== -->
+
+                <div class="col-lg-2 d-flex flex-column justify-content-center align-items-center">
+
+                    <button
+                        class="btn btn-primary mb-3"
+                        disabled>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled>
+
+                        <i class="bi bi-arrow-left"></i>
+
+                    </button>
+
+                </div>
+
+                <!-- ====================================== -->
+                <!-- GRUPO DESTINO -->
+                <!-- ====================================== -->
+
+                <div class="col-lg-5">
+
+                    <div class="card h-100">
+
+                        <div class="card-header bg-success text-white">
+
+                            <strong>
+
+                                {{ grupo_destino.grado }}{{ grupo_destino.nombre }}
+
+                            </strong>
+
+                            <span class="float-end">
+
+                                {{ estudiantes_destino|length }}
+
+                            </span>
+
+                        </div>
+
+                        <div class="card-body p-0">
+
+                            <table class="table table-hover mb-0">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th width="40"></th>
+
+                                        <th>Apellido</th>
+
+                                        <th>Nombre</th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {% for estudiante in estudiantes_destino %}
+
+                                    <tr>
+
+                                        <td>
+
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                value="{{ estudiante.id }}">
+
+                                        </td>
+
+                                        <td>
+
+                                            {{ estudiante.apellido }}
+
+                                        </td>
+
+                                        <td>
+
+                                            {{ estudiante.nombre }}
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+
+            <a
+                href="{{ url_for(
+                    'colegio.dividir_grupo',
+                    sede_id=grupo_origen.sede_id,
+                    jornada_id=grupo_origen.jornada_id,
+                    grupo_id=grupo_origen.id
+                ) }}"
+                class="btn btn-outline-secondary">
+
+                <i class="bi bi-arrow-left"></i>
+
+                Volver
+
+            </a>
+
+            <button
+                class="btn btn-success"
+                disabled>
+
+                <i class="bi bi-check-circle"></i>
+
+                Guardar Distribución
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

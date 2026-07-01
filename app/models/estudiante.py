@@ -18,6 +18,12 @@ class Estudiante(db.Model):
         nullable=False
     )
 
+    apellido = db.Column(
+        db.String(150),
+        nullable=False,
+        default=""
+    )
+
     # Compatibilidad temporal
     grado = db.Column(
         db.String(20),
@@ -178,6 +184,7 @@ class Estudiante(db.Model):
     grupo_rel = db.relationship(
         "Grupo",
         foreign_keys=[grupo_id],
+        back_populates="estudiantes",
         lazy=True
     )
 
@@ -232,7 +239,11 @@ class Estudiante(db.Model):
     # =====================================================
 
     def __repr__(self):
-        return f"<Estudiante {self.nombre} - {self.grado}{self.grupo or ''}>"
+        return (
+            f"<Estudiante "
+            f"{self.apellido}, {self.nombre} "
+            f"- {self.grado}{self.grupo or ''}>"
+        )
 
 
 # =========================================================
@@ -265,7 +276,7 @@ class EstudianteAcudiente(db.Model):
             'estudiante_id',
             'acudiente_id',
             name='unica_relacion'
-        ),
+               ),
     )
 
     def __repr__(self):

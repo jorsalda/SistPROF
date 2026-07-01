@@ -1,23 +1,94 @@
 {% extends "colegio/colegio_base.html" %}
 
 {% block colegio_page_title %}
-Jornadas de la Sede
+Jornadas de {{ sede.nombre }}
 {% endblock %}
 
 {% block colegio_content %}
 
-<h2>Jornadas de {{ sede.nombre }}</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">
+        <i class="bi bi-clock-history"></i> Jornadas de: {{ sede.nombre }}
+    </h2>
+    <a href="{{ url_for('colegio.nueva_jornada', sede_id=sede.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle"></i> Nueva Jornada
+    </a>
+</div>
 
 {% if jornadas %}
+<div class="row g-3">
     {% for jornada in jornadas %}
-        <div class="card mb-3 shadow-sm">
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm border-0">
             <div class="card-body">
-                <h4>{{ jornada.nombre }}</h4>
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock"></i> {{ jornada.nombre }}
+                    </h5>
+                    {% if jornada.activo %}
+                    <span class="badge bg-success">Activa</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactiva</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-2">
+                    <strong><i class="bi bi-hourglass-split"></i> Horario:</strong><br>
+                    <span class="fs-5 text-primary">
+                            {{ jornada.hora_inicio.strftime('%H:%M') }} - {{ jornada.hora_fin.strftime('%H:%M') }}
+                        </span>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-stopwatch"></i> Tolerancia: {{ jornada.tolerancia_minutos }} minutos
+                    </small>
+                </div>
+            </div>
+
+            <div class="card-footer bg-white border-top">
+                <div class="btn-group w-100" role="group">
+
+                    <a href="{{ url_for(
+                            'colegio.lista_grupos',
+                            sede_id=sede.id,
+                            jornada_id=jornada.id ) }}"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-people"></i> Grupos
+                    </a>
+                    <a href="{{ url_for('colegio.editar_jornada', sede_id=sede.id, jornada_id=jornada.id) }}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <form method="POST"
+                          action="{{ url_for('colegio.cambiar_estado_jornada', sede_id=sede.id, jornada_id=jornada.id) }}"
+                          style="display:inline;">
+                        {% if jornada.activo %}
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-pause"></i> Desactivar
+                        </button>
+                        {% else %}
+                        <button type="submit" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-play"></i> Activar
+                        </button>
+                        {% endif %}
+                    </form>
+                </div>
             </div>
         </div>
+    </div>
     {% endfor %}
+</div>
 {% else %}
-    <p>No hay jornadas registradas.</p>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No hay jornadas registradas para esta sede.
+</div>
 {% endif %}
+
+<div class="mt-4">
+    <a href="{{ url_for('colegio.sedes') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver a Sedes
+    </a>
+</div>
 
 {% endblock %}

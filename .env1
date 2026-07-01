@@ -1,0 +1,15 @@
+# 🔐 Clave secreta
+SECRET_KEY=clave_super_segura
+
+# 🗄️ Base de datos
+DATABASE_URL=postgresql://postgres:jes8026@localhost:5432/SistPROF
+
+# 📧 Resend (correos)
+RESEND_API_KEY=re_77nCaM26_EVUMN3xmr9rhLY4Utyp7wVmV
+RESEND_FROM_EMAIL=noreply@sistprof.com
+
+# 🎯 NUEVO: Entorno de trabajo (para configuración dinámica)
+FLASK_ENV=development
+
+# 📧 Flask-Mail (si usas Gmail para enviar correos)
+MAIL_PASSWORD=tu_contraseña_de_aplicacion_gmail

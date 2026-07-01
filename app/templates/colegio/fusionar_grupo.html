@@ -1,0 +1,155 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Fusionar Grupo
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid">
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-header">
+
+            <h4 class="mb-0">
+                <i class="bi bi-diagram-3-fill"></i>
+                Fusionar Grupo
+            </h4>
+
+            <small class="text-muted">
+                {{ sede.nombre }} | {{ jornada.nombre }}
+            </small>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="alert alert-warning">
+
+                <strong>Grupo origen:</strong>
+                {{ grupo.grado }}{{ grupo.nombre }}
+
+                <br>
+
+                <strong>Estudiantes:</strong>
+                {{ grupo.estudiantes|length }}
+
+                <br><br>
+
+                Al fusionar este grupo, todos sus estudiantes
+                serán trasladados al grupo seleccionado y
+                este grupo quedará inactivo.
+
+            </div>
+
+            {% if grupos_destino %}
+
+            <form method="POST">
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        Grupo destino
+
+                    </label>
+
+                    <select
+                        name="grupo_destino_id"
+                        class="form-select"
+                        required
+                    >
+
+                        <option value="">
+                            Seleccione...
+                        </option>
+
+                        {% for destino in grupos_destino %}
+
+                        <option value="{{ destino.id }}">
+
+                            {{ destino.grado }}{{ destino.nombre }}
+                            ({{ destino.estudiantes|length }} estudiantes)
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+
+                    <a
+                        href="{{ url_for(
+                            'colegio.lista_grupos',
+                            sede_id=sede.id,
+                            jornada_id=jornada.id
+                        ) }}"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        <i class="bi bi-arrow-left"></i>
+                        Cancelar
+
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn btn-warning"
+                        onclick="return confirm(
+                            '¿Está seguro de fusionar este grupo?'
+                        )"
+                    >
+
+                        <i class="bi bi-diagram-3"></i>
+                        Fusionar Grupo
+
+                    </button>
+
+                </div>
+
+            </form>
+
+            {% else %}
+
+            <div class="alert alert-danger">
+
+                No existen otros grupos del mismo grado para
+                realizar una fusión.
+
+            </div>
+
+            <a
+                href="{{ url_for(
+                    'colegio.lista_grupos',
+                    sede_id=sede.id,
+                    jornada_id=jornada.id
+                ) }}"
+                class="btn btn-outline-secondary"
+            >
+
+                <i class="bi bi-arrow-left"></i>
+                Volver
+
+            </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -82,5 +82,11 @@ class Docente(db.Model):
         lazy=True
     )
 
+    areas_docente_asignadas = db.relationship(
+        "DocenteAreas",
+        back_populates="docente",
+        cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f'<Docente {self.nombre}>'
