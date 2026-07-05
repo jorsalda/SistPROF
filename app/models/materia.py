@@ -17,14 +17,6 @@ class Materia(db.Model):
 
     # ================= RELACIONES =================
 
-    # Clases asociadas
-    clases = db.relationship(
-        "Clase",
-        foreign_keys="Clase.materia_id",
-        back_populates="materia_obj",
-        lazy=True
-    )
-
     # Competencias de la materia
     competencias = db.relationship(
         "CompetenciaEstudiante",

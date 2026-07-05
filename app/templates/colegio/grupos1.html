@@ -1,0 +1,313 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Grupos
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-people-fill"></i>
+            Grupos
+        </h2>
+
+        <small class="text-muted">
+            {{ sede.nombre }} | {{ jornada.nombre }}
+        </small>
+    </div>
+
+    <a href="{{ url_for( 'colegio.nuevo_grupo', sede_id=sede.id, jornada_id=jornada.id ) }}"
+       class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i>
+        Nuevo Grupo
+    </a>
+
+
+
+</div>
+
+{% if grupos %}
+
+<div class="row">
+
+    {% for grupo in grupos %}
+
+    <div class="col-md-4 mb-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    {{ grupo.grado }}{{ grupo.nombre }}
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <p>
+                    <strong>Director:</strong>
+                    {% if grupo.director %}
+                        {{ grupo.director.nombre }}
+                    {% else %}
+                        Sin asignar
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Capacidad:</strong>
+                    {{ grupo.capacidad_maxima }}
+                </p>
+
+                <p>
+                    <strong>Estudiantes:</strong>
+                    {{ grupo.estudiantes|length }}
+                </p>
+
+            </div>
+
+            <div class="card-footer bg-white d-flex gap-2">
+
+    <a href="{{ url_for(
+        'colegio.editar_grupo',
+        sede_id=sede.id,
+        jornada_id=jornada.id,
+        grupo_id=grupo.id
+    ) }}"
+       class="btn btn-outline-primary btn-sm">
+
+        <i class="bi bi-pencil"></i>
+        Editar
+
+    </a>
+
+    <a href="{{ url_for(
+        'colegio.fusionar_grupo',
+        sede_id=sede.id,
+        jornada_id=jornada.id,
+        grupo_id=grupo.id
+    ) }}"
+       class="btn btn-outline-warning btn-sm">
+
+        <i class="bi bi-shuffle"></i>
+        Fusionar
+
+    </a>
+
+<a href="{{ url_for(
+    'colegio.dividir_grupo',
+    sede_id=sede.id,
+    jornada_id=jornada.id,
+    grupo_id=grupo.id
+) }}"
+class="btn btn-outline-success btn-sm">
+
+    <i class="bi bi-diagram-3"></i>
+    Dividir
+
+</a>
+</div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="card shadow-sm border-0">
+
+    <div class="card-body text-center py-5">
+
+        <i class="bi bi-people display-1 text-muted"></i>
+
+        <h4 class="mt-3">
+            No hay grupos registrados
+        </h4>
+
+        <p class="text-muted">
+            Esta jornada aún no tiene grupos creados.
+        </p>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+<div class="mt-3">
+
+    <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}"
+       class="btn btn-outline-secondary">
+
+        <i class="bi bi-arrow-left"></i>
+        Volver a Jornadas
+
+    </a>
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Grupos
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-people-fill"></i>
+            Grupos
+        </h2>
+
+        <small class="text-muted">
+            {{ sede.nombre }} | {{ jornada.nombre }}
+        </small>
+    </div>
+
+    <a href="{{ url_for( 'colegio.nuevo_grupo', sede_id=sede.id, jornada_id=jornada.id ) }}"
+       class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i>
+        Nuevo Grupo
+    </a>
+
+
+
+</div>
+
+{% if grupos %}
+
+<div class="row">
+
+    {% for grupo in grupos %}
+
+    <div class="col-md-4 mb-3">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-light">
+
+                <h5 class="mb-0">
+                    {{ grupo.grado }}{{ grupo.nombre }}
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <p>
+                    <strong>Director:</strong>
+                    {% if grupo.director %}
+                        {{ grupo.director.nombre }}
+                    {% else %}
+                        Sin asignar
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Capacidad:</strong>
+                    {{ grupo.capacidad_maxima }}
+                </p>
+
+                <p>
+                    <strong>Estudiantes:</strong>
+                    {{ grupo.estudiantes|length }}
+                </p>
+
+            </div>
+
+            <div class="card-footer bg-white d-flex gap-2">
+
+    <a href="{{ url_for(
+        'colegio.editar_grupo',
+        sede_id=sede.id,
+        jornada_id=jornada.id,
+        grupo_id=grupo.id
+    ) }}"
+       class="btn btn-outline-primary btn-sm">
+
+        <i class="bi bi-pencil"></i>
+        Editar
+
+    </a>
+
+    <a href="{{ url_for(
+        'colegio.fusionar_grupo',
+        sede_id=sede.id,
+        jornada_id=jornada.id,
+        grupo_id=grupo.id
+    ) }}"
+       class="btn btn-outline-warning btn-sm">
+
+        <i class="bi bi-shuffle"></i>
+        Fusionar
+
+    </a>
+
+<a href="{{ url_for(
+    'colegio.dividir_grupo',
+    sede_id=sede.id,
+    jornada_id=jornada.id,
+    grupo_id=grupo.id
+) }}"
+class="btn btn-outline-success btn-sm">
+
+    <i class="bi bi-diagram-3"></i>
+    Dividir
+
+</a>
+</div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="card shadow-sm border-0">
+
+    <div class="card-body text-center py-5">
+
+        <i class="bi bi-people display-1 text-muted"></i>
+
+        <h4 class="mt-3">
+            No hay grupos registrados
+        </h4>
+
+        <p class="text-muted">
+            Esta jornada aún no tiene grupos creados.
+        </p>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+<div class="mt-3">
+
+    <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede.id) }}"
+       class="btn btn-outline-secondary">
+
+        <i class="bi bi-arrow-left"></i>
+        Volver a Jornadas
+
+    </a>
+
+</div>
+
+{% endblock %}
+</div>
+
+{% endblock %}

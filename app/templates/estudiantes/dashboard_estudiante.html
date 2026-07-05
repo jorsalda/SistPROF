@@ -26,6 +26,29 @@ Dashboard Estudiante
     </div>
 </div>
 
+<!-- 🔥 NUEVO: Filtro por materia -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label for="materiaSelect" class="form-label fw-bold mb-0">
+                    <i class="bi bi-book"></i> Filtrar por materia:
+                </label>
+            </div>
+            <div class="col-md-6">
+                <select id="materiaSelect" class="form-select">
+                    <option value="">Todas las materias</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end">
+                <a href="{{ url_for('estudiante.examen') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Presentar Examen
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Tarjetas principales -->
 <div class="row g-4">
 
@@ -216,4 +239,33 @@ Dashboard Estudiante
 
 </div>
 
+{% endblock %}
+
+{% block js %}
+<script>
+    // ============================================================
+    // 1. Cargar materias del estudiante y llenar el select
+    // ============================================================
+    fetch('/estudiantes/api/mis-materias')
+        .then(response => response.json())
+        .then(materias => {
+            const select = document.getElementById('materiaSelect');
+            materias.forEach(m => {
+                const option = document.createElement('option');
+                option.value = m.id;
+                option.textContent = m.nombre;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error al cargar materias:', error));
+
+    // ============================================================
+    // 2. Filtrar exámenes al cambiar de materia
+    // ============================================================
+    document.getElementById('materiaSelect').addEventListener('change', function() {
+        const materiaId = this.value;
+        // Redirigir a la página de examen con el filtro
+        window.location.href = `/estudiantes/examen?materia_id=${materiaId}`;
+    });
+</script>
 {% endblock %}

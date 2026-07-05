@@ -1,0 +1,224 @@
+{
+  "preguntas": [
+    {
+      "pregunta": "A partir de una tabla de percentiles de edades, ¿cuál gráfica representa correctamente los cuartiles de los datos?",
+      "opciones": [
+        "Gráfica A",
+        "Gráfica B",
+        "Gráfica C",
+        "Gráfica D"
+      ],
+      "respuesta": "Gráfica B",
+      "explicacion": "Los cuartiles dividen los datos ordenados en cuatro partes iguales: 25%, 50% (mediana) y 75%. Si el percentil 60 es 33 años, la mediana debe estar cerca de ese valor. La gráfica correcta es la que respeta ese orden y muestra los cuartiles de menor a mayor sin desordenarlos."
+    },
+    {
+      "pregunta": "¿Es posible determinar el ángulo buscado usando el procedimiento descrito en un sistema de rectas paralelas?",
+      "opciones": [
+        "No, porque los ángulos son complementarios.",
+        "Sí, porque los ángulos suman 90°.",
+        "No, porque los ángulos son suplementarios y alternos externos.",
+        "Sí, porque los ángulos tienen distinta dirección."
+      ],
+      "respuesta": "No, porque los ángulos son suplementarios y alternos externos.",
+      "explicacion": "Restar un ángulo a 180° solo sirve para encontrar su suplemento. Pero para saber si dos ángulos son iguales se deben usar relaciones correctas como ángulos alternos o correspondientes. El procedimiento no justifica correctamente esa relación, por eso no es válido."
+    },
+    {
+      "pregunta": "En dos triángulos semejantes con razón de semejanza 2, ¿un ángulo del segundo es el doble del primero?",
+      "opciones": [
+        "No, porque los ángulos correspondientes son iguales.",
+        "No, porque los triángulos son congruentes.",
+        "Sí, porque la razón se aplica a los ángulos.",
+        "Sí, porque la semejanza duplica todo."
+      ],
+      "respuesta": "No, porque los ángulos correspondientes son iguales.",
+      "explicacion": "En los triángulos semejantes, los ángulos no cambian. Lo único que cambia es el tamaño de los lados. Pensar que los ángulos se duplican es un error común que confunde semejanza con escala total."
+    },
+    {
+      "pregunta": "Una persona elige una ruta pensando que es la más corta. ¿Es correcta su elección?",
+      "opciones": [
+        "Sí, porque un tramo es más corto.",
+        "Sí, porque evita una calle larga.",
+        "No, porque ese recorrido es el más largo.",
+        "No, porque existe un recorrido más corto."
+      ],
+      "respuesta": "No, porque existe un recorrido más corto.",
+      "explicacion": "Para comparar rutas se debe sumar toda la distancia recorrida, no solo un tramo. Al analizar todas las opciones, se encuentra un recorrido con menor distancia total. Por eso la decisión no fue correcta."
+    },
+    {
+      "pregunta": "¿La operación (P1 ∪ P2) ∩ V permite obtener el conjunto de todas las verduras compradas?",
+      "opciones": [
+        "No, porque elimina frutas incorrectamente.",
+        "Sí, porque deja solo las verduras comunes.",
+        "No, porque debería usarse solo intersección.",
+        "Sí, porque equivale a la unión de las verduras."
+      ],
+      "respuesta": "Sí, porque equivale a la unión de las verduras.",
+      "explicacion": "Primero se unen todos los productos comprados por ambas personas. Luego, al intersectar con el conjunto de verduras, se eliminan las frutas. Así se obtiene correctamente solo el conjunto de verduras."
+    },
+    {
+      "pregunta": "Un estudiante calcula la fracción de compañeros a los que les gusta el fútbol. ¿En qué paso se equivoca?",
+      "opciones": [
+        "Paso 4",
+        "Paso 2",
+        "Paso 4 porque el total es incorrecto",
+        "Paso 2 porque el número de niños es incorrecto"
+      ],
+      "respuesta": "Paso 2 porque el número de niños es incorrecto",
+      "explicacion": "Calcular una fracción de una cantidad requiere multiplicar correctamente. El estudiante hizo mal ese cálculo, por lo que todos los resultados posteriores también quedan mal."
+    },
+    {
+      "pregunta": "¿Qué lados son paralelos entre sí en los trapecios reflejados?",
+      "opciones": [
+        "OP y EF",
+        "RQ y EH",
+        "OP y GH",
+        "RQ y GF"
+      ],
+      "respuesta": "RQ y EH",
+      "explicacion": "Al reflejar una figura, los lados paralelos se conservan. Observando la figura y el eje de simetría, se identifican correctamente los lados que mantienen el paralelismo."
+    },
+    {
+      "pregunta": "¿Cuál tabla muestra correctamente la cantidad de animales contagiados?",
+      "opciones": [
+        "Tabla A",
+        "Tabla B",
+        "Tabla C",
+        "Tabla D"
+      ],
+      "respuesta": "Tabla D",
+      "explicacion": "Para hallar la cantidad de animales contagiados se debe aplicar el porcentaje correspondiente a cada grupo. La tabla correcta es la que muestra resultados coherentes con esos cálculos."
+    },
+    {
+      "pregunta": "¿Qué expresión es equivalente a log(10³)?",
+      "opciones": [
+        "3 × log(10)",
+        "log(10 + 3)",
+        "log(3) × log(10)",
+        "10 + log(3)"
+      ],
+      "respuesta": "3 × log(10)",
+      "explicacion": "Una propiedad de los logaritmos indica que log(a^b) = b·log(a). Por eso log(10³) es igual a 3·log(10)."
+    },
+    {
+      "pregunta": "¿Cuál es el promedio del dinero recaudado por las películas?",
+      "opciones": [
+        "$100 millones",
+        "$50 millones",
+        "$25 millones",
+        "$20 millones"
+      ],
+      "respuesta": "$50 millones",
+      "explicacion": "El promedio se calcula sumando todas las cantidades y dividiéndolas entre el número de películas. Ese resultado corresponde a 50 millones."
+    },
+    {
+      "pregunta": "¿Qué ecuación permite hallar el número de ventas para obtener $2.260.000?",
+      "opciones": [
+        "x = 2.260.000",
+        "700.000x = 2.260.000",
+        "120.000 + 700.000x = 2.260.000",
+        "700.000 + 120.000x = 2.260.000"
+      ],
+      "respuesta": "700.000 + 120.000x = 2.260.000",
+      "explicacion": "El ingreso total se forma sumando el sueldo fijo y lo ganado por ventas. Por eso se suman ambas expresiones."
+    },
+    {
+      "pregunta": "¿De cuántas formas pueden sentarse 5 jugadores en 3 sillas?",
+      "opciones": [
+        "10",
+        "15",
+        "60",
+        "120"
+      ],
+      "respuesta": "60",
+      "explicacion": "Se trata de una permutación, ya que importa quién se sienta y en qué silla. El cálculo correcto da 60 formas."
+    },
+    {
+      "pregunta": "¿En cuál tabla hay ternas pitagóricas?",
+      "opciones": [
+        "Opción A",
+        "Opción B",
+        "Opción C",
+        "Opción D"
+      ],
+      "respuesta": "Opción A",
+      "explicacion": "Una terna pitagórica cumple x² + y² = z². Al comprobar los valores, solo la opción A cumple esta condición."
+    },
+    {
+      "pregunta": "¿Cuál es la mediana de las edades?",
+      "opciones": [
+        "13 años",
+        "14 años",
+        "15 años",
+        "16 años"
+      ],
+      "respuesta": "15 años",
+      "explicacion": "La mediana es el valor que deja la mitad de los datos a cada lado. Según los porcentajes acumulados, este valor corresponde a 15 años."
+    },
+    {
+      "pregunta": "¿Cuáles tiempos pueden corresponder a los otros dos atletas?",
+      "opciones": [
+        "31 y 30",
+        "26 y 32",
+        "28 y 36",
+        "30 y 37"
+      ],
+      "respuesta": "28 y 36",
+      "explicacion": "Si el promedio es 31, la suma total debe ser 93. Restando el tiempo conocido (29), los otros dos deben sumar 64, lo cual se cumple en la opción correcta."
+    },
+    {
+      "pregunta": "¿Qué ecuación representa la gráfica de usuarios del videojuego?",
+      "opciones": [
+        "y = x² + 3x − 9",
+        "y = −x² + 9x",
+        "y = x² + 2x − 6",
+        "y = −x² + 6x"
+      ],
+      "respuesta": "y = −x² + 6x",
+      "explicacion": "La gráfica sube y luego baja, lo que indica una parábola abierta hacia abajo. La ecuación correcta debe tener coeficiente negativo en x²."
+    },
+    {
+      "pregunta": "¿Cuánto dinero faltó el miércoles para igualar el promedio del martes?",
+      "opciones": [
+        "$1.250",
+        "$4.000",
+        "$5.000",
+        "$6.500"
+      ],
+      "respuesta": "$5.000",
+      "explicacion": "Se comparan los promedios de ambos días. La diferencia entre ellos indica cuánto dinero faltó el miércoles."
+    },
+    {
+      "pregunta": "¿Cuál es el volumen total de las cajas apiladas?",
+      "opciones": [
+        "3.000 cm³",
+        "12.000 cm³",
+        "36.000 cm³",
+        "300.000 cm³"
+      ],
+      "respuesta": "36.000 cm³",
+      "explicacion": "El volumen de una caja se calcula multiplicando largo, ancho y alto. Luego se multiplica por el número total de cajas."
+    },
+    {
+      "pregunta": "¿Cuántas bacterias hay después de 4 horas si la población se duplica?",
+      "opciones": [
+        "2⁷",
+        "2⁵",
+        "2¹²",
+        "2⁶⁴"
+      ],
+      "respuesta": "2⁷",
+      "explicacion": "Duplicar significa multiplicar por 2 cada hora. Después de 4 horas se multiplica 2³ por 2⁴, lo que da 2⁷."
+    },
+    {
+      "pregunta": "¿Cuál es el volumen del cono mostrado?",
+      "opciones": [
+        "50 cm³",
+        "40 cm³",
+        "20 cm³",
+        "10 cm³"
+      ],
+      "respuesta": "40 cm³",
+      "explicacion": "El volumen del cono se calcula como un tercio del producto entre el área de la base y la altura. Al aplicar la fórmula se obtiene 40 cm³."
+    }
+  ]
+}

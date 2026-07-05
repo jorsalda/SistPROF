@@ -56,6 +56,15 @@ Jornadas de {{ sede.nombre }}
                        class="btn btn-outline-success btn-sm">
                         <i class="bi bi-people"></i> Grupos
                     </a>
+
+                    <!-- NUEVO BOTÓN: Configurar Bloques -->
+                    <a href="{{ url_for(
+                            'colegio.configurar_bloques_jornada',
+                            jornada_id=jornada.id ) }}"
+                       class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-clock-history"></i> Bloques
+                    </a>
+
                     <a href="{{ url_for('colegio.editar_jornada', sede_id=sede.id, jornada_id=jornada.id) }}"
                        class="btn btn-outline-primary btn-sm">
                         <i class="bi bi-pencil"></i> Editar

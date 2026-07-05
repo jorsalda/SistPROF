@@ -1,0 +1,79 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block estudiante_content %}
+<div class="container-fluid">
+    <h3 class="mb-4">
+        <i class="bi bi-bar-chart-line"></i> Mis Resultados
+    </h3>
+
+    {% if resultados %}
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Examen</th>
+                            <th>Fecha</th>
+                            <th>Nota</th>
+                            <th>Nivel</th>
+                            <th>Respuestas</th>
+                            <th>Porcentaje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for resultado, examen_nombre in resultados %}
+                        <tr>
+                            <td><strong>{{ examen_nombre }}</strong></td>
+                            <td>{{ resultado.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {% if resultado.nota_numerica %}
+                                    <span class="badge bg-primary">{{ resultado.nota_numerica }}</span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if resultado.nivel %}
+                                    <span class="badge bg-info">{{ resultado.nivel.value }}</span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-success">{{ resultado.respuestas_correctas or 0 }}</span> / 
+                                <span class="text-danger">{{ resultado.respuestas_incorrectas or 0 }}</span>
+                            </td>
+                            <td>
+                                {% if resultado.porcentaje %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar 
+                                            {% if resultado.porcentaje >= 60 %}bg-success
+                                            {% elif resultado.porcentaje >= 40 %}bg-warning
+                                            {% else %}bg-danger{% endif %}"
+                                            role="progressbar"
+                                            style="width: {{ resultado.porcentaje }}%;"
+                                            aria-valuenow="{{ resultado.porcentaje }}"
+                                            aria-valuemin="0"
+                                            aria-valuemax="100">
+                                            {{ resultado.porcentaje }}%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Aún no tienes resultados de exámenes registrados.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

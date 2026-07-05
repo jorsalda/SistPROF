@@ -1,0 +1,395 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Configurar Bloques - {{ jornada.nombre }}
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid py-4">
+    
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-clock-history"></i> Configurar Bloques de Tiempo
+            </h2>
+            <p class="text-muted mb-0">
+                Jornada: <strong>{{ jornada.nombre }}</strong> |
+                Horario: {{ jornada.hora_inicio.strftime('%H:%M') }} - {{ jornada.hora_fin.strftime('%H:%M') }}
+            </p>
+        </div>
+        <a href="{{ url_for('colegio.jornadas_sede', sede_id=jornada.sede_id) }}" 
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Jornadas
+        </a>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Información -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-lightbulb-fill"></i> 
+        <strong>Tip:</strong> Define los bloques de clase y descanso en orden. El sistema usará solo los bloques de tipo <strong>"Clase"</strong> en el horario de cada grupo.
+    </div>
+
+    <!-- Formulario -->
+    <form method="POST" id="form-bloques">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul"></i> Bloques de la Jornada
+                </h5>
+                <span class="badge bg-light text-dark" id="contador-bloques">
+                    {{ bloques|length }} bloques
+                </span>
+            </div>
+            <div class="card-body">
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="tabla-bloques">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th style="width: 130px;">Tipo</th>
+                                <th>Nombre</th>
+                                <th style="width: 130px;">Hora Inicio</th>
+                                <th style="width: 130px;">Hora Fin</th>
+                                <th style="width: 100px;">Duración</th>
+                                <th style="width: 70px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bloque in bloques %}
+                            <tr class="fila-bloque {% if bloque.tipo == 'descanso' %}table-warning{% endif %}">
+                                <td class="numero-orden text-center fw-bold">{{ loop.index }}</td>
+                                <td>
+                                    <select name="tipo[]" class="form-select form-select-sm tipo-select" onchange="actualizarEstiloFila(this)">
+                                        <option value="clase" {% if bloque.tipo == 'clase' %}selected{% endif %}>📚 Clase</option>
+                                        <option value="descanso" {% if bloque.tipo == 'descanso' %}selected{% endif %}>☕ Descanso</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="nombre[]" class="form-control form-control-sm" 
+                                           value="{{ bloque.nombre }}" placeholder="Ej: Clase 1, Recreo">
+                                </td>
+                                <td>
+                                    <input type="time" name="hora_inicio[]" class="form-control form-control-sm hora-campo" 
+                                           value="{{ bloque.hora_inicio.strftime('%H:%M') }}" required>
+                                </td>
+                                <td>
+                                    <input type="time" name="hora_fin[]" class="form-control form-control-sm hora-campo" 
+                                           value="{{ bloque.hora_fin.strftime('%H:%M') }}" required>
+                                </td>
+                                <td class="duracion-celda text-center">
+                                    <span class="badge bg-secondary">{{ bloque.duracion_minutos }} min</span>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-sm btn-eliminar" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="btn btn-success btn-sm" onclick="agregarBloque()">
+                        <i class="bi bi-plus-circle"></i> Agregar Bloque
+                    </button>
+                    <button type="button" class="btn btn-info btn-sm text-white" onclick="generarAutomatico()">
+                        <i class="bi bi-magic"></i> Generar Automático (55 min + 10 min)
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="limpiarTodo()">
+                        <i class="bi bi-eraser"></i> Limpiar Todo
+                    </button>
+                </div>
+
+                <!-- Resumen -->
+                <div class="alert alert-light border">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <strong>Total Clases:</strong> 
+                            <span id="total-clases" class="badge bg-primary">0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total Descansos:</strong> 
+                            <span id="total-descansos" class="badge bg-warning text-dark">0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Horas de Clase:</strong> 
+                            <span id="horas-clase" class="badge bg-success">0 min</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <a href="{{ url_for('colegio.jornadas_sede', sede_id=jornada.sede_id) }}" 
+                   class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar Configuración
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+// Actualizar estilo de fila según tipo
+function actualizarEstiloFila(select) {
+    const fila = select.closest('.fila-bloque');
+    if (select.value === 'descanso') {
+        fila.classList.add('table-warning');
+    } else {
+        fila.classList.remove('table-warning');
+    }
+    actualizarResumen();
+}
+
+// Calcular duración
+function calcularDuracion(fila) {
+    const horaInicio = fila.querySelector('input[name="hora_inicio[]"]').value;
+    const horaFin = fila.querySelector('input[name="hora_fin[]"]').value;
+    const celdaDuracion = fila.querySelector('.duracion-celda');
+    
+    if (horaInicio && horaFin) {
+        const [h1, m1] = horaInicio.split(':').map(Number);
+        const [h2, m2] = horaFin.split(':').map(Number);
+        const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+        
+        if (minutos > 0) {
+            celdaDuracion.innerHTML = `<span class="badge bg-secondary">${minutos} min</span>`;
+        } else {
+            celdaDuracion.innerHTML = `<span class="badge bg-danger">Inválido</span>`;
+        }
+    }
+    actualizarResumen();
+}
+
+// Agregar nuevo bloque vacío
+function agregarBloque() {
+    const tbody = document.querySelector('#tabla-bloques tbody');
+    const fila = document.createElement('tr');
+    fila.className = 'fila-bloque';
+    fila.innerHTML = `
+        <td class="numero-orden text-center fw-bold">0</td>
+        <td>
+            <select name="tipo[]" class="form-select form-select-sm tipo-select" onchange="actualizarEstiloFila(this)">
+                <option value="clase">📚 Clase</option>
+                <option value="descanso">☕ Descanso</option>
+            </select>
+        </td>
+        <td>
+            <input type="text" name="nombre[]" class="form-control form-control-sm" placeholder="Ej: Clase 1">
+        </td>
+        <td>
+            <input type="time" name="hora_inicio[]" class="form-control form-control-sm hora-campo" required>
+        </td>
+        <td>
+            <input type="time" name="hora_fin[]" class="form-control form-control-sm hora-campo" required>
+        </td>
+        <td class="duracion-celda text-center">
+            <span class="badge bg-secondary">- min</span>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm btn-eliminar" title="Eliminar">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(fila);
+    actualizarOrdenes();
+    actualizarResumen();
+}
+
+// Eliminar fila
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-eliminar')) {
+        if (confirm('¿Eliminar este bloque?')) {
+            e.target.closest('.fila-bloque').remove();
+            actualizarOrdenes();
+            actualizarResumen();
+        }
+    }
+});
+
+// Calcular duración cuando cambian las horas
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('hora-campo')) {
+        calcularDuracion(e.target.closest('.fila-bloque'));
+    }
+});
+
+// Actualizar números de orden
+function actualizarOrdenes() {
+    const filas = document.querySelectorAll('.fila-bloque');
+    filas.forEach((fila, index) => {
+        fila.querySelector('.numero-orden').textContent = index + 1;
+    });
+    document.getElementById('contador-bloques').textContent = filas.length + ' bloques';
+}
+
+// Actualizar resumen
+function actualizarResumen() {
+    const filas = document.querySelectorAll('.fila-bloque');
+    let totalClases = 0;
+    let totalDescansos = 0;
+    let minutosClase = 0;
+    
+    filas.forEach(fila => {
+        const tipo = fila.querySelector('select[name="tipo[]"]').value;
+        const horaInicio = fila.querySelector('input[name="hora_inicio[]"]').value;
+        const horaFin = fila.querySelector('input[name="hora_fin[]"]').value;
+        
+        if (horaInicio && horaFin) {
+            const [h1, m1] = horaInicio.split(':').map(Number);
+            const [h2, m2] = horaFin.split(':').map(Number);
+            const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+            
+            if (tipo === 'clase' && minutos > 0) {
+                totalClases++;
+                minutosClase += minutos;
+            } else if (tipo === 'descanso' && minutos > 0) {
+                totalDescansos++;
+            }
+        }
+    });
+    
+    document.getElementById('total-clases').textContent = totalClases;
+    document.getElementById('total-descansos').textContent = totalDescansos;
+    
+    const horas = Math.floor(minutosClase / 60);
+    const mins = minutosClase % 60;
+    document.getElementById('horas-clase').textContent = 
+        horas > 0 ? `${horas}h ${mins}min` : `${mins} min`;
+}
+
+// Limpiar todo
+function limpiarTodo() {
+    if (confirm('¿Está seguro de eliminar todos los bloques? Esta acción no se puede deshacer.')) {
+        document.querySelector('#tabla-bloques tbody').innerHTML = '';
+        actualizarOrdenes();
+        actualizarResumen();
+    }
+}
+
+// Generar automáticamente (55 min clase + 10 min descanso)
+function generarAutomatico() {
+    const tbody = document.querySelector('#tabla-bloques tbody');
+    tbody.innerHTML = '';
+    
+    let horaActual = 6 * 60 + 30; // 06:30 en minutos
+    const horaFinJornada = 12 * 60 + 30; // 12:30 en minutos
+    let numeroClase = 1;
+    let numeroDescanso = 1;
+    
+    while (horaActual + 55 <= horaFinJornada) {
+        // Bloque de clase
+        const h1 = Math.floor(horaActual / 60);
+        const m1 = horaActual % 60;
+        horaActual += 55;
+        const h2 = Math.floor(horaActual / 60);
+        const m2 = horaActual % 60;
+        
+        const filaClase = crearFila(
+            'clase',
+            `Clase ${numeroClase}`,
+            `${String(h1).padStart(2,'0')}:${String(m1).padStart(2,'0')}`,
+            `${String(h2).padStart(2,'0')}:${String(m2).padStart(2,'0')}`
+        );
+        tbody.appendChild(filaClase);
+        numeroClase++;
+        
+        // Si cabe un descanso y no es la última clase
+        if (horaActual + 10 + 55 <= horaFinJornada) {
+            const h3 = h2;
+            const m3 = m2;
+            horaActual += 10;
+            const h4 = Math.floor(horaActual / 60);
+            const m4 = horaActual % 60;
+            
+            const filaDescanso = crearFila(
+                'descanso',
+                `Recreo ${numeroDescanso}`,
+                `${String(h3).padStart(2,'0')}:${String(m3).padStart(2,'0')}`,
+                `${String(h4).padStart(2,'0')}:${String(m4).padStart(2,'0')}`
+            );
+            filaDescanso.classList.add('table-warning');
+            tbody.appendChild(filaDescanso);
+            numeroDescanso++;
+        }
+    }
+    
+    actualizarOrdenes();
+    actualizarResumen();
+    alert('✅ Se generaron automáticamente los bloques.\nPuede ajustarlos antes de guardar.');
+}
+
+// Función auxiliar para crear fila
+function crearFila(tipo, nombre, horaInicio, horaFin) {
+    const fila = document.createElement('tr');
+    fila.className = 'fila-bloque';
+    fila.innerHTML = `
+        <td class="numero-orden text-center fw-bold">0</td>
+        <td>
+            <select name="tipo[]" class="form-select form-select-sm tipo-select" onchange="actualizarEstiloFila(this)">
+                <option value="clase" ${tipo === 'clase' ? 'selected' : ''}>📚 Clase</option>
+                <option value="descanso" ${tipo === 'descanso' ? 'selected' : ''}>☕ Descanso</option>
+            </select>
+        </td>
+        <td>
+            <input type="text" name="nombre[]" class="form-control form-control-sm" value="${nombre}">
+        </td>
+        <td>
+            <input type="time" name="hora_inicio[]" class="form-control form-control-sm hora-campo" 
+                   value="${horaInicio}" required>
+        </td>
+        <td>
+            <input type="time" name="hora_fin[]" class="form-control form-control-sm hora-campo" 
+                   value="${horaFin}" required>
+        </td>
+        <td class="duracion-celda text-center">
+            <span class="badge bg-secondary">- min</span>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm btn-eliminar" title="Eliminar">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    // Calcular duración inmediatamente
+    setTimeout(() => calcularDuracion(fila), 50);
+    return fila;
+}
+
+// Al cargar la página, calcular duraciones y resumen
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.fila-bloque').forEach(fila => {
+        calcularDuracion(fila);
+    });
+    actualizarOrdenes();
+    actualizarResumen();
+});
+</script>
+
+{% endblock %}

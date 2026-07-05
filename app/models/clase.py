@@ -17,9 +17,7 @@ class Clase(db.Model):
 
     # ========== COLUMNAS ==========
     id = db.Column(db.Integer, primary_key=True)
-    grado = db.Column(db.String(20), nullable=False)
-    grupo = db.Column(db.String(10), nullable=False)
-    materia = db.Column(db.String(100), nullable=False)
+
     hora_inicio = db.Column(Time, nullable=False)
     hora_fin = db.Column(Time, nullable=False)
     activo = db.Column(db.Boolean, default=True)
@@ -31,18 +29,21 @@ class Clase(db.Model):
         db.ForeignKey("docentes.id", ondelete="CASCADE"),
         nullable=False
     )
+
     colegio_id = db.Column(
         db.Integer,
         db.ForeignKey("colegios.id"),
         nullable=False
     )
-    materia_id = db.Column(
+
+    # ✅ NUEVA CLAVE: Vincula directamente a la materia asignada al grupo
+    grupo_materia_id = db.Column(
         db.Integer,
-        db.ForeignKey("materias.id"),
-        nullable=True
+        db.ForeignKey("grupo_materias.id", ondelete="CASCADE"),
+        nullable=False
     )
 
-    # ========== RELACIONES (CON back_populates) ==========
+    # ========== RELACIONES ==========
 
     # Docente que imparte la clase
     docente = db.relationship(
@@ -56,14 +57,13 @@ class Clase(db.Model):
     colegio = db.relationship(
         "Colegio",
         foreign_keys=[colegio_id],
-        back_populates="clases_colegio",  # ← Nombre único para evitar conflicto
+        back_populates="clases_colegio",
         lazy=True
     )
 
-    # Materia (relación bidireccional)
-    materia_obj = db.relationship(
-        "Materia",
-        foreign_keys=[materia_id],
+    # ✅ NUEVA RELACIÓN: Acceso a la materia y grupo
+    grupo_materia = db.relationship(
+        "GrupoMateria",
         back_populates="clases",
         lazy=True
     )
@@ -76,5 +76,19 @@ class Clase(db.Model):
         lazy=True
     )
 
+    # ========== PROPIEDADES DE ACCESO RÁPIDO ==========
+
+    @property
+    def nombre_materia(self):
+        if self.grupo_materia and self.grupo_materia.materia:
+            return self.grupo_materia.materia.nombre
+        return "N/A"
+
+    @property
+    def nombre_grupo(self):
+        if self.grupo_materia and self.grupo_materia.grupo:
+            return f"{self.grupo_materia.grupo.grado}{self.grupo_materia.grupo.nombre}"
+        return "N/A"
+
     def __repr__(self):
-        return f'<Clase {self.materia} - {self.grado}{self.grupo} ({self.dia})>'
+        return f'<Clase {self.nombre_materia} - {self.nombre_grupo} ({self.dia})>'

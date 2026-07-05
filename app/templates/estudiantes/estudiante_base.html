@@ -1,49 +1,68 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistPROF - Estudiante</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/coordinador.css') }}">
+</head>
+<body>
 
-{% block title %}SistPROF | Estudiante{% endblock %}
+<div class="coordinador-container">
+    <aside class="coordinador-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="bi bi-backpack"></i> Panel Estudiante</h2>
+            <p>SistPROF</p>
+        </div>
 
-{% block content %}
-
-<!-- Sidebar + contenido principal al estilo del docente -->
-<div class="d-flex" style="min-height: calc(100vh - 200px);">
-
-    <!-- Sidebar -->
-    <div class="bg-dark text-white" style="width: 280px; min-height: 100%;">
-        <div class="p-3">
-            <h5 class="text-center mb-4">
-                <i class="bi bi-backpack"></i>
-                Panel Estudiante
-            </h5>
-            <hr class="border-secondary">
-
-            <nav class="nav flex-column nav-pills">
-                <a class="nav-link text-white {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active bg-primary{% endif %}"
-                   href="{{ url_for('estudiante.dashboard_estudiante') }}">
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.dashboard_estudiante') }}" class="menu-link {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
-                <a class="nav-link text-white"
-                   href="{{ url_for('estudiante.examen') }}">
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.examen') }}" class="menu-link {% if request.endpoint == 'estudiante.examen' %}active{% endif %}">
                     <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
                 </a>
-                <a class="nav-link text-white"
-                   href="{{ url_for('estudiante.mis_resultados') }}">
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mis_resultados') }}" class="menu-link {% if request.endpoint == 'estudiante.mis_resultados' %}active{% endif %}">
                     <i class="bi bi-bar-chart-line"></i> Mis Resultados
                 </a>
-                <hr class="border-secondary">
-                <a class="nav-link text-white" href="{{ url_for('auth.logout') }}">
-                    <i class="bi bi-box-arrow-right"></i> Salir
-                </a>
-            </nav>
-        </div>
-    </div>
+            </li>
 
-    <!-- Contenido principal -->
-    <div class="flex-grow-1 bg-light p-4">
-        <div class="container-fluid">
+                        <!-- Botón Cerrar Sesión -->
+            <li class="menu-item logout-item">
+                <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                </button>
+            </li>
+        </ul>
+    </aside>
+
+    <main class="coordinador-content">
+        <header class="coordinador-header">
+            <h1>{% block estudiante_page_title %}Dashboard Estudiante{% endblock %}</h1>
+            <div class="user-info"><i class="bi bi-person-circle"></i> {{ current_user.email }}</div>
+        </header>
+        <div class="coordinador-main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
             {% block estudiante_content %}{% endblock %}
         </div>
-    </div>
-
+    </main>
 </div>
-
-{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

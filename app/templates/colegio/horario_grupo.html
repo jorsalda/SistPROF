@@ -1,0 +1,129 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Horario - {{ grupo.grado }}{{ grupo.nombre }}
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid py-4">
+    
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-calendar-week"></i> Horario de Clases
+            </h2>
+            <p class="text-muted mb-0">
+                Grupo: <strong>{{ grupo.grado }}{{ grupo.nombre }}</strong> | 
+                Jornada: {{ grupo.jornada.nombre if grupo.jornada else 'N/A' }}
+            </p>
+        </div>
+        <a href="{{ url_for('colegio.lista_grupos', sede_id=grupo.sede_id, jornada_id=grupo.jornada_id) }}" 
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Alerta de validación -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> 
+        <strong>Importante:</strong> El sistema validará que ningún docente exceda las <strong>22 horas semanales</strong>.
+    </div>
+
+    <!-- Formulario de Horario -->
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-primary">
+                            <tr>
+                                <th class="text-center" style="width: 120px;">Hora</th>
+                                {% for dia in dias %}
+                                <th class="text-center">{{ dia|capitalize }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bloque in bloques_hora %}
+                            <tr>
+                                <td class="text-center fw-bold bg-light">
+                                    {{ bloque.inicio }}<br>
+                                    <small class="text-muted">{{ bloque.fin }}</small>
+                                </td>
+                                {% for dia in dias %}
+                                <td class="p-2">
+                                    {% set clave = dia ~ '_' ~ bloque.inicio %}
+                                    {% set clase = horarios_dict.get(clave) %}
+                                   <select name="{{ clave }}"
+        class="form-select form-select-sm">
+    <option value="">-- Vacío --</option>
+    {% for gm in grupo_materias %}
+        <option value="{{ gm.id }}"
+                data-docente-id="{{ gm.docente_id if gm.docente else '' }}"
+                {% if clase and clase.grupo_materia_id == gm.id %}selected{% endif %}>
+            {{ gm.materia.nombre }}
+            {% if gm.docente %}
+                <br><small class="text-muted">
+                    👨‍🏫 {{ gm.docente.nombre|truncate(20, True, '...') }}
+                    <br>📚 Grupo: {{ grupo.grado }}{{ grupo.nombre }}
+                </small>
+            {% endif %}
+        </option>
+    {% endfor %}
+</select>
+
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-footer bg-white">
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-save"></i> Guardar Horario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+<style>
+    /* Mejorar visualización de options con salto de línea */
+    select option {
+        white-space: pre-line;
+        padding: 8px;
+    }
+
+    /* Resaltar celdas con clase asignada */
+    tbody tr td select:valid {
+        background-color: #d4edda;
+    }
+
+    /* Tooltip informativo */
+    .info-docente {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}

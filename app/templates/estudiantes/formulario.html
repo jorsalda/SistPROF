@@ -68,68 +68,91 @@
                         </h5>
 
                         <div class="row g-3 mb-3">
-
+                            <!-- Nombre -->
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Nombre <span class="text-danger">*</span>
                                 </label>
-
                                 <div class="input-group">
-            <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-person text-muted"></i>
-            </span>
-
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
                                     <input
-                                            type="text"
-                                            name="nombre"
-                                            class="form-control border-start-0 ps-0"
-                                            placeholder="Ej: Juan Carlos"
-                                            value="{{ estudiante.nombre if edit_mode else '' }}"
-                                            required>
+                                        type="text"
+                                        name="nombre"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: Juan Carlos"
+                                        value="{{ estudiante.nombre if edit_mode else '' }}"
+                                        required>
                                 </div>
                             </div>
 
+                            <!-- Apellido -->
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Apellido <span class="text-danger">*</span>
                                 </label>
-
                                 <div class="input-group">
-            <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-person-vcard text-muted"></i>
-            </span>
-
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person-vcard text-muted"></i>
+                                    </span>
                                     <input
-                                            type="text"
-                                            name="apellido"
-                                            class="form-control border-start-0 ps-0"
-                                            placeholder="Ej: Pérez García"
-                                            value="{{ estudiante.apellido if edit_mode else '' }}"
-                                            required>
+                                        type="text"
+                                        name="apellido"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: Pérez García"
+                                        value="{{ estudiante.apellido if edit_mode else '' }}"
+                                        required>
                                 </div>
                             </div>
-
                         </div>
 
+                        <!-- Tipo y Número de Documento -->
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">
-                                    Dirección <span class="text-danger">*</span>
+                                    Tipo de Documento <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-geo-alt text-muted"></i>
+                                        <i class="bi bi-card-list text-muted"></i>
                                     </span>
-                                    <input type="text"
-                                           name="direccion"
-                                           class="form-control border-start-0 ps-0"
-                                           placeholder="Ej: Calle 123 #45-67"
-                                           value="{{ estudiante.direccion if edit_mode else '' }}"
-                                           required>
+                                    <select
+                                        name="tipo_documento"
+                                        id="tipo_documento"
+                                        class="form-select border-start-0 ps-0"
+                                        required>
+                                        <option value="TI" {% if edit_mode and estudiante.tipo_documento == 'TI' %}selected{% endif %}>Tarjeta de Identidad (TI)</option>
+                                        <option value="CC" {% if edit_mode and estudiante.tipo_documento == 'CC' %}selected{% endif %}>Cédula de Ciudadanía (CC)</option>
+                                        <option value="CE" {% if edit_mode and estudiante.tipo_documento == 'CE' %}selected{% endif %}>Cédula de Extranjería (CE)</option>
+                                        <option value="TE" {% if edit_mode and estudiante.tipo_documento == 'TE' %}selected{% endif %}>Tarjeta de Extranjería (TE)</option>
+                                        <option value="RC" {% if edit_mode and estudiante.tipo_documento == 'RC' %}selected{% endif %}>Registro Civil (RC)</option>
+                                        <option value="PAS" {% if edit_mode and estudiante.tipo_documento == 'PAS' %}selected{% endif %}>Pasaporte</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Número de Documento <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-hash text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        name="documento"
+                                        id="documento"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: 1000123456"
+                                        value="{{ estudiante.documento if estudiante else '' }}"
+                                        required>
+                                </div>
+                            </div>
+
+                            <!-- Teléfono -->
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">
                                     Teléfono <span class="text-danger">*</span>
                                 </label>
@@ -137,12 +160,34 @@
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-telephone text-muted"></i>
                                     </span>
-                                    <input type="tel"
-                                           name="telefono"
-                                           class="form-control border-start-0 ps-0"
-                                           placeholder="Ej: 300 123 4567"
-                                           value="{{ estudiante.telefono if edit_mode else '' }}"
-                                           required>
+                                    <input
+                                        type="tel"
+                                        name="telefono"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: 300 123 4567"
+                                        value="{{ estudiante.telefono if edit_mode else '' }}"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dirección -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    Dirección <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        name="direccion"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: Calle 123 #45-67, Bogotá"
+                                        value="{{ estudiante.direccion if edit_mode else '' }}"
+                                        required>
                                 </div>
                             </div>
                         </div>
@@ -151,6 +196,29 @@
                         <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom mt-4">
                             <i class="bi bi-book me-2"></i>Información Académica
                         </h5>
+                        <!-- Email -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    Correo Electrónico <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-envelope text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: estudiante@colegio.edu.co"
+                                        value="{{ estudiante.email if estudiante and estudiante.email else '' }}"
+                                        required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Este será su usuario de acceso al sistema
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
@@ -295,7 +363,8 @@
                                     <small>
                                         • Todos los campos marcados con <span class="text-danger">*</span> son
                                         obligatorios.<br>
-                                        • El QR de acceso se genera automáticamente al guardar.
+                                        • El número de documento será su usuario de acceso.<br>
+                                        • La contraseña inicial será el mismo número de documento.
                                     </small>
                                 </div>
                             </div>

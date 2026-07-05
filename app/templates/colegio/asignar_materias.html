@@ -1,0 +1,143 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Asignar Materias - {{ grupo.grado }}{{ grupo.nombre }} | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid py-4">
+    
+    <!-- Encabezado y Botón Volver -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-book"></i> Asignar Materias
+            </h2>
+            <p class="text-muted mb-0">
+                Grupo: <strong>{{ grupo.grado }}{{ grupo.nombre }}</strong> - Jornada: {{ grupo.jornada.nombre if grupo.jornada else 'N/A' }}
+            </p>
+        </div>
+        <a href="{{ url_for('colegio.lista_grupos', sede_id=grupo.sede_id, jornada_id=grupo.jornada_id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Grupos
+        </a>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Formulario Principal -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Configuración de Materias y Docentes</h5>
+        </div>
+        <div class="card-body p-4">
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">Activar</th>
+                                <th>Materia</th>
+                                <th>Docente Asignado</th>
+                                <th style="width: 150px;">Horas/Semana</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for materia in materias %}
+                            <tr>
+                                <td class="text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        class="form-check-input materia-check" 
+                                        name="activar_{{ materia.id }}" 
+                                        id="check_{{ materia.id }}"
+                                        {% if materia.id in asignaciones_actuales %}checked{% endif %}
+                                        onchange="toggleDocente({{ materia.id }})"
+                                    >
+                                </td>
+                                <td>
+                                    <label for="check_{{ materia.id }}" class="fw-semibold mb-0 cursor-pointer">
+                                        {{ materia.nombre }}
+                                    </label>
+                                </td>
+                                <td>
+                                    <select 
+                                        name="materia_{{ materia.id }}" 
+                                        id="select_{{ materia.id }}" 
+                                        class="form-select form-select-sm"
+                                        {% if materia.id not in asignaciones_actuales %}disabled{% endif %}
+                                    >
+                                        <option value="">-- Seleccione docente --</option>
+                                        {% for docente in docentes %}
+                                            <option value="{{ docente.id }}" 
+                                                {% if asignaciones_actuales.get(materia.id) == docente.id %}selected{% endif %}>
+                                                {{ docente.nombre }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input 
+                                        type="number" 
+                                        name="horas_{{ materia.id }}" 
+                                        class="form-control form-control-sm" 
+                                        value="2" 
+                                        min="1" 
+                                        max="10"
+                                        {% if materia.id not in asignaciones_actuales %}disabled{% endif %}
+                                    >
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-save"></i> Guardar Asignaciones
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Script para habilitar/deshabilitar selects -->
+<script>
+    function toggleDocente(id) {
+        const checkbox = document.getElementById('check_' + id);
+        const select = document.getElementById('select_' + id);
+        // También buscamos el input de horas si lo usamos en el futuro
+        const horasInput = document.querySelector(`input[name="horas_${id}"]`);
+        
+        if (checkbox.checked) {
+            select.disabled = false;
+            if(horasInput) horasInput.disabled = false;
+        } else {
+            select.disabled = true;
+            select.value = ""; // Limpiar selección
+            if(horasInput) horasInput.disabled = true;
+        }
+    }
+</script>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+{% endblock %}

@@ -13,7 +13,12 @@ from app.models.estudiante import Estudiante
 from app.models.jornada import Jornada
 from app.models.usuario import Usuario
 from app.models.grupo import Grupo
+from app.models.grupo_materia import GrupoMateria
+from app.models.materia import Materia
 
+from app.models.grupo_materia import GrupoMateria
+from app.models.clase import Clase, DiaSemana
+from datetime import datetime, timedelta
 colegio_bp = Blueprint(
     "colegio",
     __name__,
@@ -1876,3 +1881,351 @@ def fusionar_grupo(
         grupos_destino=grupos_destino
     )
 
+
+# ==========================================================
+# ASIGNAR MATERIAS A UN GRUPO
+# ==========================================================
+
+@colegio_bp.route('/grupos/<int:grupo_id>/materias', methods=['GET', 'POST'])
+@login_required
+def asignar_materias_grupo(grupo_id):
+    # 1. Obtener el grupo y verificar que pertenezca al colegio
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    # 2. Obtener todas las materias y docentes activos
+    todas_las_materias = Materia.query.all()
+    docentes = Docente.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(Docente.nombre).all()
+
+    # 3. Obtener las materias YA asignadas a este grupo
+    materias_asignadas = GrupoMateria.query.filter_by(
+        grupo_id=grupo.id,
+        activo=True
+    ).all()
+
+    # Crear un diccionario rápido para saber qué docente tiene cada materia
+    # Formato: { materia_id: docente_id }
+    asignaciones_actuales = {
+        gm.materia_id: gm.docente_id
+        for gm in materias_asignadas
+    }
+
+    # ==========================================================
+    # SI ES POST (GUARDAR CAMBIOS)
+    # ==========================================================
+    if request.method == 'POST':
+        try:
+            # Desactivamos todas las asignaciones anteriores de este grupo
+            GrupoMateria.query.filter_by(grupo_id=grupo.id).update({'activo': False})
+
+            for materia in todas_las_materias:
+                # Verificamos si el checkbox de esta materia está marcado
+                activar = request.form.get(f'activar_{materia.id}')
+                docente_id = request.form.get(f'materia_{materia.id}')
+                horas = request.form.get(f'horas_{materia.id}', 2, type=int)
+
+                if activar and docente_id:
+                    existente = GrupoMateria.query.filter_by(
+                        grupo_id=grupo.id,
+                        materia_id=materia.id
+                    ).first()
+
+                    if existente:
+                        existente.activo = True
+                        existente.docente_id = int(docente_id)
+                        existente.horas_semanales = horas
+                    else:
+                        nueva_asignacion = GrupoMateria(
+                            grupo_id=grupo.id,
+                            materia_id=materia.id,
+                            docente_id=int(docente_id),
+                            horas_semanales=horas,
+                            activo=True
+                        )
+                        db.session.add(nueva_asignacion)
+
+            db.session.commit()
+            flash(f'Materias del grupo {grupo.grado}{grupo.nombre} actualizadas correctamente', 'success')
+            return redirect(url_for('colegio.asignar_materias_grupo', grupo_id=grupo.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+
+    # ==========================================================
+    # SI ES GET (MOSTRAR FORMULARIO)
+    # ==========================================================
+    return render_template(
+        'colegio/asignar_materias.html',
+        grupo=grupo,
+        materias=todas_las_materias,
+        docentes=docentes,
+        asignaciones_actuales=asignaciones_actuales
+    )
+
+
+@colegio_bp.route('/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_grupo(sede_id, jornada_id, grupo_id):
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    try:
+        # Si tiene estudiantes, mejor desactivar que eliminar
+        if grupo.estudiantes and len(grupo.estudiantes) > 0:
+            grupo.activo = False
+            db.session.commit()
+            flash(f'Grupo {grupo.grado}{grupo.nombre} desactivado (tiene estudiantes matriculados)', 'warning')
+        else:
+            db.session.delete(grupo)
+            db.session.commit()
+            flash(f'Grupo {grupo.grado}{grupo.nombre} eliminado correctamente', 'success')
+
+        return redirect(url_for('colegio.lista_grupos', sede_id=sede_id, jornada_id=jornada_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'danger')
+        return redirect(url_for('colegio.lista_grupos', sede_id=sede_id, jornada_id=jornada_id))
+
+
+@colegio_bp.route('/grupos/<int:grupo_id>/horario', methods=['GET', 'POST'])
+@login_required
+
+def horario_grupo(grupo_id):
+    from app.models.jornada_bloque import JornadaBloque
+
+    # Obtener el grupo con su jornada
+    grupo = Grupo.query.filter_by(
+        id=grupo_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    # Obtener la jornada del grupo
+    jornada = grupo.jornada
+
+    # ==========================================================
+    # OBTENER BLOQUES CONFIGURADOS PARA ESTA JORNADA
+    # ==========================================================
+
+    # Primero intentamos obtener los bloques de tipo 'clase' configurados
+    bloques_clase = JornadaBloque.query.filter_by(
+        jornada_id=jornada.id,
+        tipo='clase',
+        activo=True
+    ).order_by(JornadaBloque.orden).all()
+
+    # Convertir a formato para el template
+    bloques_hora = [
+        {
+            'inicio': bloque.hora_inicio.strftime('%H:%M'),
+            'fin': bloque.hora_fin.strftime('%H:%M'),
+            'nombre': bloque.nombre
+        }
+        for bloque in bloques_clase
+    ]
+
+    # Si no hay bloques configurados, generar dinámicamente desde la jornada
+    if not bloques_hora and jornada and jornada.hora_inicio and jornada.hora_fin:
+        from datetime import timedelta
+
+        hora_actual = datetime.combine(datetime.today(), jornada.hora_inicio)
+        hora_final = datetime.combine(datetime.today(), jornada.hora_fin)
+
+        while hora_actual < hora_final:
+            hora_inicio_str = hora_actual.strftime('%H:%M')
+            hora_fin_dt = hora_actual + timedelta(hours=1)
+            hora_fin_str = hora_fin_dt.strftime('%H:%M')
+
+            bloques_hora.append({
+                'inicio': hora_inicio_str,
+                'fin': hora_fin_str,
+                'nombre': f"Clase {len(bloques_hora) + 1}"
+            })
+
+            hora_actual = hora_fin_dt
+
+    # Si aún no hay bloques, usar valores por defecto
+    if not bloques_hora:
+        bloques_hora = [
+            {'inicio': '07:00', 'fin': '08:00', 'nombre': 'Clase 1'},
+            {'inicio': '08:00', 'fin': '09:00', 'nombre': 'Clase 2'},
+            {'inicio': '09:00', 'fin': '10:00', 'nombre': 'Clase 3'},
+            {'inicio': '10:00', 'fin': '11:00', 'nombre': 'Clase 4'},
+            {'inicio': '11:00', 'fin': '12:00', 'nombre': 'Clase 5'},
+            {'inicio': '12:00', 'fin': '13:00', 'nombre': 'Clase 6'},
+            {'inicio': '13:00', 'fin': '14:00', 'nombre': 'Clase 7'},
+            {'inicio': '14:00', 'fin': '15:00', 'nombre': 'Clase 8'},
+            {'inicio': '15:00', 'fin': '16:00', 'nombre': 'Clase 9'},
+            {'inicio': '16:00', 'fin': '17:00', 'nombre': 'Clase 10'},
+            {'inicio': '17:00', 'fin': '18:00', 'nombre': 'Clase 11'},
+        ]
+
+        flash(
+            f"⚠️ La jornada '{jornada.nombre}' no tiene bloques configurados. "
+            f"Usando horarios por defecto. Configure los bloques en 'Jornadas → Bloques'.",
+            'warning'
+        )
+
+    # Obtener materias asignadas a este grupo
+    grupo_materias = GrupoMateria.query.filter_by(
+        grupo_id=grupo.id,
+        activo=True
+    ).all()
+
+    # Obtener horarios existentes
+    clases_existentes = Clase.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).join(
+        GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id
+    ).filter(
+        GrupoMateria.grupo_id == grupo.id
+    ).all()
+
+    # Crear diccionario con clave "dia_hora_inicio"
+    horarios_dict = {}
+    for clase in clases_existentes:
+        clave = f"{clase.dia.value}_{clase.hora_inicio.strftime('%H:%M')}"
+        horarios_dict[clave] = clase
+
+    # Días de la semana
+    dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+
+    if request.method == 'POST':
+        try:
+            # Procesar cada celda del horario
+            for dia in dias:
+                for bloque in bloques_hora:
+                    hora = bloque['inicio']
+                    clave = f"{dia}_{hora}"
+                    grupo_materia_id = request.form.get(clave)
+
+                    if grupo_materia_id and grupo_materia_id != '':
+                        grupo_materia = GrupoMateria.query.get(int(grupo_materia_id))
+
+                        # VALIDACIÓN: 22 HORAS MÁXIMO POR DOCENTE
+                        if grupo_materia and grupo_materia.docente_id:
+                            horas_actuales = db.session.query(Clase).join(
+                                GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id
+                            ).filter(
+                                GrupoMateria.docente_id == grupo_materia.docente_id,
+                                Clase.activo == True
+                            ).count()
+
+                            clase_existente = Clase.query.filter_by(
+                                colegio_id=current_user.colegio_id,
+                                dia=DiaSemana(dia),
+                                hora_inicio=datetime.strptime(hora, '%H:%M').time()
+                            ).first()
+
+                            if not clase_existente:
+                                horas_actuales += 1
+
+                            if horas_actuales > 22:
+                                flash(
+                                    f"⚠️ El docente '{grupo_materia.docente.nombre}' ya tiene "
+                                    f"{horas_actuales - 1} horas asignadas. "
+                                    f"No puede exceder 22 horas semanales.",
+                                    'danger'
+                                )
+                                return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+
+                        # GUARDAR LA CLASE
+                        if clase_existente:
+                            clase_existente.grupo_materia_id = int(grupo_materia_id)
+                            clase_existente.docente_id = grupo_materia.docente_id if grupo_materia else None
+                        else:
+                            nueva_clase = Clase(
+                                colegio_id=current_user.colegio_id,
+                                grupo_materia_id=int(grupo_materia_id),
+                                docente_id=grupo_materia.docente_id if grupo_materia else None,
+                                dia=DiaSemana(dia),
+                                hora_inicio=datetime.strptime(hora, '%H:%M').time(),
+                                hora_fin=datetime.strptime(bloque['fin'], '%H:%M').time(),
+                                activo=True
+                            )
+                            db.session.add(nueva_clase)
+
+            db.session.commit()
+            flash('Horario actualizado correctamente', 'success')
+            return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+
+    return render_template(
+        'colegio/horario_grupo.html',
+        grupo=grupo,
+        grupo_materias=grupo_materias,
+        horarios_dict=horarios_dict,
+        dias=dias,
+        bloques_hora=bloques_hora
+    )
+
+
+# ==========================================================
+# CONFIGURAR BLOQUES DE TIEMPO POR JORNADA
+# ==========================================================
+
+@colegio_bp.route('/jornadas/<int:jornada_id>/configurar-bloques', methods=['GET', 'POST'])
+@login_required
+def configurar_bloques_jornada(jornada_id):
+    from app.models.jornada_bloque import JornadaBloque
+
+    jornada = Jornada.query.filter_by(
+        id=jornada_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    if request.method == 'POST':
+        try:
+            # Limpiar bloques existentes de esta jornada
+            JornadaBloque.query.filter_by(jornada_id=jornada.id).delete()
+
+            # Procesar bloques enviados desde el formulario
+            horas_inicio = request.form.getlist('hora_inicio[]')
+            horas_fin = request.form.getlist('hora_fin[]')
+            tipos = request.form.getlist('tipo[]')
+            nombres = request.form.getlist('nombre[]')
+
+            for i in range(len(horas_inicio)):
+                if horas_inicio[i] and horas_fin[i]:
+                    bloque = JornadaBloque(
+                        jornada_id=jornada.id,
+                        hora_inicio=datetime.strptime(horas_inicio[i], '%H:%M').time(),
+                        hora_fin=datetime.strptime(horas_fin[i], '%H:%M').time(),
+                        tipo=tipos[i] if i < len(tipos) else 'clase',
+                        nombre=nombres[i] if i < len(nombres) else f"Bloque {i + 1}",
+                        orden=i + 1,
+                        activo=True
+                    )
+                    db.session.add(bloque)
+
+            db.session.commit()
+            flash('Bloques de la jornada configurados correctamente', 'success')
+            return redirect(url_for('colegio.configurar_bloques_jornada', jornada_id=jornada.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar los bloques: {str(e)}', 'danger')
+
+    # GET: Obtener bloques existentes para mostrar en el formulario
+    bloques = JornadaBloque.query.filter_by(
+        jornada_id=jornada.id,
+        activo=True
+    ).order_by(JornadaBloque.orden).all()
+
+    return render_template(
+        'colegio/configurar_bloques.html',
+        jornada=jornada,
+        bloques=bloques
+    )

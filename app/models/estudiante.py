@@ -23,7 +23,21 @@ class Estudiante(db.Model):
         nullable=False,
         default=""
     )
-
+    tipo_documento = db.Column(
+        db.String(20),
+        nullable=True,
+        default='TI'
+    )
+    documento = db.Column(
+        db.String(20),
+        unique=True,
+        nullable=True
+    )
+    email = db.Column(
+        db.String(120),
+        unique=True,
+        nullable=True
+    )
     # Compatibilidad temporal
     grado = db.Column(
         db.String(20),

@@ -15,8 +15,11 @@ class Examen(db.Model):
     )
 
     descripcion = db.Column(db.Text)
+    tiempo_limite_minutos = db.Column(db.Integer, default=60)
 
-    fecha = db.Column(
+    activo = db.Column(db.Boolean, default=True)
+
+    fecha_creacion= db.Column(
         db.Date,
         nullable=False
     )
@@ -38,17 +41,18 @@ class Examen(db.Model):
         nullable=False
     )
 
-    archivo_json = db.Column(db.String(200))  # ← Nombre del archivo (legacy)
+    archivo_json = db.Column(db.String(200))
 
-    # 🔥 NUEVO CAMPO (opcional, si decide guardar JSON directamente en esta tabla)
-    contenido_json = db.Column(JSONB)  # ← Contenido completo del examen
+    contenido_json = db.Column(JSONB)
 
-    # 🔥 RELACIÓN CON TIPO_EXAMEN
     tipo_examen_id = db.Column(
         db.Integer,
         db.ForeignKey("tipo_examen.id"),
         nullable=True
     )
+
+    # 🔥 AGREGAR ESTA LÍNEA
+    activo = db.Column(db.Boolean, default=True)
 
     # Relaciones existentes
     materia = db.relationship(
@@ -61,7 +65,6 @@ class Examen(db.Model):
         backref="examenes"
     )
 
-    # 🔥 NUEVA RELACIÓN
     tipo_examen = db.relationship(
         "TipoExamen",
         backref="examenes",

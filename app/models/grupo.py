@@ -77,7 +77,13 @@ class Grupo(db.Model):
             f"{self.sede.nombre if self.sede else 'Sin Sede'}>"
         )
 
-
+    # Materias asignadas a este grupo
+    materias_asignadas = db.relationship(
+        "GrupoMateria",
+        back_populates="grupo",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 class GrupoAreas(db.Model):
     """Tabla intermedia: Grupo ↔ Área"""
 

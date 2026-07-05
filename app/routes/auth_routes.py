@@ -86,7 +86,7 @@ def login():
 
             # ESTUDIANTE
             elif resultado.rol == 'estudiante':
-                return redirect(url_for('estudiante.dashboard'))
+                return redirect(url_for('estudiante.dashboard_estudiante'))
 
             # ACUDIENTE
             elif resultado.rol == 'acudiente':
