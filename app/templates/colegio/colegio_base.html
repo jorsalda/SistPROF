@@ -49,6 +49,16 @@
                 </a>
             </li>
 
+            <li class="menu-item">
+                <a class="nav-link" href="{{ url_for('colegio.plan_estudios') }}">
+                    <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
+                </a>
+            </li>
+            <li class="menu-item">
+    <a href="{{ url_for('colegio.lista_materias') }}" class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
+        <i class="bi bi-book"></i> Materias
+    </a>
+</li>
             <!-- Docentes -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_docentes') }}"
@@ -153,6 +163,7 @@
                     </li>
                 </ul>
             </li>
+
             <!-- Mi Cuenta -->
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}"

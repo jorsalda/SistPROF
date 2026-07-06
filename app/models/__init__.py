@@ -62,3 +62,5 @@ from .coordinador import Coordinador
 
 
 from app.models.grupo import Grupo
+
+from app.models.plan_estudios import PlanEstudios

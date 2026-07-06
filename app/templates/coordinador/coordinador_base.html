@@ -29,6 +29,12 @@
                 </a>
             </li>
             <li class="menu-item">
+    <a href="{{ url_for('colegio.plan_estudios') }}" class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
+        <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
+    </a>
+</li>
+
+            <li class="menu-item">
                 <a href="{{ url_for('coordinador.lista_docentes') }}" class="menu-link {% if request.endpoint == 'coordinador.lista_docentes' %}active{% endif %}">
                     <i class="bi bi-people"></i> Docentes
                 </a>

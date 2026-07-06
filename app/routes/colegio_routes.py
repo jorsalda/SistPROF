@@ -2229,3 +2229,188 @@ def configurar_bloques_jornada(jornada_id):
         jornada=jornada,
         bloques=bloques
     )
+
+
+# ==========================================================
+# PLAN DE ESTUDIOS (MALLA CURRICULAR)
+# ==========================================================
+
+@colegio_bp.route('/plan-estudios', methods=['GET', 'POST'])
+@login_required
+def plan_estudios():
+    from app.models.plan_estudios import PlanEstudios
+
+    if request.method == 'POST':
+        try:
+            # Procesar cada celda del formulario
+            grados = request.form.getlist('grado[]')
+            materia_ids = request.form.getlist('materia_id[]')
+            horas = request.form.getlist('horas[]')
+
+            for i in range(len(grados)):
+                grado = grados[i]
+                materia_id = materia_ids[i]
+                horas_semanales = int(horas[i]) if horas[i] else 0
+
+                # Buscar si ya existe
+                plan = PlanEstudios.query.filter_by(
+                    colegio_id=current_user.colegio_id,
+                    grado=grado,
+                    materia_id=materia_id
+                ).first()
+
+                if horas_semanales > 0:
+                    if plan:
+                        # Actualizar existente
+                        plan.horas_semanales = horas_semanales
+                    else:
+                        # Crear nuevo
+                        nuevo_plan = PlanEstudios(
+                            colegio_id=current_user.colegio_id,
+                            grado=grado,
+                            materia_id=materia_id,
+                            horas_semanales=horas_semanales,
+                            activo=True
+                        )
+                        db.session.add(nuevo_plan)
+                else:
+                    # Si horas es 0, eliminar el registro
+                    if plan:
+                        db.session.delete(plan)
+
+            db.session.commit()
+            flash('Plan de estudios actualizado correctamente', 'success')
+            return redirect(url_for('colegio.plan_estudios'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+
+    # GET: Obtener datos para mostrar
+    from app.models.materia import Materia
+
+    # Obtener todas las materias activas del colegio
+    materias = Materia.query.order_by(Materia.nombre).all()
+    # Grados disponibles
+    grados = ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°', '10°', '11°']
+
+    # Obtener plan de estudios actual
+    plan_actual = PlanEstudios.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).all()
+
+    # Crear diccionario para acceso rápido: {(grado, materia_id): horas}
+    plan_dict = {
+        (p.grado, p.materia_id): p.horas_semanales
+        for p in plan_actual
+    }
+
+    return render_template(
+        'colegio/plan_estudios.html',
+        materias=materias,
+        grados=grados,
+        plan_dict=plan_dict
+    )
+
+
+# ==========================================================
+# GESTIÓN DE MATERIAS (GLOBAL - COMPARTIDAS)
+# ==========================================================
+
+@colegio_bp.route('/materias')
+@login_required
+def lista_materias():
+    """Lista todas las materias (globales)"""
+    materias = Materia.query.order_by(Materia.nombre).all()
+
+    return render_template(
+        'colegio/materias.html',
+        materias=materias
+    )
+
+
+@colegio_bp.route('/materias/nueva', methods=['GET', 'POST'])
+@login_required
+def nueva_materia():
+    """Crear nueva materia (global)"""
+    if request.method == 'POST':
+        nombre = request.form.get('nombre', '').strip()
+
+        if not nombre:
+            flash('El nombre de la materia es obligatorio', 'danger')
+            return redirect(url_for('colegio.nueva_materia'))
+
+        # Verificar que no exista
+        existe = Materia.query.filter_by(nombre=nombre).first()
+
+        if existe:
+            flash('Ya existe una materia con ese nombre', 'warning')
+            return redirect(url_for('colegio.nueva_materia'))
+
+        materia = Materia(nombre=nombre)
+
+        db.session.add(materia)
+        db.session.commit()
+
+        flash(f'Materia "{nombre}" creada correctamente', 'success')
+        return redirect(url_for('colegio.lista_materias'))
+
+    return render_template('colegio/formulario_materia.html', materia=None)
+
+
+@colegio_bp.route('/materias/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_materia(id):
+    """Editar materia existente"""
+    materia = Materia.query.get_or_404(id)
+
+    if request.method == 'POST':
+        nuevo_nombre = request.form.get('nombre', '').strip()
+
+        if not nuevo_nombre:
+            flash('El nombre es obligatorio', 'danger')
+            return redirect(url_for('colegio.editar_materia', id=id))
+
+        # Verificar que no exista otra con el mismo nombre
+        existe = Materia.query.filter(
+            Materia.nombre == nuevo_nombre,
+            Materia.id != id
+        ).first()
+
+        if existe:
+            flash('Ya existe otra materia con ese nombre', 'warning')
+            return redirect(url_for('colegio.editar_materia', id=id))
+
+        materia.nombre = nuevo_nombre
+        db.session.commit()
+
+        flash(f'Materia "{nuevo_nombre}" actualizada correctamente', 'success')
+        return redirect(url_for('colegio.lista_materias'))
+
+    return render_template('colegio/formulario_materia.html', materia=materia)
+
+
+@colegio_bp.route('/materias/<int:id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_materia(id):
+    """Eliminar materia (solo si no tiene relaciones)"""
+    materia = Materia.query.get_or_404(id)
+
+    # Verificar si tiene relaciones
+    from app.models.plan_estudios import PlanEstudios
+    from app.models.grupo_materia import GrupoMateria
+
+    tiene_plan = PlanEstudios.query.filter_by(materia_id=id).first()
+    tiene_grupo = GrupoMateria.query.filter_by(materia_id=id).first()
+
+    if tiene_plan or tiene_grupo:
+        flash('No se puede eliminar: esta materia está siendo usada en Plan de Estudios o Grupos', 'danger')
+        return redirect(url_for('colegio.lista_materias'))
+
+    nombre = materia.nombre
+    db.session.delete(materia)
+    db.session.commit()
+
+    flash(f'Materia "{nombre}" eliminada correctamente', 'success')
+    return redirect(url_for('colegio.lista_materias'))

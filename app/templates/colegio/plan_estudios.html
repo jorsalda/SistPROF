@@ -1,10 +1,149 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Plan de Estudios
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid py-4">
+    
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
+            </h2>
+            <p class="text-muted mb-0">
+                Configuración de horas semanales por grado y materia
+            </p>
+        </div>
+        <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Información -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> 
+        <strong>Instrucciones:</strong> Define cuántas horas semanales debe tener cada materia por grado. 
+        Deja en <strong>0</strong> o vacío si la materia no aplica para ese grado.
+    </div>
+
+    <!-- Formulario -->
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Malla Curricular
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 100px;">Grado</th>
+                                {% for materia in materias %}
+                                <th class="text-center" style="min-width: 120px;">
+                                    {{ materia.nombre }}
+                                </th>
+                                {% endfor %}
+                                <th class="text-center" style="width: 100px;">Total Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grado in grados %}
+                            <tr>
+                                <td class="text-center fw-bold bg-light">
+                                    {{ grado }}
+                                </td>
+                                {% for materia in materias %}
+                                <td class="text-center p-1">
+                                    <input 
+                                        type="number" 
+                                        name="horas[]" 
+                                        value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                        min="0" 
+                                        max="10"
+                                        class="form-control form-control-sm text-center"
+                                        data-grado="{{ grado }}"
+                                        data-materia-id="{{ materia.id }}"
+                                        onchange="actualizarTotal(this)"
+                                    >
+                                    <input type="hidden" name="grado[]" value="{{ grado }}">
+                                    <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                                </td>
+                                {% endfor %}
+                                <td class="text-center fw-bold">
+                                    <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <button type="reset" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar Plan de Estudios
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+// Actualizar total de horas por grado
+function actualizarTotal(input) {
+    const grado = input.getAttribute('data-grado');
+    const fila = input.closest('tr');
+    const inputs = fila.querySelectorAll('input[name="horas[]"]');
+    
+    let total = 0;
+    inputs.forEach(inp => {
+        const valor = parseInt(inp.value) || 0;
+        total += valor;
+    });
+    
+    const badge = fila.querySelector('.total-grado');
+    badge.textContent = total;
+    
+    // Cambiar color según el total
+    if (total > 40) {
+        badge.className = 'badge bg-danger total-grado';
+    } else if (total > 30) {
+        badge.className = 'badge bg-warning text-dark total-grado';
+    } else {
+        badge.className = 'badge bg-success total-grado';
+    }
+}
+
+// Calcular totales al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[name="horas[]"]').forEach(input => {
+        actualizarTotal(input);
+    });
+});
+</script>
+
+{% endblock %}
