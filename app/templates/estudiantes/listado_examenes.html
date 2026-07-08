@@ -1,0 +1,46 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Mis Exámenes | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}
+Mis Exámenes Disponibles
+{% endblock %}
+
+{% block estudiante_content %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-journal-text"></i>
+            Seleccione un examen para presentar
+        </h5>
+    </div>
+    <div class="card-body" id="lista-examenes">
+        <div class="text-center p-4">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-3">Cargando exámenes...</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}?v=1"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('listado_examenes: DOM cargado');
+        console.log('listado_examenes: Elemento #lista-examenes:', document.getElementById('lista-examenes'));
+        console.log('listado_examenes: clsEstudiante existe?', typeof clsEstudiante);
+
+        if (typeof clsEstudiante !== 'undefined') {
+            console.log('listado_examenes: Llamando a cargarListaExamenes()');
+            clsEstudiante.cargarListaExamenes();
+        } else {
+            console.error('listado_examenes: ClsEstudiante NO está cargado');
+            document.getElementById('lista-examenes').innerHTML =
+                '<p class="text-danger">Error: ClsEstudiante no está cargado</p>';
+        }
+    });
+</script>
+
+{% endblock %}

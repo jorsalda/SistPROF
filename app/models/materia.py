@@ -15,6 +15,11 @@ class Materia(db.Model):
         nullable=False
     )
 
+    nivel_educativo = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
     # ================= RELACIONES =================
 
     # Competencias de la materia

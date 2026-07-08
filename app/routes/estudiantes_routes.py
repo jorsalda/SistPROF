@@ -31,19 +31,16 @@ estudiante_bp = Blueprint(
 @estudiante_bp.route("/")
 @login_required
 def listar():
-    # Obtener filtros
     search = request.args.get('search', '').strip()
     sede_id = request.args.get('sede_id', type=int)
     grado = request.args.get('grado', '').strip()
     grupo_id = request.args.get('grupo_id', type=int)
 
-    # Consulta base
     consulta = Estudiante.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
     )
 
-    # Aplicar filtros
     if search:
         consulta = consulta.filter(
             or_(
@@ -61,10 +58,8 @@ def listar():
     if grupo_id:
         consulta = consulta.filter_by(grupo_id=grupo_id)
 
-    # Ordenar
     estudiantes = consulta.order_by(Estudiante.nombre).all()
 
-    # Obtener datos para filtros
     sedes = Sede.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
@@ -75,7 +70,6 @@ def listar():
         activo=True
     ).order_by(Grupo.grado, Grupo.nombre).all()
 
-    # Obtener grados únicos
     grados_unicos = db.session.query(
         Estudiante.grado
     ).filter_by(
@@ -100,13 +94,9 @@ def listar():
 # =========================================================
 # API: OBTENER JORNADAS POR SEDE (AJAX)
 # =========================================================
-
 @estudiante_bp.route("/api/jornadas/<int:sede_id>")
 @login_required
 def api_jornadas_por_sede(sede_id):
-    """
-    Endpoint AJAX para cargar jornadas filtradas por sede
-    """
     jornadas = Jornada.query.filter_by(
         sede_id=sede_id,
         colegio_id=current_user.colegio_id,
@@ -130,7 +120,6 @@ def api_jornadas_por_sede(sede_id):
 def nuevo():
 
     if request.method == "POST":
-
         nombre = request.form.get("nombre", "").strip()
         apellido = request.form.get("apellido", "").strip()
         tipo_documento = request.form.get("tipo_documento", "").strip()
@@ -142,14 +131,7 @@ def nuevo():
         docente_id = request.form.get("docente_id", type=int)
         direccion = request.form.get("direccion", "").strip()
         telefono = request.form.get("telefono", "").strip()
-        acudiente_principal_id = request.form.get(
-            "acudiente_principal_id",
-            type=int
-        )
-
-        # =================================================
-        # VALIDACIONES DE CAMPOS OBLIGATORIOS
-        # =================================================
+        acudiente_principal_id = request.form.get("acudiente_principal_id", type=int)
 
         if not nombre:
             flash("El nombre del estudiante es requerido", "danger")
@@ -187,10 +169,6 @@ def nuevo():
             flash("Debe seleccionar un acudiente principal", "danger")
             return redirect(url_for("estudiante.nuevo"))
 
-        # =================================================
-        # VALIDACIONES DE DUPLICADOS
-        # =================================================
-
         if Usuario.query.filter_by(email=email).first():
             flash("El correo electrónico ya está registrado en el sistema", "danger")
             return redirect(url_for("estudiante.nuevo"))
@@ -208,10 +186,6 @@ def nuevo():
             flash("Ese estudiante ya existe en el grupo seleccionado", "warning")
             return redirect(url_for("estudiante.nuevo"))
 
-        # =================================================
-        # VALIDACIONES DE EXISTENCIA
-        # =================================================
-
         grupo_obj = Grupo.query.filter_by(
             id=grupo_id,
             colegio_id=current_user.colegio_id
@@ -221,20 +195,10 @@ def nuevo():
             flash("Grupo no válido", "danger")
             return redirect(url_for("estudiante.nuevo"))
 
-        # =================================================
-        # TOKEN QR
-        # =================================================
-
         qr_token = (
             f"EST-{current_user.colegio_id}-"
             f"{secrets.token_hex(8).upper()}"
         )
-
-        # =================================================
-        # PASO 1: CREAR USUARIO PARA EL ESTUDIANTE
-        # Usuario = email del formulario
-        # Contraseña = número de documento
-        # =================================================
 
         usuario_estudiante = Usuario(
             nombre=f"{nombre} {apellido}",
@@ -247,11 +211,7 @@ def nuevo():
             is_approved=True
         )
         db.session.add(usuario_estudiante)
-        db.session.flush()  # Para obtener el ID del usuario sin hacer commit
-
-        # =================================================
-        # PASO 2: CREAR ESTUDIANTE (vinculado al usuario)
-        # =================================================
+        db.session.flush()
 
         estudiante = Estudiante(
             nombre=nombre,
@@ -265,26 +225,14 @@ def nuevo():
             acudiente_principal_id=acudiente_principal_id,
             grupo_id=grupo_obj.id,
             colegio_id=current_user.colegio_id,
-            sede_id=(
-                sede_id
-                if sede_id
-                else grupo_obj.sede_id
-            ),
-            jornada_id=(
-                jornada_id
-                if jornada_id
-                else grupo_obj.jornada_id
-            ),
+            sede_id=(sede_id if sede_id else grupo_obj.sede_id),
+            jornada_id=(jornada_id if jornada_id else grupo_obj.jornada_id),
             docente_id=docente_id,
             qr_token=qr_token,
             activo=True
         )
 
         db.session.add(estudiante)
-
-        # =================================================
-        # PASO 3: MATRÍCULA AUTOMÁTICA EN LAS CLASES DEL GRUPO
-        # =================================================
 
         clases_del_grupo = db.session.query(Clase).join(
             GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id
@@ -310,7 +258,6 @@ def nuevo():
                 db.session.add(matricula)
                 clases_matriculadas += 1
 
-        # Guardar todo en la base de datos
         db.session.commit()
 
         flash(
@@ -320,10 +267,6 @@ def nuevo():
             "success"
         )
         return redirect(url_for("estudiante.listar"))
-
-    # =====================================================
-    # GET - Mostrar formulario vacío
-    # =====================================================
 
     sedes = Sede.query.filter_by(
         colegio_id=current_user.colegio_id,
@@ -343,10 +286,7 @@ def nuevo():
     grupos = Grupo.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
-    ).order_by(
-        Grupo.grado,
-        Grupo.nombre
-    ).all()
+    ).order_by(Grupo.grado, Grupo.nombre).all()
 
     acudientes = Acudiente.query.filter_by(
         colegio_id=current_user.colegio_id
@@ -377,7 +317,6 @@ def editar(id):
     ).first_or_404()
 
     if request.method == "POST":
-
         nombre = request.form.get("nombre", "").strip()
         apellido = request.form.get("apellido", "").strip()
         grupo_id = request.form.get("grupo_id", type=int)
@@ -386,14 +325,7 @@ def editar(id):
         docente_id = request.form.get("docente_id", type=int)
         direccion = request.form.get("direccion", "").strip()
         telefono = request.form.get("telefono", "").strip()
-        acudiente_principal_id = request.form.get(
-            "acudiente_principal_id",
-            type=int
-        )
-
-        # =================================================
-        # VALIDACIONES
-        # =================================================
+        acudiente_principal_id = request.form.get("acudiente_principal_id", type=int)
 
         if not nombre:
             flash("El nombre es obligatorio", "danger")
@@ -428,10 +360,6 @@ def editar(id):
             flash("Grupo no válido", "danger")
             return redirect(url_for("estudiante.editar", id=id))
 
-        # =================================================
-        # DUPLICADOS
-        # =================================================
-
         existe = Estudiante.query.filter(
             Estudiante.nombre == nombre,
             Estudiante.apellido == apellido,
@@ -441,15 +369,8 @@ def editar(id):
         ).first()
 
         if existe:
-            flash(
-                "Ya existe otro estudiante igual en ese grupo",
-                "warning"
-            )
+            flash("Ya existe otro estudiante igual en ese grupo", "warning")
             return redirect(url_for("estudiante.editar", id=id))
-
-        # =================================================
-        # ACTUALIZAR
-        # =================================================
 
         estudiante.nombre = nombre
         estudiante.apellido = apellido
@@ -457,16 +378,8 @@ def editar(id):
         estudiante.telefono = telefono
         estudiante.acudiente_principal_id = acudiente_principal_id
         estudiante.grupo_id = grupo_obj.id
-        estudiante.sede_id = (
-            sede_id
-            if sede_id
-            else grupo_obj.sede_id
-        )
-        estudiante.jornada_id = (
-            jornada_id
-            if jornada_id
-            else grupo_obj.jornada_id
-        )
+        estudiante.sede_id = (sede_id if sede_id else grupo_obj.sede_id)
+        estudiante.jornada_id = (jornada_id if jornada_id else grupo_obj.jornada_id)
         estudiante.docente_id = docente_id
 
         if 'activo' in request.form:
@@ -480,10 +393,6 @@ def editar(id):
         )
 
         return redirect(url_for("estudiante.listar"))
-
-    # =====================================================
-    # GET
-    # =====================================================
 
     sedes = Sede.query.filter_by(
         colegio_id=current_user.colegio_id,
@@ -503,10 +412,7 @@ def editar(id):
     grupos = Grupo.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
-    ).order_by(
-        Grupo.grado,
-        Grupo.nombre
-    ).all()
+    ).order_by(Grupo.grado, Grupo.nombre).all()
 
     acudientes = Acudiente.query.filter_by(
         colegio_id=current_user.colegio_id
@@ -544,26 +450,13 @@ def eliminar(id):
     tiene_evaluaciones = hasattr(estudiante, "evaluaciones") and len(estudiante.evaluaciones) > 0
 
     if tiene_asistencias or tiene_novedades or tiene_evaluaciones:
-
         estudiante.activo = False
-
         db.session.commit()
-
-        flash(
-            f"Estudiante '{nombre}' desactivado",
-            "warning"
-        )
-
+        flash(f"Estudiante '{nombre}' desactivado", "warning")
     else:
-
         db.session.delete(estudiante)
-
         db.session.commit()
-
-        flash(
-            f"Estudiante '{nombre}' eliminado",
-            "success"
-        )
+        flash(f"Estudiante '{nombre}' eliminado", "success")
 
     return redirect(url_for("estudiante.listar"))
 
@@ -616,14 +509,9 @@ def cambiar_estado(id):
     ).first_or_404()
 
     estudiante.activo = not estudiante.activo
-
     db.session.commit()
 
-    estado = (
-        "activado"
-        if estudiante.activo
-        else "desactivado"
-    )
+    estado = "activado" if estudiante.activo else "desactivado"
 
     return jsonify({
         "success": True,
@@ -645,7 +533,6 @@ def regenerar_qr(id):
     ).first_or_404()
 
     nuevo_qr = estudiante.generar_qr_token()
-
     db.session.commit()
 
     return jsonify({
@@ -668,17 +555,12 @@ def buscar_por_qr(token):
     ).first()
 
     if estudiante:
-
         return jsonify({
             "success": True,
             "estudiante": {
                 "id": estudiante.id,
                 "nombre": estudiante.nombre,
-                "grupo": (
-                    estudiante.grupo.nombre
-                    if estudiante.grupo
-                    else ""
-                )
+                "grupo": (estudiante.grupo.nombre if estudiante.grupo else "")
             }
         })
 
@@ -696,27 +578,12 @@ def buscar_por_qr(token):
 def asistencia_rapida():
 
     if request.method == "POST":
-
-        qr_token = request.form.get(
-            "qr_token",
-            ""
-        ).strip()
-
-        estado = request.form.get(
-            "estado",
-            "presente"
-        )
+        qr_token = request.form.get("qr_token", "").strip()
+        estado = request.form.get("estado", "presente")
 
         if not qr_token:
-
-            flash(
-                "Token QR no válido",
-                "danger"
-            )
-
-            return redirect(
-                url_for("estudiante.asistencia_rapida")
-            )
+            flash("Token QR no válido", "danger")
+            return redirect(url_for("estudiante.asistencia_rapida"))
 
         estudiante = Estudiante.query.filter_by(
             qr_token=qr_token,
@@ -724,18 +591,10 @@ def asistencia_rapida():
         ).first()
 
         if not estudiante:
-
-            flash(
-                "Estudiante no encontrado",
-                "danger"
-            )
-
-            return redirect(
-                url_for("estudiante.asistencia_rapida")
-            )
+            flash("Estudiante no encontrado", "danger")
+            return redirect(url_for("estudiante.asistencia_rapida"))
 
         try:
-
             from app.models.asistencia import Asistencia
 
             asistencia = Asistencia(
@@ -747,28 +606,16 @@ def asistencia_rapida():
             )
 
             db.session.add(asistencia)
-
             db.session.commit()
 
-            flash(
-                f"Asistencia registrada: {estudiante.nombre}",
-                "success"
-            )
+            flash(f"Asistencia registrada: {estudiante.nombre}", "success")
 
         except ImportError:
+            flash("Módulo de asistencias no configurado aún", "warning")
 
-            flash(
-                "Módulo de asistencias no configurado aún",
-                "warning"
-            )
+        return redirect(url_for("estudiante.asistencia_rapida"))
 
-        return redirect(
-            url_for("estudiante.asistencia_rapida")
-        )
-
-    return render_template(
-        "estudiantes/asistencia_rapida.html"
-    )
+    return render_template("estudiantes/asistencia_rapida.html")
 
 
 # =========================================================
@@ -777,21 +624,12 @@ def asistencia_rapida():
 @estudiante_bp.route("/ingenios")
 @login_required
 def ingenios():
-
-    return render_template(
-        "estudiantes/ingenios.html"
-    )
+    return render_template("estudiantes/ingenios.html")
 
 
-@estudiante_bp.route('/examen')
-@login_required
-def examen():
-    if current_user.rol != 'estudiante':
-        flash('Acceso no autorizado', 'danger')
-        return redirect(url_for('dashboard.index'))
-    return render_template('estudiantes/examen_estudiante.html')
-
-
+# =========================================================
+# MIS RESULTADOS
+# =========================================================
 @estudiante_bp.route('/mis-resultados')
 @login_required
 def mis_resultados():
@@ -808,7 +646,6 @@ def mis_resultados():
         flash('Perfil de estudiante no encontrado', 'warning')
         return redirect(url_for('auth.logout'))
 
-    # Obtener todos los resultados del estudiante
     resultados = db.session.query(
         ResultadoExamen,
         Examen.nombre.label('examen_nombre')
@@ -827,6 +664,9 @@ def mis_resultados():
     )
 
 
+# =========================================================
+# DASHBOARD ESTUDIANTE
+# =========================================================
 @estudiante_bp.route('/dashboard')
 @login_required
 def dashboard_estudiante():
@@ -844,7 +684,6 @@ def dashboard_estudiante():
         flash('Perfil de estudiante no encontrado', 'warning')
         return redirect(url_for('auth.logout'))
 
-    # Estadísticas
     resultados = ResultadoExamen.query.filter_by(estudiante_id=estudiante.id).all()
     total_examenes = len(resultados)
 
@@ -856,7 +695,6 @@ def dashboard_estudiante():
         promedio_general = 0
         mejor_nota = 0
 
-    # Últimos 5 resultados
     ultimos_resultados = db.session.query(
         ResultadoExamen,
         Examen.nombre.label('examen_nombre')
@@ -880,24 +718,18 @@ def dashboard_estudiante():
 
 
 # =========================================================
-# GESTIÓN DE ESTUDIANTES (PARA EL ADMIN)
+# GESTIÓN DE ESTUDIANTES
 # =========================================================
-
 @estudiante_bp.route("/gestion")
 @login_required
 def gestion_estudiantes():
-    """
-    Dashboard administrativo con estadísticas, filtros y vista consolidada
-    """
     from app.services.estudiante_service import EstudianteService
 
-    # Parámetros de filtros
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
     grado = request.args.get('grado', '').strip()
     grupo_id = request.args.get('grupo_id', type=int)
 
-    # Obtener estudiantes con filtros
     resultado = EstudianteService.get_all_by_colegio(
         colegio_id=current_user.colegio_id,
         page=page,
@@ -907,16 +739,13 @@ def gestion_estudiantes():
         grupo_id=grupo_id
     )
 
-    # Obtener estadísticas
     estadisticas = EstudianteService.get_estadisticas(current_user.colegio_id)
 
-    # Obtener datos para filtros
     grupos = Grupo.query.filter_by(
         colegio_id=current_user.colegio_id,
         activo=True
     ).order_by(Grupo.grado, Grupo.nombre).all()
 
-    # Obtener grados únicos
     grados_unicos = db.session.query(
         Estudiante.grado
     ).filter_by(
@@ -940,13 +769,11 @@ def gestion_estudiantes():
 
 
 # =========================================================
-# API: OBTENER GRUPOS POR SEDE (AJAX)
+# API: OBTENER GRUPOS POR SEDE
 # =========================================================
-
 @estudiante_bp.route("/api/grupos/<int:sede_id>")
 @login_required
 def api_grupos_por_sede(sede_id):
-
     jornada_id = request.args.get("jornada", type=int)
 
     consulta = Grupo.query.filter_by(
@@ -956,14 +783,9 @@ def api_grupos_por_sede(sede_id):
     )
 
     if jornada_id:
-        consulta = consulta.filter_by(
-            jornada_id=jornada_id
-        )
+        consulta = consulta.filter_by(jornada_id=jornada_id)
 
-    grupos = consulta.order_by(
-        Grupo.grado,
-        Grupo.nombre
-    ).all()
+    grupos = consulta.order_by(Grupo.grado, Grupo.nombre).all()
 
     return jsonify([
         {
@@ -976,15 +798,11 @@ def api_grupos_por_sede(sede_id):
 
 
 # =========================================================
-# API: OBTENER ACUDIENTES (AJAX)
+# API: OBTENER ACUDIENTES
 # =========================================================
-
 @estudiante_bp.route("/api/acudientes")
 @login_required
 def api_acudientes():
-    """
-    Endpoint AJAX para cargar acudientes del colegio
-    """
     acudientes = Acudiente.query.filter_by(
         colegio_id=current_user.colegio_id
     ).order_by(Acudiente.nombre).all()
@@ -999,22 +817,19 @@ def api_acudientes():
 
 
 # =========================================================
-# API: ESTADÍSTICAS RÁPIDAS (AJAX)
+# API: ESTADÍSTICAS RÁPIDAS
 # =========================================================
-
 @estudiante_bp.route("/api/estadisticas")
 @login_required
 def api_estadisticas():
-    """
-    Endpoint AJAX para obtener estadísticas actualizadas
-    """
     from app.services.estudiante_service import EstudianteService
-
     estadisticas = EstudianteService.get_estadisticas(current_user.colegio_id)
-
     return jsonify(estadisticas)
 
 
+# =========================================================
+# API: MIS MATERIAS
+# =========================================================
 @estudiante_bp.route('/api/mis-materias')
 @login_required
 def mis_materias():
@@ -1025,7 +840,6 @@ def mis_materias():
     if not estudiante:
         return jsonify({'error': 'Estudiante no encontrado'}), 404
 
-    # Obtener materias del grupo del estudiante a través de grupo_materias
     materias = []
     if estudiante.grupo_id:
         from app.models.materia import Materia

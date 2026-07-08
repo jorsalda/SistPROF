@@ -13,6 +13,7 @@ from app.routes.estudiantes_routes import estudiante_bp
 from app.routes.coordinador_routes import coordinador_bp
 
 
+from .models.pregunta import Pregunta
 # Modelos
 from .models import *
 

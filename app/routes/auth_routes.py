@@ -44,7 +44,7 @@ def index():
 
         # ESTUDIANTE
         elif current_user.rol == 'estudiante':
-            return redirect(url_for('estudiante.dashboard'))
+            return redirect(url_for('estudiante.dashboard_estudiante'))
 
         # ACUDIENTE
         elif current_user.rol == 'acudiente':

@@ -5,6 +5,9 @@ from config import Config
 from app.extensions import db, login_manager
 
 
+
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -45,3 +48,4 @@ def create_app():
 
 
     return app
+

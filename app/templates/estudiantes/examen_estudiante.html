@@ -1,38 +1,99 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluación Interactiva | SistPROF</title>
-    <!-- Estilos -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/examen.css') }}">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1>📝 Evaluación Estudiante</h1>
+{% extends "estudiantes/estudiante_base.html" %}
 
-        <!-- 🎮 Área de juego (se muestra cuando hay un examen seleccionado) -->
-        <div id="gameArea">
-            <div id="contexto"></div>
-            <div id="question"></div>
-            <div id="options"></div>
-            <p id="feedback"></p>
-            <p id="countdown"></p>
+{% block title %}Presentar Examen | SistPROF{% endblock %}
 
-            <div id="controls">
-                <button id="nextButton" style="display:none;">Siguiente Pregunta</button>
-                <button id="explanationButton" style="display:none;">Ver Explicación</button>
-            </div>
-            <div id="explanation-column"></div>
+{% block estudiante_page_title %}
+Presentar Examen
+{% endblock %}
+
+{% block estudiante_content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/examen_estilos.css') }}">
+
+<!-- TÍTULO Y CONTROLES -->
+<div id="exam-wrapper">
+<div class="exam-header-section">
+    <h1 class="exam-title">Evaluación</h1>
+
+    <div class="exam-controls-box">
+        <div class="control-item">
+            <label for="numQuestions">Número de preguntas:</label>
+            <input type="number" id="numQuestions" min="1" max="50" value="10">
         </div>
 
-        <!-- 📋 Resultados finales -->
-        <div id="result"></div>
+        <div class="control-item">
+            <label for="timePerQuestion">Tiempo por pregunta:</label>
+            <select id="timePerQuestion">
+                <option value="1">1 minuto</option>
+                <option value="2" selected>2 minutos</option>
+                <option value="3">3 minutos</option>
+            </select>
+        </div>
+
+        <div class="control-item">
+            <button id="updateQuestions" class="btn-update">Actualizar y Recargar</button>
+        </div>
+
+        <div class="control-item">
+            <span id="examInfo" class="info-text"></span>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 CONTADORES DE TIEMPO - Esquina inferior derecha -->
+<div id="timers-container" style="display:none;">
+    <div id="question-timer" class="timer-badge timer-warning">
+        <i class="bi bi-clock"></i> Pregunta: <span id="question-time">2:00</span>
+    </div>
+    <div id="exam-timer" class="timer-badge timer-danger">
+        <i class="bi bi-hourglass-split"></i> Examen: <span id="exam-time">20:00</span>
+    </div>
+</div>
+
+<!-- Contenedor de 3 columnas -->
+<div id="container">
+
+    <!-- Columna 1: Contexto y Pregunta -->
+    <div class="col-1-contexto-pregunta">
+        <div id="contexto"></div>
+        <div id="question">
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-3">Cargando...</p>
+            </div>
+        </div>
     </div>
 
-    <!-- Lógica principal -->
-    <script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
-</body>
-</html>
+    <!-- Columna 2: Opciones -->
+    <div class="col-2-opciones">
+        <div id="options"></div>
+        <button id="nextButton" style="display:none;">Siguiente Pregunta</button>
+        <button id="explanationButton" style="display:none;">Ver Explicación</button>
+        <div id="feedback" style="display:none;"></div>
+    </div>
+
+    <!-- Columna 3: Explicación -->
+    <div class="col-3-explicacion">
+        <div id="explanation-column"></div>
+    </div>
+
+</div>
+</div> 
+<div id="result" style="display:none;"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
+
+<script>
+    $(document).ready(function() {
+        if (typeof clsEstudiante !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const examenId = urlParams.get('id');
+            if (examenId) {
+                clsEstudiante.seleccionarExamen(parseInt(examenId));
+            }
+        }
+    });
+</script>
+
+{% endblock %}

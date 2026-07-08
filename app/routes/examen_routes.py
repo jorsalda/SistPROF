@@ -1,12 +1,14 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.models.examen import Examen
+from app.models.pregunta import Pregunta  # <-- NUEVO: Importamos el modelo Pregunta
 from app.models.resultado_examen import ResultadoExamen
 from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
 from app.models.estudiante import Estudiante
-from app.models.tipo_examen import TipoExamen  # ← AGREGADO
+from app.models.tipo_examen import TipoExamen
 from app.extensions import db
 from datetime import datetime
+import random  # <-- NUEVO: Para aleatorizar las preguntas
 
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 
@@ -15,7 +17,8 @@ examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 @login_required
 def obtener_json_examen(examen_id):
     """
-    Devuelve el JSON del examen para que el estudiante lo presente.
+    Devuelve las preguntas aleatorias desde el banco de preguntas en la BD.
+    Si no hay preguntas en la BD, hace fallback al JSON antiguo.
     """
     examen = Examen.query.get_or_404(examen_id)
 
@@ -23,24 +26,39 @@ def obtener_json_examen(examen_id):
     if examen.colegio_id != current_user.colegio_id:
         return jsonify({'error': 'No tiene acceso a este examen'}), 403
 
-    # 1. Prioridad: contenido_json en la BD
-    if examen.contenido_json:
-        return jsonify(examen.contenido_json)
+    # 1. Obtener la cantidad de preguntas que el estudiante quiere (por defecto 10)
+    num_preguntas = request.args.get('cantidad', default=10, type=int)
 
-    # 2. Si no, buscar archivo
-    if not examen.archivo_json:
-        return jsonify({'error': 'Este examen no tiene contenido'}), 404
+    # 2. Consultar el banco de preguntas en la BD
+    preguntas_db = Pregunta.query.filter_by(
+        materia_id=examen.materia_id,
+        tipo='icfes',
+        activo=True
+    ).all()
 
-    import os, json
-    ruta_json = os.path.join('static', 'examenes', examen.archivo_json)
+    # 3. Si NO hay preguntas en la BD, usamos el JSON antiguo (Fallback)
+    if not preguntas_db:
+        if examen.contenido_json:
+            return jsonify(examen.contenido_json)
+        return jsonify({'error': 'No hay preguntas disponibles en el banco para esta materia'}), 404
 
-    if not os.path.exists(ruta_json):
-        return jsonify({'error': f'Archivo {examen.archivo_json} no encontrado'}), 404
+    # 4. Aleatorizar y limitar la cantidad
+    random.shuffle(preguntas_db)
+    preguntas_seleccionadas = preguntas_db[:num_preguntas]
 
-    with open(ruta_json, 'r', encoding='utf-8') as f:
-        contenido = json.load(f)
+    # 5. Formatear para que EstudianteJS lo entienda
+    preguntas_formateadas = []
+    for p in preguntas_seleccionadas:
+        preguntas_formateadas.append({
+            "pregunta": p.texto,
+            "opciones": p.opciones,
+            "respuesta": p.respuesta_correcta,
+            "explicacion": p.explicacion,
+            "tema": p.tema,
+            "dificultad": p.dificultad
+        })
 
-    return jsonify(contenido)
+    return jsonify({"preguntas": preguntas_formateadas})
 
 
 @examen_bp.route('/disponibles', methods=['GET'])
@@ -50,23 +68,18 @@ def examenes_disponibles():
     Devuelve la lista de exámenes disponibles para el estudiante.
     Si se pasa materia_id, filtra por esa materia.
     """
-    materia_id = request.args.get('materia_id', type=int)  # ← NUEVO: filtro por materia
+    materia_id = request.args.get('materia_id', type=int)
 
     if current_user.rol == 'estudiante':
-        # Construir la consulta base
         query = Examen.query.join(TipoExamen).filter(
             Examen.activo == True,
             Examen.colegio_id == current_user.colegio_id,
             TipoExamen.disponible_individual == True
         )
-
-        # Aplicar filtro por materia si se proporciona
         if materia_id:
             query = query.filter(Examen.materia_id == materia_id)
-
         examenes = query.all()
     else:
-        # Para docente/admin: todos los exámenes del colegio
         query = Examen.query.filter_by(
             colegio_id=current_user.colegio_id,
             activo=True
@@ -93,8 +106,7 @@ def examenes_disponibles():
 @login_required
 def render_examen_estudiante():
     """
-    Renderiza la plantilla del examen e inyecta los IDs necesarios
-    para que el JS pueda enviar los resultados al backend.
+    Renderiza la plantilla del examen e inyecta los IDs necesarios.
     """
     exam_id = request.args.get('id', type=int)
     examen_obj = Examen.query.get(exam_id) if exam_id else Examen.query.filter_by(activo=True).first()
@@ -186,3 +198,16 @@ def guardar_resultado_examen():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+@examen_bp.route('/listado')
+@login_required
+def listado_examenes():
+    """
+    Muestra la lista de exámenes disponibles para el estudiante.
+    """
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    return render_template('estudiantes/listado_examenes.html')

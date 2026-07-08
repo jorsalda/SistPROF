@@ -116,13 +116,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-warning">
                             <tr>
-                                <td colspan="{{ materias_preescolar|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-balloon-heart-fill text-danger"></i> PREESCOLAR
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_preescolar %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -146,7 +146,7 @@ Plan de Estudios
                                 <td class="text-center fw-bold bg-light">
                                     {{ grado }}
                                 </td>
-                                {% for materia in materias_preescolar %}
+                                {% for materia in materias %}
                                 <td class="text-center p-1">
                                     <input
                                         type="number"
@@ -176,13 +176,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-success">
                             <tr>
-                                <td colspan="{{ materias_primaria|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-book-fill text-success"></i> PRIMARIA
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_primaria %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -206,7 +206,7 @@ Plan de Estudios
                                 <td class="text-center fw-bold bg-light">
                                     {{ grado }}
                                 </td>
-                                {% for materia in materias_primaria %}
+                                {% for materia in materias %}
                                 <td class="text-center p-1">
                                     <input
                                         type="number"
@@ -236,13 +236,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-danger">
                             <tr>
-                                <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-compass-fill text-danger"></i> PROGRAMAS ESPECIALES (Aceleración, Brújula, Refuerzo, Integración)
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_programas_especiales %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -266,7 +266,7 @@ Plan de Estudios
                                     <td class="text-center fw-bold bg-light">
                                         {{ grado }}
                                     </td>
-                                    {% for materia in materias_programas_especiales %}
+                                    {% for materia in materias %}
                                     <td class="text-center p-1">
                                         <input
                                             type="number"
@@ -290,7 +290,7 @@ Plan de Estudios
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center text-muted py-4">
+                                    <td colspan="{{ materias|length + 2 }}" class="text-center text-muted py-4">
                                         <i class="bi bi-info-circle"></i>
                                         No hay programas especiales configurados.
                                         Agregue grados como "Aceleración 6°", "Brújula 7°", "Refuerzo 5°" en la sección superior.
@@ -304,13 +304,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-primary">
                             <tr>
-                                <td colspan="{{ materias_bachillerato|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-briefcase-fill text-primary"></i> BACHILLERATO
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_bachillerato %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -334,7 +334,7 @@ Plan de Estudios
                                 <td class="text-center fw-bold bg-light">
                                     {{ grado }}
                                 </td>
-                                {% for materia in materias_bachillerato %}
+                                {% for materia in materias %}
                                 <td class="text-center p-1">
                                     <input
                                         type="number"
@@ -364,13 +364,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-info">
                             <tr>
-                                <td colspan="{{ materias_media|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-mortarboard-fill text-info"></i> MEDIA ACADÉMICA
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_media %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -394,7 +394,7 @@ Plan de Estudios
                                 <td class="text-center fw-bold bg-light">
                                     {{ grado }}
                                 </td>
-                                {% for materia in materias_media %}
+                                {% for materia in materias %}
                                 <td class="text-center p-1">
                                     <input
                                         type="number"
@@ -424,13 +424,13 @@ Plan de Estudios
                         <!-- ========================================= -->
                         <thead class="table-secondary">
                             <tr>
-                                <td colspan="{{ materias_validacion|length + 2 }}" class="text-center fw-bold py-2">
+                                <td colspan="{{ materias|length + 2 }}" class="text-center fw-bold py-2">
                                     <i class="bi bi-stars text-dark"></i> OTRAS MODALIDADES
                                 </td>
                             </tr>
                             <tr>
                                 <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_validacion %}
+                                {% for materia in materias %}
                                 <th class="text-center" style="min-width: 120px;">
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span>{{ materia.nombre }}</span>
@@ -448,37 +448,40 @@ Plan de Estudios
                             </tr>
                         </thead>
                         <tbody>
-                            {% if grados_otras_modalidades %}
-                                {% for grado in grados_otras_modalidades %}
+                            {% set tiene_otras = [] %}
+                            {% for grado in grados_personalizados %}
+                                {% if grado not in grados_programas_especiales %}
+                                    {% if tiene_otras.append(1) %}{% endif %}
+                                    <tr>
+                                        <td class="text-center fw-bold bg-light">
+                                            {{ grado }}
+                                        </td>
+                                        {% for materia in materias %}
+                                        <td class="text-center p-1">
+                                            <input
+                                                type="number"
+                                                name="horas[]"
+                                                value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                                min="0"
+                                                max="10"
+                                                class="form-control form-control-sm text-center"
+                                                data-grado="{{ grado }}"
+                                                data-materia-id="{{ materia.id }}"
+                                                onchange="actualizarTotal(this)"
+                                            >
+                                            <input type="hidden" name="grado[]" value="{{ grado }}">
+                                            <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                                        </td>
+                                        {% endfor %}
+                                        <td class="text-center fw-bold">
+                                            <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                            {% if not tiene_otras %}
                                 <tr>
-                                    <td class="text-center fw-bold bg-light">
-                                        {{ grado }}
-                                    </td>
-                                    {% for materia in materias_validacion %}
-                                    <td class="text-center p-1">
-                                        <input
-                                            type="number"
-                                            name="horas[]"
-                                            value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                            min="0"
-                                            max="10"
-                                            class="form-control form-control-sm text-center"
-                                            data-grado="{{ grado }}"
-                                            data-materia-id="{{ materia.id }}"
-                                            onchange="actualizarTotal(this)"
-                                        >
-                                        <input type="hidden" name="grado[]" value="{{ grado }}">
-                                        <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                    </td>
-                                    {% endfor %}
-                                    <td class="text-center fw-bold">
-                                        <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="{{ materias_validacion|length + 2 }}" class="text-center text-muted py-4">
+                                    <td colspan="{{ materias|length + 2 }}" class="text-center text-muted py-4">
                                         <i class="bi bi-info-circle"></i>
                                         No hay otras modalidades configuradas.
                                         Agregue grados como "Bilingüe 5°", "Inmersión 3°" en la sección superior.

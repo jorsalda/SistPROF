@@ -1,0 +1,273 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}
+Configurar Materias por Nivel
+{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid py-4">
+    
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-diagram-3-fill"></i> Configurar Materias por Nivel
+            </h2>
+            <p class="text-muted mb-0">
+                Define qué materias se impartirán en cada nivel educativo
+            </p>
+        </div>
+        <a href="{{ url_for('colegio.plan_estudios') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Plan de Estudios
+        </a>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Información -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> 
+        <strong>Instrucciones:</strong> Selecciona las materias que corresponden a cada nivel educativo. 
+        Esto permitirá organizar el Plan de Estudios de forma más clara y profesional.
+    </div>
+
+    <!-- Formulario principal -->
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Configuración de Materias
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 300px;">Nivel Educativo</th>
+                                <th>Materias Disponibles</th>
+                                <th style="width: 200px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- PREESCOLAR -->
+                            <tr class="table-warning">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-balloon-heart-fill text-danger"></i> PREESCOLAR
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-balloon-heart text-danger"></i> Preescolar
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_preescolar"
+                                                    value="{{ materia.id }}"
+                                                    id="preescolar_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel['Preescolar'] %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="preescolar_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Preescolar" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- PRIMARIA -->
+                            <tr class="table-success">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-book-fill text-success"></i> PRIMARIA
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-book text-success"></i> Primaria
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_primaria"
+                                                    value="{{ materia.id }}"
+                                                    id="primaria_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel['Primaria'] %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="primaria_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Primaria" class="btn btn-sm btn-success">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- BACHILLERATO -->
+                            <tr class="table-primary">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-briefcase-fill text-primary"></i> BACHILLERATO
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-briefcase text-primary"></i> Bachillerato
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_bachillerato"
+                                                    value="{{ materia.id }}"
+                                                    id="bachillerato_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel['Bachillerato'] %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="bachillerato_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Bachillerato" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- MEDIA -->
+                            <tr class="table-info">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-mortarboard-fill text-info"></i> MEDIA ACADÉMICA
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-mortarboard text-info"></i> Media
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_media"
+                                                    value="{{ materia.id }}"
+                                                    id="media_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel['Media'] %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="media_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Media" class="btn btn-sm btn-info">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- MODALIDADES ESPECIALES -->
+                            <tr class="table-secondary">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-stars text-dark"></i> MODALIDADES ESPECIALES
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-stars text-dark"></i> Modalidades
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_modalidades"
+                                                    value="{{ materia.id }}"
+                                                    id="modalidades_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel['Modalidades'] %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="modalidades_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Modalidades" class="btn btn-sm btn-secondary">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <button type="reset" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" onclick="window.location.href='{{ url_for('colegio.plan_estudios') }}'" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Ir al Plan de Estudios
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}

@@ -4,22 +4,46 @@ class ClsEstudiante {
         this.preguntaActual = 0;
         this.respuestasCorrectas = 0;
         this.respuestasIncorrectas = 0;
-        this.numPreguntasJuego = 0;  // Se setea al cargar el examen
+        this.numPreguntasJuego = 0;
         this.respuestaResaltada = false;
         this.temporizadorDetenido = false;
         this.segundoClic = false;
         this.countdownInterval = null;
+        this.totalTimeInterval = null;
         this.explicacionVisible = false;
-        this.examenId = null;  // 🔥 NUEVO: almacena el ID del examen seleccionado
-        this.tiempoPorPregunta = 30;  // 🔥 NUEVO: se setea desde el tipo_examen
+        this.examenId = null;
+        this.materiaId = null;
+        this.tiempoPorPregunta = 30;
+        this.tiempoTotalExamen = 0;
+        this.tiempoRestanteTotal = 0;
+        this.todasLasRespuestas = [];
+        this.examenFinalizado = false;
     }
 
-    // 🔥 NUEVO: Cargar lista de exámenes disponibles al iniciar
     init() {
         $(document).ready(() => {
             this.cargarListaExamenes();
 
-            // Manejador para el botón de siguiente pregunta
+            $("#updateQuestions").click(() => {
+                const cantidad = parseInt($("#numQuestions").val());
+                const tiempoPorPreguntaMin = parseInt($("#timePerQuestion").val());
+
+                if (cantidad > 0 && this.examenId) {
+                    this.tiempoPorPregunta = tiempoPorPreguntaMin * 60;
+                    this.tiempoTotalExamen = cantidad * this.tiempoPorPregunta;
+                    this.tiempoRestanteTotal = this.tiempoTotalExamen;
+
+                    console.log(`>>>>> Configuración: ${cantidad} preguntas, ${tiempoPorPreguntaMin} min por pregunta`);
+
+                    $("#examInfo").text(`${cantidad} preguntas | ${tiempoPorPreguntaMin} min/pregunta | Total: ${this.formatTime(this.tiempoTotalExamen)}`).show();
+
+                    this.finalizarExamen(false);
+                    this.cargarPreguntasDesdeAPI(this.examenId, cantidad);
+                } else if (!this.examenId) {
+                    alert('Primero debe seleccionar un examen');
+                }
+            });
+
             $("#nextButton").click(() => {
                 if (!this.respuestaResaltada) {
                     this.detenerContador();
@@ -31,12 +55,10 @@ class ClsEstudiante {
                 }
             });
 
-            // Manejador para el botón de ver explicación
             $("#explanationButton").click(() => {
                 this.mostrarExplicacion();
             });
 
-            // Manejador para seleccionar opciones
             $(document).on("click", "#options label", function() {
                 $("#options label").removeClass('selected');
                 $(this).addClass('selected');
@@ -44,7 +66,6 @@ class ClsEstudiante {
         });
     }
 
-    // 🔥 NUEVO: Cargar lista de exámenes desde el backend
     cargarListaExamenes() {
         fetch('/api/examen/disponibles')
             .then(response => response.json())
@@ -52,94 +73,202 @@ class ClsEstudiante {
                 this.mostrarListaExamenes(examenes);
             })
             .catch(error => {
-                console.error('Error al cargar exámenes:', error);
-                $("#result").html('<p class="error">Error al cargar los exámenes disponibles</p>').show();
+                console.error('Error:', error);
             });
     }
 
-    // 🔥 NUEVO: Mostrar lista de exámenes para que el estudiante elija
     mostrarListaExamenes(examenes) {
+        const contenedor = document.getElementById('lista-examenes');
+        if (!contenedor) return;
+
         if (examenes.length === 0) {
-            $("#question").html('<p>No hay exámenes disponibles en este momento.</p>');
+            contenedor.innerHTML = '<p class="text-muted">No hay exámenes disponibles.</p>';
             return;
         }
 
-        let html = '<div class="lista-examenes"><h3>Seleccione un examen:</h3><ul>';
+        let html = '<ul class="list-group">';
         examenes.forEach(ex => {
-            html += `<li class="examen-item" data-id="${ex.id}">
-                        <strong>${ex.nombre}</strong><br>
-                        <span class="descripcion">${ex.descripcion || ''}</span><br>
-                        <span class="tiempo">Tiempo: ${ex.tiempo_limite_minutos} minutos</span>
-                        <span class="tipo">Tipo: ${ex.tipo_examen || 'Estándar'}</span>
-                        <button class="btn-seleccionar">Seleccionar este examen</button>
+            html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${ex.nombre}</strong><br>
+                            <small class="text-muted">${ex.descripcion || ''}</small><br>
+                            <small>Tiempo: ${ex.tiempo_limite_minutos} min</small>
+                        </div>
+                        <a href="/api/examen/estudiante?id=${ex.id}" class="btn btn-primary btn-sm">
+                            Presentar
+                        </a>
                     </li>`;
         });
-        html += '</ul></div>';
-
-        $("#question").html(html);
-        $("#options").hide();
-        $("#countdown").hide();
-        $("#nextButton").hide();
-
-        // Eventos para los botones de selección
-        $(".btn-seleccionar").click((e) => {
-            const item = $(e.target).closest('.examen-item');
-            const examenId = item.data('id');
-            this.seleccionarExamen(examenId);
-        });
+        html += '</ul>';
+        contenedor.innerHTML = html;
     }
 
-    // 🔥 NUEVO: Seleccionar un examen y cargar sus preguntas
-    seleccionarExamen(examenId) {
+    seleccionarExamen(examenId, materiaId) {
+        console.log('>>>>> seleccionarExamen:', examenId);
         this.examenId = examenId;
-        this.cargarPreguntasDesdeAPI(examenId);
+        this.materiaId = materiaId;
+
+        const cantidad = parseInt($("#numQuestions").val()) || 10;
+        const tiempoPorPreguntaMin = parseInt($("#timePerQuestion").val()) || 2;
+
+        this.tiempoPorPregunta = tiempoPorPreguntaMin * 60;
+        this.tiempoTotalExamen = cantidad * this.tiempoPorPregunta;
+        this.tiempoRestanteTotal = this.tiempoTotalExamen;
+
+        $("#examInfo").text(`${cantidad} preguntas | ${tiempoPorPreguntaMin} min/pregunta | Total: ${this.formatTime(this.tiempoTotalExamen)}`).show();
+
+        this.cargarPreguntasDesdeAPI(examenId, cantidad);
     }
 
-    // 🔥 NUEVO: Cargar preguntas desde el backend (reemplaza cargarPreguntasDesdeArchivo)
-    cargarPreguntasDesdeAPI(examenId) {
-        fetch(`/api/examen/${examenId}/json`)
+    cargarPreguntasDesdeAPI(examenId, cantidadSolicitada) {
+        console.log('>>>>> Cargando', cantidadSolicitada, 'preguntas del examen', examenId);
+
+        fetch(`/api/examen/${examenId}/json?cantidad=${cantidadSolicitada}`)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error al cargar el examen');
-                }
+                if (!response.ok) throw new Error('Error al cargar');
                 return response.json();
             })
             .then(data => {
-                this.preguntas = data.preguntas;
-                this.numPreguntasJuego = this.preguntas.length;
+                console.log('>>>>> Preguntas recibidas del backend:', data.preguntas ? data.preguntas.length : 0);
+
+                // 🔥 CORRECCIÓN: Limitar estrictamente a la cantidad solicitada
+                if (data.preguntas && data.preguntas.length > cantidadSolicitada) {
+                    console.log(`>>>>> Backend devolvió ${data.preguntas.length} preguntas, limitando a ${cantidadSolicitada}`);
+                    this.preguntas = data.preguntas.slice(0, cantidadSolicitada);
+                } else {
+                    this.preguntas = data.preguntas;
+                }
+
+                // 🔥 CORRECCIÓN: Forzar que numPreguntasJuego sea exactamente la cantidad solicitada
+                this.numPreguntasJuego = cantidadSolicitada;
+
                 this.preguntaActual = 0;
                 this.respuestasCorrectas = 0;
                 this.respuestasIncorrectas = 0;
                 this.respuestaResaltada = false;
+                this.todasLasRespuestas = [];
+                this.examenFinalizado = false;
 
-                // Mezclar preguntas
-                this.shuffleArray(this.preguntas);
+                console.log(`>>>>> numPreguntasJuego establecido a: ${this.numPreguntasJuego}`);
+                console.log(`>>>>> Total de preguntas en array: ${this.preguntas.length}`);
 
-                // Mostrar interfaz de examen
                 $("#options").show();
                 $("#nextButton").show();
+                $("#loadedQuestionsCount").html(`<b>Preguntas cargadas:</b> ${this.numPreguntasJuego}`);
+
+                this.iniciarContadorTotal();
                 this.mostrarPregunta();
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('No se pudo cargar el examen. Intente de nuevo.');
+                console.error('❌ Error:', error);
+                $('#question').html(`<div class="alert alert-danger">Error: ${error.message}</div>`);
             });
     }
 
-    // Mostrar pregunta (adaptado)
+
+
+   iniciarContadorTotal() {
+    $("#timers-container").show();
+    this.actualizarDisplayTiempoTotal();
+
+    this.totalTimeInterval = setInterval(() => {
+        this.tiempoRestanteTotal--;
+        this.actualizarDisplayTiempoTotal();
+
+        if (this.tiempoRestanteTotal <= 0) {
+            console.log('>>>>> ¡Tiempo total terminado!');
+            this.finalizarExamenAutomaticamente();
+        }
+    }, 1000);
+}
+
+actualizarDisplayTiempoTotal() {
+    const examTimer = $("#exam-timer");
+    const examTimeSpan = $("#exam-time");
+
+    examTimeSpan.text(this.formatTime(this.tiempoRestanteTotal));
+
+    if (this.tiempoRestanteTotal <= 60) {
+        examTimer.addClass('warning-critical');
+    } else {
+        examTimer.removeClass('warning-critical');
+    }
+}
+
+iniciarContadorPregunta() {
+    var tiempoRestante = this.tiempoPorPregunta;
+
+    const questionTimer = $("#question-timer");
+    const questionTimeSpan = $("#question-time");
+
+    questionTimeSpan.text(this.formatTime(tiempoRestante));
+    $("#timers-container").show();
+
+    this.countdownInterval = setInterval(() => {
+        tiempoRestante--;
+        questionTimeSpan.text(this.formatTime(tiempoRestante));
+
+        if (tiempoRestante <= 10 && tiempoRestante > 0) {
+            questionTimer.addClass('warning-critical');
+        } else {
+            questionTimer.removeClass('warning-critical');
+        }
+
+        if (tiempoRestante < 0) {
+            this.detenerContador();
+            this.avanzarAPreguntaSiguiente();
+        }
+    }, 1000);
+}
+
+finalizarExamen(mostrarResultado = true) {
+    this.examenFinalizado = true;
+
+    this.detenerContador();
+    if (this.totalTimeInterval) {
+        clearInterval(this.totalTimeInterval);
+        this.totalTimeInterval = null;
+    }
+
+    // Ocultar contadores
+    $("#timers-container").hide();
+
+    if (mostrarResultado) {
+        this.mostrarResultado();
+    }
+}
+
+    formatTime(segundos) {
+        const mins = Math.floor(segundos / 60);
+        const secs = segundos % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
     mostrarPregunta() {
+        // 🔥 VERIFICACIÓN ESTRICTA
         if (this.preguntaActual < this.numPreguntasJuego && this.preguntaActual < this.preguntas.length) {
             var pregunta = this.preguntas[this.preguntaActual];
 
-            // Mostrar el contexto
             if (pregunta.contexto) {
-                $("#contexto").html(`<b>Contexto:</b> ${pregunta.contexto}`).show();
+                let contextoHtml = '<b>Contexto:</b>';
+
+                if (pregunta.contexto.tipo === 'imagen') {
+                    contextoHtml += `<p>${pregunta.contexto.texto || ''}</p>`;
+                    contextoHtml += `<img src="${pregunta.contexto.src}" class="imagen-contexto">`;
+                } else if (pregunta.contexto.tipo === 'video') {
+                    contextoHtml += `<p>${pregunta.contexto.texto || ''}</p>`;
+                    contextoHtml += `<video controls class="video-contexto"><source src="${pregunta.contexto.src}" type="video/mp4"></video>`;
+                } else {
+                    contextoHtml += `<p>${pregunta.contexto}</p>`;
+                }
+
+                $("#contexto").html(contextoHtml).show();
             } else {
-                $("#contexto").hide();
+                $("#contexto").empty().hide();
             }
 
-            // Mostrar la pregunta
-            $("#question").html(`<b>Pregunta ${this.preguntaActual + 1}:</b> ${pregunta.pregunta}`);
+            // 🔥 Mostrar número correcto de pregunta
+            $("#question").html(`<b>Pregunta ${this.preguntaActual + 1} de ${this.numPreguntasJuego}:</b> ${pregunta.pregunta}`);
 
             $("#options").empty();
             var opciones = this.shuffleArray(pregunta.opciones.slice());
@@ -153,126 +282,134 @@ class ClsEstudiante {
             });
 
             $("#countdown").show();
-            this.iniciarContador();
+            this.iniciarContadorPregunta();
+            $("#nextButton").show();
+            $("#explanationButton").hide();
+            $("#feedback").hide();
+            $("#explanation-column").empty();
+            this.explicacionVisible = false;
 
-            $("#selectedNumQuestions").text(`${this.numPreguntasJuego}`);
+            $("#selectedNumQuestions").text(`Pregunta ${this.preguntaActual + 1} de ${this.numPreguntasJuego}`);
         } else {
+            console.log(`>>>>> Terminó el examen. Preguntas respondidas: ${this.preguntaActual}, Total configurado: ${this.numPreguntasJuego}`);
+            this.finalizarExamen(true);
+        }
+    }
+
+    iniciarContadorPregunta() {
+        var tiempoRestante = this.tiempoPorPregunta;
+        $("#countdown").text(`Tiempo restante: ${this.formatTime(tiempoRestante)}`);
+
+        this.countdownInterval = setInterval(() => {
+            tiempoRestante--;
+            $("#countdown").text(`Tiempo restante: ${this.formatTime(tiempoRestante)}`);
+
+            if (tiempoRestante < 0) {
+                this.detenerContador();
+                this.avanzarAPreguntaSiguiente();
+            }
+        }, 1000);
+    }
+
+    finalizarExamenAutomaticamente() {
+        if (!this.examenFinalizado) {
+            console.log('>>>>> Finalizando automáticamente');
+            this.finalizarExamen(true);
+        }
+    }
+
+    finalizarExamen(mostrarResultado = true) {
+        this.examenFinalizado = true;
+
+        this.detenerContador();
+        if (this.totalTimeInterval) {
+            clearInterval(this.totalTimeInterval);
+            this.totalTimeInterval = null;
+        }
+
+        if (mostrarResultado) {
             this.mostrarResultado();
         }
     }
 
-    // Mostrar resultado (adaptado para enviar al backend)
     mostrarResultado() {
-        $("#question").empty();
-        $("#options").empty();
-        $("#contexto").empty();
+    // 🔥 OCULTAR TODO EL EXAMEN (header, columnas, contadores)
+    $("#exam-wrapper").hide();
+    $("#timers-container").hide();
 
-        const totalPreguntas = this.numPreguntasJuego;
-        const porcentaje = (this.respuestasCorrectas / totalPreguntas) * 100;
-        const calificacionDecimal = (porcentaje / 20).toFixed(2);
-        let calificacionLetra = '';
+    const totalPreguntas = this.numPreguntasJuego;
+    const porcentaje = totalPreguntas > 0 ? (this.respuestasCorrectas / totalPreguntas) * 100 : 0;
+    const calificacionDecimal = (porcentaje / 20).toFixed(2);
 
-        if (porcentaje >= 100) {
-            calificacionLetra = 'S';
-        } else if (porcentaje >= 80) {
-            calificacionLetra = 'A';
-        } else if (porcentaje >= 60) {
-            calificacionLetra = 'B';
-        } else if (porcentaje >= 40) {
-            calificacionLetra = 'b';
-        } else if (porcentaje >= 20) {
-            calificacionLetra = 'I';
-        }
+    let calificacionLetra = '';
+    if (porcentaje >= 100) calificacionLetra = 'S';
+    else if (porcentaje >= 80) calificacionLetra = 'A';
+    else if (porcentaje >= 60) calificacionLetra = 'B';
+    else if (porcentaje >= 40) calificacionLetra = 'b';
+    else calificacionLetra = 'I';
 
-        $("#result").html(`
-            <table>
-                <tr>
-                    <th>Correctas</th>
-                    <th>Incorrectas</th>
-                    <th>Porcentaje</th>
-                    <th>Literal</th>
-                    <th>Numérica</th>
-                </tr>
-                <tr>
-                    <td>${this.respuestasCorrectas}</td>
-                    <td>${this.respuestasIncorrectas}</td>
-                    <td>${porcentaje.toFixed(2)}%</td>
-                    <td>${calificacionLetra}</td>
-                    <td>${calificacionDecimal}</td>
-                </tr>
+    $("#result").html(`
+        <div class="result-container">
+            <h2 class="result-title">Resultado del Examen</h2>
+            
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>Correctas</th>
+                        <th>Incorrectas</th>
+                        <th>Total</th>
+                        <th>Porcentaje</th>
+                        <th>Literal</th>
+                        <th>Nota (0-5)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-success"><strong>${this.respuestasCorrectas}</strong></td>
+                        <td class="text-danger"><strong>${this.respuestasIncorrectas}</strong></td>
+                        <td><strong>${totalPreguntas}</strong></td>
+                        <td><strong>${porcentaje.toFixed(2)}%</strong></td>
+                        <td><strong>${calificacionLetra}</strong></td>
+                        <td><strong>${calificacionDecimal}</strong></td>
+                    </tr>
+                </tbody>
             </table>
-            <button id="playAgain">Nuevo Examen</button>
-        `).show();
+            
+            <div class="result-message">${this.getResultMessage(porcentaje)}</div>
+            
+            <button id="playAgain" class="btn-play-again">Presentar Nuevo Examen</button>
+        </div>
+    `).show();
 
-        // 🔥 NUEVO: Guardar resultado en el backend
-        this.guardarResultado(porcentaje, calificacionDecimal, calificacionLetra);
+    this.guardarResultado(porcentaje, calificacionDecimal, calificacionLetra);
 
-        $("#nextButton").hide();
-        $("#countdown").hide();
+    $(document).off("click", "#playAgain").on("click", "#playAgain", () => {
+        location.reload();
+    });
+}
+
+    getResultMessage(porcentaje) {
+        if (porcentaje >= 90) return '<div class="alert alert-success">¡Excelente trabajo!</div>';
+        else if (porcentaje >= 70) return '<div class="alert alert-info">Buen trabajo</div>';
+        else if (porcentaje >= 60) return '<div class="alert alert-warning">Aprobado, pero puede mejorar</div>';
+        else return '<div class="alert alert-danger">Necesitas reforzar</div>';
     }
 
-    // 🔥 NUEVO: Guardar resultado en la base de datos
     guardarResultado(porcentaje, notaNumerica, literal) {
         if (!this.examenId) return;
 
-        fetch('/api/examen/guardar-resultado', {
+        fetch('/api/examen/guardar', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 examen_id: this.examenId,
-                respuestas_correctas: this.respuestasCorrectas,
-                respuestas_incorrectas: this.respuestasIncorrectas,
-                porcentaje: porcentaje,
-                nota_numerica: parseFloat(notaNumerica),
-                literal: literal
+                materia_id: this.materiaId,
+                respuestas: this.todasLasRespuestas
             })
         })
         .then(response => response.json())
-        .then(data => {
-            console.log('Resultado guardado:', data);
-        })
-        .catch(error => {
-            console.error('Error al guardar resultado:', error);
-        });
-    }
-
-    // Resetear estado del juego
-    resetGameState() {
-        this.preguntaActual = 0;
-        this.respuestasCorrectas = 0;
-        this.respuestasIncorrectas = 0;
-        this.respuestaResaltada = false;
-        this.temporizadorDetenido = false;
-        this.segundoClic = false;
-        this.explicacionVisible = false;
-        clearInterval(this.countdownInterval);
-        this.countdownInterval = null;
-    }
-
-    iniciarNuevoJuego() {
-        this.resetGameState();
-        this.cargarListaExamenes();  // 🔥 Volver a la lista
-        $("#result").empty().hide();
-        $("#nextButton").hide();
-        $("#options").hide();
-    }
-
-    // Iniciar contador (30 segundos por defecto)
-    iniciarContador() {
-        var tiempoRestante = this.tiempoPorPregunta;
-        $("#countdown").text(`Tiempo restante: ${tiempoRestante} segundos`);
-        this.countdownInterval = setInterval(() => {
-            tiempoRestante--;
-            if (tiempoRestante >= 0) {
-                $("#countdown").text(`Tiempo restante: ${tiempoRestante} segundos`);
-            } else {
-                this.detenerContador();
-                alert("¡Se acabó el tiempo!");
-                this.avanzarAPreguntaSiguiente();
-            }
-        }, 1000);
+        .then(data => console.log('Guardado:', data))
+        .catch(error => console.error('Error al guardar:', error));
     }
 
     detenerContador() {
@@ -302,7 +439,7 @@ class ClsEstudiante {
             }, 100);
             $("#explanationButton").show();
         } else {
-            alert("Seleccione una opción antes de continuar.");
+            alert("Seleccione una opción");
         }
     }
 
@@ -314,7 +451,7 @@ class ClsEstudiante {
             this.explicacionVisible = false;
             $("#explanationButton").show();
         } else {
-            $("#explanation-column").html(`<b>Explicación:</b> ${explicacion}`).show().css('color', 'blue');
+            $("#explanation-column").html(`<b>Explicación:</b> ${explicacion}`).show();
             this.explicacionVisible = true;
             $("#explanationButton").hide();
         }
@@ -326,25 +463,37 @@ class ClsEstudiante {
             this.explicacionVisible = false;
             $("#explanation-column").empty().hide();
         }
+
         if (!this.temporizadorDetenido) {
             this.detenerContador();
         }
+
         var respuestaSeleccionada = $("input[name='opcion']:checked").val();
+        var pregunta = this.preguntas[this.preguntaActual];
+
+        let respuestaData = {
+            texto_pregunta: pregunta.pregunta,
+            respuesta_seleccionada: respuestaSeleccionada || '',
+            respuesta_correcta: pregunta.respuesta,
+            es_correcta: (respuestaSeleccionada === pregunta.respuesta),
+            tiempo_respuesta_seg: this.tiempoPorPregunta
+        };
+        this.todasLasRespuestas.push(respuestaData);
+
         if (respuestaSeleccionada !== undefined) {
-            var pregunta = this.preguntas[this.preguntaActual];
             if (respuestaSeleccionada === pregunta.respuesta) {
                 this.respuestasCorrectas++;
             } else {
                 this.respuestasIncorrectas++;
             }
         } else {
-            var pregunta = this.preguntas[this.preguntaActual];
             var opciones = pregunta.opciones;
             var respuestaCorrecta = pregunta.respuesta;
             var respuestaIncorrecta = opciones.find(opcion => opcion !== respuestaCorrecta);
             $("input[value='" + respuestaIncorrecta + "']").prop("checked", true);
             this.respuestasIncorrectas++;
         }
+
         this.preguntaActual++;
         this.mostrarPregunta();
         this.respuestaResaltada = false;
@@ -362,6 +511,5 @@ class ClsEstudiante {
     }
 }
 
-// Instanciar y ejecutar
 const clsEstudiante = new ClsEstudiante();
 clsEstudiante.init();

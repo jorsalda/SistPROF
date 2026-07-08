@@ -2239,60 +2239,91 @@ def configurar_bloques_jornada(jornada_id):
 @login_required
 def plan_estudios():
     from app.models.plan_estudios import PlanEstudios
-
-    if request.method == 'POST':
-        try:
-            # Procesar cada celda del formulario
-            grados = request.form.getlist('grado[]')
-            materia_ids = request.form.getlist('materia_id[]')
-            horas = request.form.getlist('horas[]')
-
-            for i in range(len(grados)):
-                grado = grados[i]
-                materia_id = materia_ids[i]
-                horas_semanales = int(horas[i]) if horas[i] else 0
-
-                # Buscar si ya existe
-                plan = PlanEstudios.query.filter_by(
-                    colegio_id=current_user.colegio_id,
-                    grado=grado,
-                    materia_id=materia_id
-                ).first()
-
-                if horas_semanales > 0:
-                    if plan:
-                        # Actualizar existente
-                        plan.horas_semanales = horas_semanales
-                    else:
-                        # Crear nuevo
-                        nuevo_plan = PlanEstudios(
-                            colegio_id=current_user.colegio_id,
-                            grado=grado,
-                            materia_id=materia_id,
-                            horas_semanales=horas_semanales,
-                            activo=True
-                        )
-                        db.session.add(nuevo_plan)
-                else:
-                    # Si horas es 0, eliminar el registro
-                    if plan:
-                        db.session.delete(plan)
-
-            db.session.commit()
-            flash('Plan de estudios actualizado correctamente', 'success')
-            return redirect(url_for('colegio.plan_estudios'))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al guardar: {str(e)}', 'danger')
-
-    # GET: Obtener datos para mostrar
     from app.models.materia import Materia
+    from app.models.nivel_materia import NivelMateria
 
-    # Obtener todas las materias activas del colegio
+    # ==========================================
+    # DEFINICIONES GLOBALES (para POST y GET)
+    # ==========================================
+
+    # Mapeo de grados a niveles educativos
+    grado_a_nivel = {
+        'Pre-jardín': 'Preescolar',
+        'Jardín': 'Preescolar',
+        'Transición': 'Preescolar',
+        '1°': 'Primaria',
+        '2°': 'Primaria',
+        '3°': 'Primaria',
+        '4°': 'Primaria',
+        '5°': 'Primaria',
+        '6°': 'Bachillerato',
+        '7°': 'Bachillerato',
+        '8°': 'Bachillerato',
+        '9°': 'Bachillerato',
+        '10°': 'Media',
+        '11°': 'Media'
+    }
+
+    # Grados estándar
+    grados_estandar = [
+        'Pre-jardín', 'Jardín', 'Transición',  # Preescolar
+        '1°', '2°', '3°', '4°', '5°',  # Primaria
+        '6°', '7°', '8°', '9°',  # Bachillerato
+        '10°', '11°'  # Media
+    ]
+
+    # Obtener grados personalizados del colegio
+    grados_personalizados = db.session.query(
+        PlanEstudios.grado
+    ).filter(
+        PlanEstudios.colegio_id == current_user.colegio_id,
+        ~PlanEstudios.grado.in_(grados_estandar),
+        PlanEstudios.activo == True
+    ).distinct().order_by(PlanEstudios.grado).all()
+
+    grados_personalizados = [g[0] for g in grados_personalizados]
+
+    # Clasificar grados personalizados
+    palabras_especiales = ['aceleración', 'brújula', 'refuerzo', 'integración', 'especial']
+
+    grados_programas_especiales = []
+    grados_otras_modalidades = []
+
+    for grado in grados_personalizados:
+        grado_lower = grado.lower()
+        if any(palabra in grado_lower for palabra in palabras_especiales):
+            grados_programas_especiales.append(grado)
+        else:
+            grados_otras_modalidades.append(grado)
+
+    # Combinar todos los grados (en orden)
+    grados = grados_estandar + grados_programas_especiales + grados_otras_modalidades
+
+    # ==========================================
+    # OBTENER MATERIAS POR NIVEL EDUCATIVO
+    # ==========================================
+
+    # Materias específicas por nivel (usando el campo nivel_educativo)
+    materias_preescolar = Materia.query.filter_by(nivel_educativo='Preescolar').order_by(Materia.nombre).all()
+    materias_primaria = Materia.query.filter_by(nivel_educativo='Primaria').order_by(Materia.nombre).all()
+    materias_bachillerato = Materia.query.filter_by(nivel_educativo='Bachillerato').order_by(Materia.nombre).all()
+    materias_media = Materia.query.filter_by(nivel_educativo='Media').order_by(Materia.nombre).all()
+    materias_programas_especiales = Materia.query.filter_by(nivel_educativo='Programas Especiales').order_by(
+        Materia.nombre).all()
+    materias_validacion = Materia.query.filter_by(nivel_educativo='Validación').order_by(Materia.nombre).all()
+
+    # Todas las materias (fallback si no hay configuración por nivel)
     materias = Materia.query.order_by(Materia.nombre).all()
-    # Grados disponibles
-    grados = ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°', '10°', '11°']
+
+    # Materias por nivel (para compatibilidad con template)
+    materias_por_nivel = {
+        'Preescolar': materias_preescolar if materias_preescolar else materias,
+        'Primaria': materias_primaria if materias_primaria else materias,
+        'Bachillerato': materias_bachillerato if materias_bachillerato else materias,
+        'Media': materias_media if materias_media else materias,
+        'Programas Especiales': materias_programas_especiales if materias_programas_especiales else materias,
+        'Validación': materias_validacion if materias_validacion else materias
+    }
 
     # Obtener plan de estudios actual
     plan_actual = PlanEstudios.query.filter_by(
@@ -2306,11 +2337,98 @@ def plan_estudios():
         for p in plan_actual
     }
 
+    # ==========================================
+    # SI ES POST (GUARDAR CAMBIOS)
+    # ==========================================
+    if request.method == 'POST':
+        # Verificar si se está agregando un grado personalizado
+        nuevo_grado = request.form.get('nuevo_grado', '').strip()
+        if nuevo_grado:
+            existe = PlanEstudios.query.filter_by(
+                colegio_id=current_user.colegio_id,
+                grado=nuevo_grado
+            ).first()
+
+            if not existe:
+                flash(f'Grado personalizado "{nuevo_grado}" agregado. Ahora configura sus materias.', 'success')
+            else:
+                flash(f'El grado "{nuevo_grado}" ya existe.', 'warning')
+
+            return redirect(url_for('colegio.plan_estudios'))
+
+        # Verificar si se está eliminando un grado personalizado
+        eliminar_grado = request.form.get('eliminar_grado', '').strip()
+        if eliminar_grado and eliminar_grado not in grados_estandar:
+            PlanEstudios.query.filter_by(
+                colegio_id=current_user.colegio_id,
+                grado=eliminar_grado
+            ).delete()
+            db.session.commit()
+            flash(f'Grado personalizado "{eliminar_grado}" eliminado.', 'success')
+            return redirect(url_for('colegio.plan_estudios'))
+
+        try:
+            # Procesar cada celda del formulario
+            grados_form = request.form.getlist('grado[]')
+            materia_ids = request.form.getlist('materia_id[]')
+            horas = request.form.getlist('horas[]')
+
+            for i in range(len(grados_form)):
+                grado = grados_form[i]
+                materia_id = materia_ids[i]
+                horas_semanales = int(horas[i]) if horas[i] else 0
+
+                # Buscar si ya existe
+                plan = PlanEstudios.query.filter_by(
+                    colegio_id=current_user.colegio_id,
+                    grado=grado,
+                    materia_id=materia_id
+                ).first()
+
+                if horas_semanales > 0:
+                    if plan:
+                        plan.horas_semanales = horas_semanales
+                    else:
+                        nuevo_plan = PlanEstudios(
+                            colegio_id=current_user.colegio_id,
+                            grado=grado,
+                            materia_id=materia_id,
+                            horas_semanales=horas_semanales,
+                            activo=True
+                        )
+                        db.session.add(nuevo_plan)
+                else:
+                    if plan:
+                        db.session.delete(plan)
+
+            db.session.commit()
+            flash('Plan de estudios actualizado correctamente', 'success')
+            return redirect(url_for('colegio.plan_estudios'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+
+    # ==========================================
+    # SI ES GET (MOSTRAR FORMULARIO)
+    # ==========================================
     return render_template(
         'colegio/plan_estudios.html',
         materias=materias,
+        materias_preescolar=materias_preescolar,
+        materias_primaria=materias_primaria,
+        materias_bachillerato=materias_bachillerato,
+        materias_media=materias_media,
+        materias_programas_especiales=materias_programas_especiales,
+        materias_validacion=materias_validacion,
         grados=grados,
-        plan_dict=plan_dict
+        grados_estandar=grados_estandar,
+        grados_personalizados=grados_personalizados,
+        grados_programas_especiales=grados_programas_especiales,
+        grados_otras_modalidades=grados_otras_modalidades,
+        plan_dict=plan_dict,
+        grado_a_nivel=grado_a_nivel,
+        materias_por_nivel=materias_por_nivel
     )
 
 
@@ -2414,3 +2532,69 @@ def eliminar_materia(id):
 
     flash(f'Materia "{nombre}" eliminada correctamente', 'success')
     return redirect(url_for('colegio.lista_materias'))
+
+
+# ==========================================================
+# CONFIGURACIÓN DE MATERIAS POR NIVEL EDUCATIVO
+# ==========================================================
+
+@colegio_bp.route('/configurar-materias-por-nivel', methods=['GET', 'POST'])
+@login_required
+def configurar_materias_nivel():
+    from app.models.nivel_materia import NivelMateria
+
+    if request.method == 'POST':
+        try:
+            # Obtener el nivel que se está guardando
+            nivel = request.form.get('nivel')
+
+            # Obtener todas las materias seleccionadas para ese nivel
+            # Los checkboxes se llaman: materia_ids_preescolar, materia_ids_primaria, etc.
+            campo_materias = f'materia_ids_{nivel.lower().replace(" ", "_").replace("é", "e")}'
+            materia_ids = request.form.getlist(campo_materias)
+
+            # Eliminar materias actuales del nivel
+            NivelMateria.query.filter_by(nivel_educativo=nivel).delete()
+
+            # Agregar nuevas materias
+            for idx, materia_id in enumerate(materia_ids):
+                if materia_id:
+                    nivel_materia = NivelMateria(
+                        nivel_educativo=nivel,
+                        materia_id=int(materia_id),
+                        orden=idx,
+                        activo=True
+                    )
+                    db.session.add(nivel_materia)
+
+            db.session.commit()
+            flash(f'Materias del nivel "{nivel}" actualizadas correctamente', 'success')
+            return redirect(url_for('colegio.configurar_materias_nivel'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+
+    # GET: Mostrar formulario
+    from app.models.materia import Materia
+
+    niveles = ['Preescolar', 'Primaria', 'Bachillerato', 'Media', 'Modalidades']
+
+    # Obtener todas las materias
+    todas_materias = Materia.query.order_by(Materia.nombre).all()
+
+    # Obtener materias configuradas por nivel
+    materias_por_nivel = {}
+    for nivel in niveles:
+        materias_nivel = NivelMateria.query.filter_by(
+            nivel_educativo=nivel,
+            activo=True
+        ).order_by(NivelMateria.orden).all()
+        materias_por_nivel[nivel] = [nm.materia for nm in materias_nivel]
+
+    return render_template(
+        'colegio/configurar_materias_nivel.html',
+        niveles=niveles,
+        todas_materias=todas_materias,
+        materias_por_nivel=materias_por_nivel
+    )

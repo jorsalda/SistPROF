@@ -4,9 +4,10 @@ from app.models.examen import Examen
 from app.models.resultado_examen import ResultadoExamen
 from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
 from app.models.estudiante import Estudiante
+from app.models.tipo_examen import TipoExamen  # ← AGREGADO
 from app.extensions import db
 from datetime import datetime
-
+from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 
 
@@ -40,6 +41,53 @@ def obtener_json_examen(examen_id):
         contenido = json.load(f)
 
     return jsonify(contenido)
+
+
+@examen_bp.route('/disponibles', methods=['GET'])
+@login_required
+def examenes_disponibles():
+    """
+    Devuelve la lista de exámenes disponibles para el estudiante.
+    Si se pasa materia_id, filtra por esa materia.
+    """
+    materia_id = request.args.get('materia_id', type=int)  # ← NUEVO: filtro por materia
+
+    if current_user.rol == 'estudiante':
+        # Construir la consulta base
+        query = Examen.query.join(TipoExamen).filter(
+            Examen.activo == True,
+            Examen.colegio_id == current_user.colegio_id,
+            TipoExamen.disponible_individual == True
+        )
+
+        # Aplicar filtro por materia si se proporciona
+        if materia_id:
+            query = query.filter(Examen.materia_id == materia_id)
+
+        examenes = query.all()
+    else:
+        # Para docente/admin: todos los exámenes del colegio
+        query = Examen.query.filter_by(
+            colegio_id=current_user.colegio_id,
+            activo=True
+        )
+        if materia_id:
+            query = query.filter(Examen.materia_id == materia_id)
+        examenes = query.all()
+
+    resultado = []
+    for e in examenes:
+        resultado.append({
+            'id': e.id,
+            'nombre': e.nombre,
+            'descripcion': e.descripcion,
+            'tipo_examen': e.tipo_examen.nombre if e.tipo_examen else None,
+            'tiempo_limite_minutos': e.tiempo_limite_minutos,
+            'materia_id': e.materia_id
+        })
+
+    return jsonify(resultado)
+
 
 @examen_bp.route('/estudiante', methods=['GET'])
 @login_required
@@ -139,3 +187,15 @@ def guardar_resultado_examen():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@examen_bp.route('/listado')
+@login_required
+def listado_examenes():
+    """
+    Muestra la lista de exámenes disponibles para el estudiante.
+    """
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    return render_template('estudiantes/listado_examenes.html')
