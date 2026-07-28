@@ -23,18 +23,34 @@
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
+
             <li class="menu-item">
-                <li class="menu-item">
-    <a href="{{ url_for('examen.listado_examenes') }}" class="menu-link">
-        <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
-    </a>
-</li>
+                <a href="{{ url_for('examen.listado_examenes') }}" class="menu-link">
+                    <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
+                </a>
             </li>
+
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}" class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
                     <i class="bi bi-person-badge"></i> Mi Cuenta
                 </a>
             </li>
+
+            <!-- ✅ PASO 1: Mi Membresía (SOLO para independientes) -->
+            {% if current_user.colegio_id == 46 %}
+            <li class="menu-item">
+                <a href="{{ url_for('membresia.ver_mi_plan') }}" class="menu-link {% if request.endpoint == 'membresia.ver_mi_plan' %}active{% endif %}">
+                    <i class="bi bi-credit-card"></i> Mi Membresía
+                </a>
+            </li>
+            {% endif %}
+            <li class="menu-item">
+    <a href="{{ url_for('estudiante.examenes_disponibles') }}"
+       class="menu-link {% if request.endpoint == 'estudiante.examenes_disponibles' %}active{% endif %}">
+        <i class="bi bi-file-earmark-text"></i>
+        Mis Exámenes
+    </a>
+</li>       
             <li class="menu-item logout-item">
                 <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
                     <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
@@ -48,6 +64,7 @@
             <h1>{% block estudiante_page_title %}Dashboard Estudiante{% endblock %}</h1>
             <div class="user-info"><i class="bi bi-person-circle"></i> {{ current_user.email }}</div>
         </header>
+
         <div class="coordinador-main-content">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -59,6 +76,26 @@
                     {% endfor %}
                 {% endif %}
             {% endwith %}
+
+            <!-- ✅ PASO 2: Alerta de membresía (SOLO para independientes) -->
+            {% if current_user.colegio_id == 46 %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>📋 Estado de tu membresía:</strong>
+                    {% if dias_restantes is defined and dias_restantes > 0 %}
+                        Te quedan {{ dias_restantes }} días de prueba.
+                    {% elif dias_restantes is defined and dias_restantes <= 0 %}
+                        Tu periodo de prueba ha vencido. Por favor renueva tu membresía.
+                    {% else %}
+                        Verifica el estado de tu membresía.
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('membresia.ver_mi_plan') }}" class="btn btn-sm btn-primary">
+                    💳 Ver/Renovar
+                </a>
+            </div>
+            {% endif %}
+
             {% block estudiante_content %}{% endblock %}
         </div>
     </main>

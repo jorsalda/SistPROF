@@ -1,0 +1,192 @@
+{% extends "admin/admin_base.html" %}
+
+{% block admin_page_title %}Detalle de Colegio - {{ colegio.nombre }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-building"></i> Detalle de Colegio</h2>
+    <a href="{{ url_for('admin.dashboard') }}" 
+       class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver al Dashboard
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4">
+    <!-- Información Principal -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Información del Colegio</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Nombre</label>
+                        <input type="text" class="form-control" value="{{ colegio.nombre }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Código de Acceso</label>
+                        <input type="text" class="form-control" value="{{ colegio.codigo_acceso }}" readonly>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Estado Actual</label>
+                        <div class="mt-2">
+                            <span class="badge bg-{{ badge_class }} fs-6">
+                                {{ estado }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Total Usuarios</label>
+                        <input type="text" class="form-control" value="{{ total_usuarios }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Usuarios Activos</label>
+                        <input type="text" class="form-control" value="{{ usuarios_activos }}" readonly>
+                    </div>
+                </div>
+                
+                {% if dias_restantes is not none %}
+                <div class="alert alert-info">
+                    <i class="bi bi-clock"></i> 
+                    <strong>{{ dias_restantes }} días restantes</strong> de período de prueba
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lista de Usuarios del Colegio -->
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Usuarios del Colegio</h5>
+            </div>
+            <div class="card-body">
+                {% if colegio.usuarios %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Fecha Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in colegio.usuarios %}
+                            <tr>
+                                <td>{{ usuario.email }}</td>
+                                <td><span class="badge bg-secondary">{{ usuario.rol }}</span></td>
+                                <td>
+                                    {% if usuario.is_active %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ usuario.fecha_registro.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Este colegio aún no tiene usuarios registrados.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Acciones de Administración</h5>
+            </div>
+            <div class="card-body">
+                <!-- Aprobar -->
+                {% if colegio.en_prueba %}
+                <form action="{{ url_for('admin.aprobar_colegio', colegio_id=colegio.id) }}" 
+                      method="POST" 
+                      class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit"
+                            class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> Aprobar Colegio (Fin de Prueba)
+                    </button>
+                </form>
+                {% endif %}
+
+                <!-- Bloquear/Desbloquear -->
+                {% if colegio.activo %}
+                <form action="{{ url_for('admin.bloquear_colegio', colegio_id=colegio.id) }}"
+                      method="POST"
+                      class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit"
+                            class="btn btn-danger w-100"
+                            onclick="return confirm('¿Estás seguro de bloquear este colegio? Todos los usuarios perderán el acceso.')">
+                        <i class="bi bi-lock"></i> Bloquear Colegio
+                    </button>
+                </form>
+                {% else %}
+                <form action="{{ url_for('admin.desbloquear_colegio', colegio_id=colegio.id) }}"
+                      method="POST"
+                      class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit"
+                            class="btn btn-warning w-100">
+                        <i class="bi bi-unlock"></i> Desbloquear Colegio
+                    </button>
+                </form>
+                {% endif %}
+
+                <!-- Modificar Días de Prueba -->
+                <div class="mb-3">
+                    <label class="form-label text-muted">Extender/Modificar Período de Prueba</label>
+                    <form action="{{ url_for('admin.modificar_dias_prueba', colegio_id=colegio.id) }}"
+                          method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="dias_prueba" 
+                                   value="15"
+                                   min="1"
+                                   max="365">
+                            <span class="input-group-text">días</span>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Desde la fecha de hoy</small>
+                    </form>
+                </div>
+                
+                <hr>
+                
+                <div class="alert alert-secondary">
+                    <small>
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Nota:</strong> Al aprobar un colegio, se elimina la fecha de expiración y queda activo permanentemente hasta que se decida lo contrario.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

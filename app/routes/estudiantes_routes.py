@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from app.models.usuario import Usuario
@@ -17,7 +17,9 @@ from datetime import datetime
 from app.models.clase import Clase
 from app.models.clase_estudiante import ClaseEstudiante
 from app.models.grupo_materia import GrupoMateria
-
+from app.models.examen import Examen
+from app.models.resultado_examen import ResultadoExamen
+from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
 estudiante_bp = Blueprint(
     "estudiante",
     __name__,
@@ -664,20 +666,17 @@ def mis_resultados():
     )
 
 
-# =========================================================
-# DASHBOARD ESTUDIANTE
-# =========================================================
 @estudiante_bp.route('/dashboard')
 @login_required
 def dashboard_estudiante():
     if current_user.rol != 'estudiante':
         flash('Acceso no autorizado', 'danger')
-        return redirect(url_for('dashboard.index'))
+        return redirect(url_for('auth.logout'))
 
     from app.models.estudiante import Estudiante
     from app.models.resultado_examen import ResultadoExamen
     from app.models.examen import Examen
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
     if not estudiante:
@@ -706,16 +705,21 @@ def dashboard_estudiante():
         ResultadoExamen.fecha.desc()
     ).limit(5).all()
 
+    # ✅ PASO 3: Calcular días restantes de membresía
+    dias_restantes = 0
+    if current_user.fecha_expiracion:
+        dias_restantes = (current_user.fecha_expiracion - datetime.utcnow()).days
+
     return render_template(
-        'estudiantes/dashboard_estudiante.html',
+        'estudiantes/dashboard_estudiante.html',  # ← Asegúrate que este template EXTENDE el archivo que modificamos arriba
         estudiante=estudiante,
         total_examenes=total_examenes,
         promedio_general=promedio_general,
         mejor_nota=mejor_nota,
         ultimos_resultados=ultimos_resultados,
-        hoy=datetime.now()
+        hoy=datetime.now(),
+        dias_restantes=dias_restantes  # ← AGREGAR ESTO
     )
-
 
 # =========================================================
 # GESTIÓN DE ESTUDIANTES
@@ -855,3 +859,291 @@ def mis_materias():
             materias = Materia.query.filter(Materia.id.in_(materias_ids)).all()
 
     return jsonify([{'id': m.id, 'nombre': m.nombre} for m in materias])
+
+# =========================================================
+# REGISTRO PÚBLICO - ESTUDIANTES INDEPENDIENTES
+# =========================================================
+@estudiante_bp.route("/registro-publico", methods=["GET", "POST"])
+def registro_publico():
+    """
+    Formulario público para estudiantes independientes
+    (Sin necesidad de usuario del colegio)
+    """
+    # Deshabilitar CSRF para esta ruta pública
+    COLEGIO_INDEPENDIENTE_ID = 46  # ID del colegio creado
+
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        apellido = request.form.get("apellido", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        documento = request.form.get("documento", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+        direccion = request.form.get("direccion", "").strip()
+
+        # Validaciones
+        if not nombre or not apellido or not email or not documento:
+            flash("Los campos marcados con * son obligatorios", "danger")
+            return redirect(url_for("estudiante.registro_publico"))
+
+        # Verificar si el email ya existe
+        if Usuario.query.filter_by(email=email).first():
+            flash("El correo electrónico ya está registrado en el sistema", "danger")
+            return redirect(url_for("estudiante.registro_publico"))
+
+        # Verificar si el documento ya existe en independientes
+        if Estudiante.query.filter_by(
+            documento=documento,
+            colegio_id=COLEGIO_INDEPENDIENTE_ID
+        ).first():
+            flash("Ya existe un estudiante con ese número de documento", "danger")
+            return redirect(url_for("estudiante.registro_publico"))
+
+        # Contraseña inicial = documento
+        password_inicial = documento
+
+        try:
+            # 1. Crear usuario automáticamente
+            usuario_estudiante = Usuario(
+                nombre=f"{nombre} {apellido}",
+                email=email,
+                password_hash=generate_password_hash(password_inicial),
+                rol='estudiante',
+                colegio_id=COLEGIO_INDEPENDIENTE_ID,
+                sede_id=None,
+                is_active=True,
+                is_approved=True
+            )
+            db.session.add(usuario_estudiante)
+            db.session.flush()
+
+            # 2. Crear estudiante
+            estudiante = Estudiante(
+                nombre=nombre,
+                apellido=apellido,
+                documento=documento,
+                email=email,
+                usuario_id=usuario_estudiante.id,
+                telefono=telefono,
+                direccion=direccion,
+                colegio_id=COLEGIO_INDEPENDIENTE_ID,
+                sede_id=17,
+                jornada_id=48,
+                acudiente_principal_id=23,
+                grupo_id=None,
+                docente_id=None,
+                qr_token=f"EST-IND-{secrets.token_hex(8).upper()}",
+                activo=True
+            )
+            db.session.add(estudiante)
+            db.session.commit()
+
+            # 3. Mostrar credenciales
+            flash(
+                f"¡Registro exitoso! Tus credenciales de acceso son:<br>"
+                f"📧 Email: <strong>{email}</strong><br>"
+                f"🔑 Contraseña: <strong>{password_inicial}</strong><br>"
+                f"<small>Guarda esta información. Puedes cambiar la contraseña después.</small>",
+                "success"
+            )
+
+            return redirect(url_for("auth.login"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al registrar: {str(e)}", "danger")
+            return redirect(url_for("estudiante.registro_publico"))
+
+    # GET: Mostrar formulario
+    return render_template("estudiantes/registro_publico.html")
+
+# =========================================================
+# PRESENTAR EXAMENES (NUEVO)
+# =========================================================
+
+@estudiante_bp.route('/examenes-disponibles')
+@login_required
+def examenes_disponibles():
+    """Lista exámenes disponibles para el estudiante"""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil de estudiante no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    # Exámenes activos del colegio
+    examenes = Examen.query.filter_by(
+        colegio_id=estudiante.colegio_id,
+        activo=True
+    ).all()
+
+    # Resultados previos
+    resultados = ResultadoExamen.query.filter_by(
+        estudiante_id=estudiante.id
+    ).all()
+
+    examenes_respondidos = {r.examen_id for r in resultados}
+
+    return render_template(
+        'estudiantes/examenes_disponibles.html',
+        examenes=examenes,
+        examenes_respondidos=examenes_respondidos,
+        resultados=resultados
+    )
+
+
+@estudiante_bp.route('/presentar-examen/<int:id>')
+@login_required
+def presentar_examen(id):
+    """Vista para presentar el examen"""
+    if current_user.rol != 'estudiante':
+        abort(403)
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        abort(403)
+
+    examen = Examen.query.get_or_404(id)
+
+    # Verificar si ya lo respondió
+    ya_respondio = ResultadoExamen.query.filter_by(
+        examen_id=id,
+        estudiante_id=estudiante.id
+    ).first()
+
+    if ya_respondio:
+        flash("Ya has presentado este examen.", "warning")
+        return redirect(url_for('estudiante.examenes_disponibles'))
+
+    return render_template(
+        'estudiantes/presentar_examen.html',
+        examen=examen
+    )
+
+
+@estudiante_bp.route('/guardar-respuesta/<int:id>', methods=["POST"])
+@login_required
+def guardar_respuesta(id):
+    """Guarda las respuestas y califica automáticamente"""
+    if current_user.rol != 'estudiante':
+        abort(403)
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        abort(403)
+
+    examen = Examen.query.get_or_404(id)
+
+    # Verificar si ya respondió
+    ya_respondio = ResultadoExamen.query.filter_by(
+        examen_id=id,
+        estudiante_id=estudiante.id
+    ).first()
+
+    if ya_respondio:
+        flash("Ya has presentado este examen.", "warning")
+        return redirect(url_for('estudiante.examenes_disponibles'))
+
+    preguntas = examen.contenido_json or []
+    total_preguntas = len(preguntas)
+
+    if total_preguntas == 0:
+        flash("Este examen no tiene preguntas.", "danger")
+        return redirect(url_for('estudiante.examenes_disponibles'))
+
+    # Calificar
+    respuestas_correctas = 0
+    detalles = []
+
+    for pregunta in preguntas:
+        num = pregunta["numero"]
+        respuesta_estudiante = request.form.get(f"pregunta_{num}") or ""
+
+        es_correcta = respuesta_estudiante == pregunta.get("respuesta_correcta")
+        if es_correcta:
+            respuestas_correctas += 1
+
+        detalles.append({
+            "numero_pregunta": num,
+            "texto_pregunta": pregunta.get("texto", ""),
+            "respuesta_seleccionada": respuesta_estudiante,
+            "respuesta_correcta": pregunta.get("respuesta_correcta", ""),
+            "es_correcta": es_correcta
+        })
+
+    # Calcular métricas
+    porcentaje = (respuestas_correctas / total_preguntas) * 100
+    respuestas_incorrectas = total_preguntas - respuestas_correctas
+    nota_numerica = round((porcentaje / 100) * 5, 2)
+
+    # Determinar literal
+    if porcentaje >= 90:
+        literal = "S"
+    elif porcentaje >= 80:
+        literal = "A"
+    elif porcentaje >= 70:
+        literal = "B"
+    elif porcentaje >= 60:
+        literal = "b"
+    else:
+        literal = "I"
+
+    # Crear resultado
+    resultado = ResultadoExamen(
+        estudiante_id=estudiante.id,
+        examen_id=id,
+        materia_id=examen.materia_id,
+        total_preguntas=total_preguntas,
+        respuestas_correctas=respuestas_correctas,
+        respuestas_incorrectas=respuestas_incorrectas,
+        porcentaje=porcentaje,
+        nota_numerica=nota_numerica,
+        literal=literal,
+        fecha=datetime.utcnow(),
+        fecha_finalizacion=datetime.utcnow()
+    )
+
+    db.session.add(resultado)
+    db.session.flush()
+
+    # Guardar detalles
+    for det in detalles:
+        detalle = RespuestaExamenDetalle(
+            resultado_examen_id=resultado.id,
+            **det
+        )
+        db.session.add(detalle)
+
+    db.session.commit()
+
+    flash("Examen enviado correctamente.", "success")
+    return redirect(url_for('estudiante.ver_resultado_examen', id=resultado.id))
+
+
+@estudiante_bp.route('/resultado-examen/<int:id>')
+@login_required
+def ver_resultado_examen(id):
+    """Muestra el resultado del examen"""
+    if current_user.rol != 'estudiante':
+        abort(403)
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        abort(403)
+
+    resultado = ResultadoExamen.query.get_or_404(id)
+
+    if resultado.estudiante_id != estudiante.id:
+        abort(403)
+
+    detalles = RespuestaExamenDetalle.query.filter_by(
+        resultado_examen_id=resultado.id
+    ).order_by(RespuestaExamenDetalle.numero_pregunta).all()
+
+    return render_template(
+        'estudiantes/resultado_examen.html',
+        resultado=resultado,
+        detalles=detalles
+    )

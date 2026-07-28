@@ -9,20 +9,23 @@ class Examen(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    nombre = db.Column(
+    # ✅ Título visible para estudiantes y docentes
+    titulo = db.Column(
         db.String(200),
         nullable=False
     )
 
+    # ✅ Nombre interno (puede ser igual al título o un identificador)
+    nombre = db.Column(
+        db.String(200),
+        nullable=True
+    )
+
     descripcion = db.Column(db.Text)
+
     tiempo_limite_minutos = db.Column(db.Integer, default=60)
 
     activo = db.Column(db.Boolean, default=True)
-
-    fecha_creacion= db.Column(
-        db.Date,
-        nullable=False
-    )
 
     fecha_creacion = db.Column(
         db.DateTime,
@@ -51,10 +54,7 @@ class Examen(db.Model):
         nullable=True
     )
 
-    # 🔥 AGREGAR ESTA LÍNEA
-    activo = db.Column(db.Boolean, default=True)
-
-    # Relaciones existentes
+    # Relaciones
     materia = db.relationship(
         "Materia",
         backref="examenes"
@@ -72,6 +72,4 @@ class Examen(db.Model):
     )
 
     def __repr__(self):
-        return f"<Examen {self.nombre}>"
-
-
+        return f"<Examen {self.titulo}>"

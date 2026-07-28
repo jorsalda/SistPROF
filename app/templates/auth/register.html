@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - SistPRO</title>
+    <title>Registro - SistPROF</title>
     <!-- CSS Principal -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <!-- CSS de Autenticación -->
@@ -15,98 +15,81 @@
             <div class="auth-header">
                 <div class="login-icon">📝</div>
                 <h2>Crear Cuenta</h2>
-                <p>Registra tu colegio en SistPRO</p>
+                <p id="subtitulo-registro">Registra tu colegio en SistPROF</p>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
                         <div class="alert alert-{{ category }}">
-                            {% if "Contraseña no válida" in message %}
-                                <!-- Mostrar lista de errores de contraseña -->
-                                <strong>⚠️ Contraseña no válida:</strong>
-                                <ul class="mb-0 mt-2">
-                                    {% for error in message.split('\n')[1:] %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                {{ message }}
-                            {% endif %}
+                            {{ message }}
                         </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
 
             <!-- Formulario de Registro -->
-            <form method="post" class="auth-form">
+            <form method="post" class="auth-form" id="form-registro">
                 <!-- Token CSRF -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+                <!-- ✅ NUEVO: Tipo de Registro -->
                 <div class="form-group">
-                    <label for="email" class="form-label required">Correo institucional</label>
-                    <input
-                        type="email"
-                        name="email"
-                        id="email"
-                        class="form-control"
-                        placeholder="colegio@institucion.edu"
-                        required
-                        autocomplete="email"
-                    >
+                    <label class="form-label required">Tipo de registro</label>
+                    <select name="tipo_registro" id="tipo_registro" class="form-control" required onchange="toggleCampos()">
+                        <option value="colegio">Registrar un nuevo Colegio</option>
+                        <option value="independiente">Registrarme como Independiente (Docente/Estudiante)</option>
+                    </select>
+                </div>
+
+                <!-- Campos para INDEPENDIENTES (Ocultos por defecto) -->
+                <div id="campos-independiente" style="display: none;">
+                    <div class="form-group">
+                        <label for="nombre_completo" class="form-label required">Nombre completo</label>
+                        <input type="text" name="nombre_completo" id="nombre_completo" class="form-control" placeholder="Ej: Juan Pérez">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rol_independiente" class="form-label required">Soy...</label>
+                        <select name="rol_independiente" id="rol_independiente" class="form-control">
+                            <option value="docente">Docente Independiente</option>
+                            <option value="estudiante">Estudiante Independiente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campos para COLEGIO (Visibles por defecto) -->
+                <div id="campos-colegio">
+                    <div class="form-group">
+                        <label for="colegio" class="form-label required">Nombre del colegio</label>
+                        <input type="text" name="colegio" id="colegio" class="form-control" placeholder="Colegio San Juan">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="codigo_acceso" class="form-label">
+                            Código de acceso del colegio
+                            <small class="text-muted">(opcional - dejar en blanco para generar automático)</small>
+                        </label>
+                        <input type="text" name="codigo_acceso" id="codigo_acceso" class="form-control" placeholder="Ej: COLEGIO-2026" autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- Campos Comunes -->
+                <div class="form-group">
+                    <label for="email" class="form-label required">Correo electrónico</label>
+                    <input type="email" name="email" id="email" class="form-control" placeholder="correo@ejemplo.com" required autocomplete="email">
                 </div>
 
                 <div class="form-group">
                     <label for="password" class="form-label required">Contraseña</label>
-                    <input
-                        type="password"
-                        name="password"
-                        id="password"
-                        class="form-control"
-                        placeholder="••••••••"
-                        required
-                        autocomplete="new-password"
-                    >
+                    <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="new-password">
                     <small class="form-text text-muted">
                         La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.
                     </small>
                 </div>
 
                 <div class="form-group">
-                    <label for="colegio" class="form-label required">Nombre del colegio</label>
-                    <input
-                        type="text"
-                        name="colegio"
-                        id="colegio"
-                        class="form-control"
-                        placeholder="Colegio San Juan"
-                        required
-                    >
-                </div>
-
-                <!-- ✅ NUEVO CAMPO: Código de acceso (opcional) -->
-                <div class="form-group">
-                    <label for="codigo_acceso" class="form-label">
-                        Código de acceso del colegio
-                        <small class="text-muted">(opcional - dejar en blanco para generar automático)</small>
-                    </label>
-                    <input
-                        type="text"
-                        name="codigo_acceso"
-                        id="codigo_acceso"
-                        class="form-control"
-                        placeholder="Ej: COLEGIO-2026"
-                        autocomplete="off"
-                    >
-                    <small class="form-text text-muted">
-                        Si lo dejas en blanco, el sistema generará un código único automáticamente
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Registrarse
-                    </button>
+                    <button type="submit" class="btn btn-primary btn-block">Registrarse</button>
                 </div>
             </form>
 
@@ -116,5 +99,48 @@
             </div>
         </div>
     </div>
+
+    <!-- ✅ Script para mostrar/ocultar campos según el tipo de registro -->
+    <script>
+        function toggleCampos() {
+            const tipo = document.getElementById('tipo_registro').value;
+            const camposIndependiente = document.getElementById('campos-independiente');
+            const camposColegio = document.getElementById('campos-colegio');
+            const subtitulo = document.getElementById('subtitulo-registro');
+
+            // Inputs de colegio
+            const inputColegio = document.getElementById('colegio');
+            const inputCodigo = document.getElementById('codigo_acceso');
+
+            // Inputs de independiente
+            const inputNombre = document.getElementById('nombre_completo');
+            const inputRol = document.getElementById('rol_independiente');
+
+            if (tipo === 'independiente') {
+                camposIndependiente.style.display = 'block';
+                camposColegio.style.display = 'none';
+                subtitulo.textContent = 'Regístrate para acceder a módulos independientes';
+
+                // Hacer requeridos los campos de independiente
+                inputNombre.setAttribute('required', 'required');
+                inputRol.setAttribute('required', 'required');
+
+                // Quitar requerido a los de colegio
+                inputColegio.removeAttribute('required');
+                inputCodigo.removeAttribute('required');
+            } else {
+                camposIndependiente.style.display = 'none';
+                camposColegio.style.display = 'block';
+                subtitulo.textContent = 'Registra tu colegio en SistPROF';
+
+                // Hacer requeridos los campos de colegio
+                inputColegio.setAttribute('required', 'required');
+
+                // Quitar requerido a los de independiente
+                inputNombre.removeAttribute('required');
+                inputRol.removeAttribute('required');
+            }
+        }
+    </script>
 </body>
 </html>

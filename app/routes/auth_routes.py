@@ -53,7 +53,6 @@ def index():
     return redirect(url_for('auth.login'))
 
 
-# ⭐⭐ LOGIN ⭐⭐
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
 
@@ -97,6 +96,7 @@ def login():
 
         else:
             flash(resultado, 'danger')
+            return redirect(url_for('auth.login'))  # ✅ AQUÍ ESTÁ EL CAMBIO
 
     return render_template('auth/login.html')
 
@@ -111,19 +111,29 @@ def logout():
 
     return redirect(url_for('auth.login'))
 
-
 # ⭐⭐ REGISTRO ⭐⭐
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-
     if request.method == 'POST':
+        # Obtener tipo de registro del formulario
+        tipo_registro = request.form.get('tipo_registro', 'colegio')
 
-        ok, mensaje = registrar_usuario(
-            request.form['email'],
-            request.form['password'],
-            request.form['colegio'],
-            request.form.get('codigo_acceso', '')
-        )
+        if tipo_registro == 'independiente':
+            ok, mensaje = registrar_usuario(
+                email=request.form['email'],
+                password=request.form['password'],
+                tipo_registro='independiente',
+                nombre_completo=request.form.get('nombre_completo'),
+                rol_independiente=request.form.get('rol_independiente')
+            )
+        else:
+            ok, mensaje = registrar_usuario(
+                email=request.form['email'],
+                password=request.form['password'],
+                tipo_registro='colegio',
+                nombre_colegio=request.form.get('colegio'),
+                codigo_acceso=request.form.get('codigo_acceso', '')
+            )
 
         if ok:
             flash(mensaje, "success")
@@ -132,7 +142,6 @@ def register():
         flash(mensaje, 'danger')
 
     return render_template('auth/register.html')
-
 
 # ⭐⭐ TEST ⭐⭐
 @auth_bp.route('/test')

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Exámenes | SistPROF{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4"><i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes Disponibles</h2>
+    
+    {% if examenes %}
+    <div class="row">
+        {% for examen in examenes %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm {% if examen.id in examenes_respondidos %}border-success{% endif %}">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ examen.titulo }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">{{ examen.descripcion }}</p>
+                    <div class="mb-2"><strong><i class="bi bi-clock me-1"></i>Tiempo:</strong> {{ examen.tiempo_limite_minutos }} min</div>
+                    <div class="mb-2"><strong><i class="bi bi-question-circle me-1"></i>Preguntas:</strong> {{ examen.contenido_json|length if examen.contenido_json else 0 }}</div>
+                    <div class="mb-2"><strong><i class="bi bi-book me-1"></i>Materia:</strong> {{ examen.materia.nombre if examen.materia else 'N/A' }}</div>
+                    
+                    {% if examen.id in examenes_respondidos %}
+                        {% set resultado = resultados|selectattr('examen_id', 'equalto', examen.id)|first %}
+                        <div class="alert alert-success mt-3 mb-0">
+                            <strong>✓ Presentado</strong><br>
+                            Nota: {{ resultado.nota_numerica }}/5.0 ({{ "%.0f"|format(resultado.porcentaje) }}%)<br>
+                            <small>{{ resultado.fecha.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <a href="{{ url_for('estudiante.ver_resultado_examen', id=resultado.id) }}" 
+                           class="btn btn-outline-success btn-sm w-100 mt-2">
+                            Ver Detalle
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('estudiante.presentar_examen', id=examen.id) }}" 
+                           class="btn btn-primary btn-sm w-100 mt-3">
+                            <i class="bi bi-play me-2"></i>Presentar Examen
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle me-2"></i>
+        No tienes exámenes disponibles por el momento.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

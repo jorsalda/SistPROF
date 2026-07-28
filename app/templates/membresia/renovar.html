@@ -1,0 +1,39 @@
+{% extends "estudiantes/dashboard_estudiante.html" %}
+
+{% block estudiante_page_title %}Renovar Membresía{% endblock %}
+
+{% block estudiante_content %}
+<div class="container mt-4">
+    <h2> Renovar Membresía</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label class="form-label">Tipo de Plan</label>
+                    <select name="tipo_plan" class="form-control" required>
+                        <option value="mensual">Mensual - $50.000 COP/mes</option>
+                        <option value="anual">Anual - $500.000 COP/año (2 meses gratis)</option>
+                        <option value="vitalicio">Vitalicio - $1.000.000 COP (pago único)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Método de Pago</label>
+                    <select name="metodo_pago" class="form-control" required>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="nequi">Nequi</option>
+                        <option value="daviplata">Daviplata</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                <a href="{{ url_for('membresia.ver_mi_plan') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

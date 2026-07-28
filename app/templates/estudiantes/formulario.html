@@ -68,60 +68,28 @@
                         </h5>
 
                         <div class="row g-3 mb-3">
-                            <!-- Nombre -->
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Nombre <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-person text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: Juan Carlos"
-                                        value="{{ estudiante.nombre if edit_mode else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                    <input type="text" name="nombre" class="form-control border-start-0 ps-0" placeholder="Ej: Juan Carlos" value="{{ estudiante.nombre if edit_mode else '' }}" required>
                                 </div>
                             </div>
-
-                            <!-- Apellido -->
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Apellido <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Apellido <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-person-vcard text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="apellido"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: Pérez García"
-                                        value="{{ estudiante.apellido if edit_mode else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-vcard text-muted"></i></span>
+                                    <input type="text" name="apellido" class="form-control border-start-0 ps-0" placeholder="Ej: Pérez García" value="{{ estudiante.apellido if edit_mode else '' }}" required>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tipo y Número de Documento -->
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Tipo de Documento <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Tipo de Documento <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-card-list text-muted"></i>
-                                    </span>
-                                    <select
-                                        name="tipo_documento"
-                                        id="tipo_documento"
-                                        class="form-select border-start-0 ps-0"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-card-list text-muted"></i></span>
+                                    <select name="tipo_documento" id="tipo_documento" class="form-select border-start-0 ps-0" required>
                                         <option value="TI" {% if edit_mode and estudiante.tipo_documento == 'TI' %}selected{% endif %}>Tarjeta de Identidad (TI)</option>
                                         <option value="CC" {% if edit_mode and estudiante.tipo_documento == 'CC' %}selected{% endif %}>Cédula de Ciudadanía (CC)</option>
                                         <option value="CE" {% if edit_mode and estudiante.tipo_documento == 'CE' %}selected{% endif %}>Cédula de Extranjería (CE)</option>
@@ -131,160 +99,98 @@
                                     </select>
                                 </div>
                             </div>
-
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Número de Documento <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Número de Documento <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-hash text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="documento"
-                                        id="documento"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: 1000123456"
-                                        value="{{ estudiante.documento if estudiante else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-hash text-muted"></i></span>
+                                    <input type="text" name="documento" id="documento" class="form-control border-start-0 ps-0" placeholder="Ej: 1000123456" value="{{ estudiante.documento if estudiante else '' }}" required>
                                 </div>
                             </div>
-
-                            <!-- Teléfono -->
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Teléfono <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Teléfono <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-telephone text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="tel"
-                                        name="telefono"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: 300 123 4567"
-                                        value="{{ estudiante.telefono if edit_mode else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-telephone text-muted"></i></span>
+                                    <input type="tel" name="telefono" class="form-control border-start-0 ps-0" placeholder="Ej: 300 123 4567" value="{{ estudiante.telefono if edit_mode else '' }}" required>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Dirección -->
                         <div class="row g-3 mb-3">
                             <div class="col-md-12">
-                                <label class="form-label fw-semibold">
-                                    Dirección <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Dirección <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-geo-alt text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="direccion"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: Calle 123 #45-67, Bogotá"
-                                        value="{{ estudiante.direccion if edit_mode else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-geo-alt text-muted"></i></span>
+                                    <input type="text" name="direccion" class="form-control border-start-0 ps-0" placeholder="Ej: Calle 123 #45-67, Bogotá" value="{{ estudiante.direccion if edit_mode else '' }}" required>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- SECCIÓN 2: Información Académica -->
+                        <!-- SECCIÓN 2: Información Académica y Acceso -->
                         <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom mt-4">
-                            <i class="bi bi-book me-2"></i>Información Académica
+                            <i class="bi bi-book me-2"></i>Información Académica y Acceso
                         </h5>
-                        <!-- Email -->
+
                         <div class="row g-3 mb-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-semibold">
-                                    Correo Electrónico <span class="text-danger">*</span>
-                                </label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Correo Electrónico <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-envelope text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        class="form-control border-start-0 ps-0"
-                                        placeholder="Ej: estudiante@colegio.edu.co"
-                                        value="{{ estudiante.email if estudiante and estudiante.email else '' }}"
-                                        required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                    <input type="email" name="email" class="form-control border-start-0 ps-0" placeholder="Ej: estudiante@colegio.edu.co" value="{{ estudiante.email if estudiante and estudiante.email else '' }}" required>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Este será su usuario de acceso al sistema
+                                    <i class="bi bi-info-circle"></i> Este será su usuario de acceso al sistema.
+                                </div>
+                            </div>
+
+                            <!-- CAMPO DE CONTRASEÑA AGREGADO DE FORMA LIMPIA -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                                    <input type="password" name="password" id="password" class="form-control border-start-0 ps-0" placeholder="Se autocompleta con el documento" value="{{ estudiante.documento if edit_mode else '' }}" required minlength="6">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword" title="Mostrar/ocultar contraseña">
+                                        <i class="bi bi-eye" id="iconToggle"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Por defecto es el documento. Puede modificarla aquí si lo desea.
                                 </div>
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Sede <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Sede <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-building text-muted"></i>
-                                    </span>
-                                    <select name="sede_id"
-                                            id="sedeSelect"
-                                            class="form-select border-start-0 ps-0"
-                                            required
-                                            onchange="cargarJornadas()">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-building text-muted"></i></span>
+                                    <select name="sede_id" id="sedeSelect" class="form-select border-start-0 ps-0" required onchange="cargarJornadas()">
                                         <option value="">Seleccione sede</option>
                                         {% for sede in sedes %}
-                                        <option value="{{ sede.id }}"
-                                                {% if edit_mode and estudiante.sede_id== sede.id %}selected{% endif %}>
-                                            {{ sede.nombre }}
-                                        </option>
+                                        <option value="{{ sede.id }}" {% if edit_mode and estudiante.sede_id == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
                             </div>
-
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Jornada <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Jornada <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-clock text-muted"></i>
-                                    </span>
-                                    <select name="jornada_id"
-                                            id="jornadaSelect"
-                                            class="form-select border-start-0 ps-0"
-                                            required
-                                            onchange="cargarGrupos()">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-clock text-muted"></i></span>
+                                    <select name="jornada_id" id="jornadaSelect" class="form-select border-start-0 ps-0" required onchange="cargarGrupos()">
                                         <option value="">Seleccione jornada</option>
                                         {% if edit_mode and estudiante.jornada_id %}
-                                        <option value="{{ estudiante.jornada_id }}" selected>
-                                            {{ estudiante.jornada.nombre if estudiante.jornada else '' }}
-                                        </option>
+                                        <option value="{{ estudiante.jornada_id }}" selected>{{ estudiante.jornada.nombre if estudiante.jornada else '' }}</option>
                                         {% endif %}
                                     </select>
                                 </div>
                             </div>
-
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Grupo <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Grupo <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-people text-muted"></i>
-                                    </span>
-                                    <select name="grupo_id"
-                                            id="grupoSelect"
-                                            class="form-select border-start-0 ps-0"
-                                            required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-people text-muted"></i></span>
+                                    <select name="grupo_id" id="grupoSelect" class="form-select border-start-0 ps-0" required>
                                         <option value="">Seleccione grupo</option>
                                         {% if edit_mode and estudiante.grupo_rel %}
-                                        <option value="{{ estudiante.grupo_rel.id }}" selected>
-                                            {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre }}
-                                        </option>
+                                        <option value="{{ estudiante.grupo_rel.id }}" selected>{{ estudiante.grado }}{{ estudiante.grupo_rel.nombre }}</option>
                                         {% endif %}
                                     </select>
                                 </div>
@@ -293,27 +199,18 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Docente Director de Grupo
-                                </label>
+                                <label class="form-label fw-semibold">Docente Director de Grupo</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-person-check text-muted"></i>
-                                    </span>
-                                    <select name="docente_id"
-                                            class="form-select border-start-0 ps-0">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-check text-muted"></i></span>
+                                    <select name="docente_id" class="form-select border-start-0 ps-0">
                                         <option value="">Sin asignar</option>
                                         {% for docente in docentes %}
-                                        <option value="{{ docente.id }}"
-                                                {% if edit_mode and estudiante.docente_id== docente.id %}selected{%
-                                                endif %}>
-                                            {{ docente.nombre }}
-                                        </option>
+                                        <option value="{{ docente.id }}" {% if edit_mode and estudiante.docente_id == docente.id %}selected{% endif %}>{{ docente.nombre }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Opcional - Se puede asignar después
+                                    <i class="bi bi-info-circle"></i> Opcional - Se puede asignar después.
                                 </div>
                             </div>
                         </div>
@@ -325,29 +222,20 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-12">
-                                <label class="form-label fw-semibold">
-                                    Acudiente Principal <span class="text-danger">*</span>
-                                </label>
+                                <label class="form-label fw-semibold">Acudiente Principal <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-person-heart text-muted"></i>
-                                    </span>
-                                    <select name="acudiente_principal_id"
-                                            class="form-select border-start-0 ps-0"
-                                            required>
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-heart text-muted"></i></span>
+                                    <select name="acudiente_principal_id" class="form-select border-start-0 ps-0" required>
                                         <option value="">Seleccione acudiente</option>
                                         {% for acudiente in acudientes %}
-                                        <option value="{{ acudiente.id }}"
-                                                {% if edit_mode and estudiante.acudiente_principal_id== acudiente.id
-                                                %}selected{% endif %}>
-                                            {{ acudiente.nombre }} - {{ acudiente.parentesco or 'N/A' }} ({{
-                                            acudiente.telefono }})
+                                        <option value="{{ acudiente.id }}" {% if edit_mode and estudiante.acudiente_principal_id == acudiente.id %}selected{% endif %}>
+                                            {{ acudiente.nombre }} - {{ acudiente.parentesco or 'N/A' }} ({{ acudiente.telefono }})
                                         </option>
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> El acudiente debe estar registrado previamente
+                                    <i class="bi bi-info-circle"></i> El acudiente debe estar registrado previamente.
                                 </div>
                             </div>
                         </div>
@@ -361,10 +249,9 @@
                                 <div class="flex-grow-1 ms-3">
                                     <strong>Información importante</strong><br>
                                     <small>
-                                        • Todos los campos marcados con <span class="text-danger">*</span> son
-                                        obligatorios.<br>
-                                        • El número de documento será su usuario de acceso.<br>
-                                        • La contraseña inicial será el mismo número de documento.
+                                        • Todos los campos marcados con <span class="text-danger">*</span> son obligatorios.<br>
+                                        • El correo electrónico será su usuario de acceso.<br>
+                                        • La contraseña inicial es el número de documento, pero puede modificarla en el campo de arriba antes de guardar.
                                     </small>
                                 </div>
                             </div>
@@ -372,12 +259,10 @@
 
                         <!-- Botones de Acción -->
                         <div class="d-flex gap-3 justify-content-end pt-3 border-top">
-                            <a href="{{ url_for('estudiante.listar') }}"
-                               class="btn btn-outline-secondary">
+                            <a href="{{ url_for('estudiante.listar') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
-                            <button type="submit"
-                                    class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-save me-2"></i>{{ 'Actualizar' if edit_mode else 'Guardar Estudiante' }}
                             </button>
                         </div>
@@ -390,39 +275,20 @@
 </div>
 
 <style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .input-group .form-control,
-    .input-group .form-select {
-        font-size: 0.95rem;
-    }
+    .bg-gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+    .input-group .form-control, .input-group .form-select { font-size: 0.95rem; }
 </style>
 
 <script>
-    // Cargar jornadas cuando cambia la sede
+    // 1. Cargar jornadas cuando cambia la sede
     function cargarJornadas() {
         const sedeId = document.getElementById('sedeSelect').value;
         const jornadaSelect = document.getElementById('jornadaSelect');
         const grupoSelect = document.getElementById('grupoSelect');
 
-        // Limpiar selects dependientes
         jornadaSelect.innerHTML = '<option value="">Seleccione jornada</option>';
         grupoSelect.innerHTML = '<option value="">Seleccione sede y jornada primero</option>';
 
@@ -434,7 +300,6 @@
                         jornadaSelect.innerHTML = '<option value="">No hay jornadas disponibles</option>';
                         return;
                     }
-
                     jornadas.forEach(jornada => {
                         const option = document.createElement('option');
                         option.value = jornada.id;
@@ -449,13 +314,12 @@
         }
     }
 
-    // Cargar grupos cuando cambia la jornada
+    // 2. Cargar grupos cuando cambia la jornada
     function cargarGrupos(grupoIdSeleccionado = null) {
         const sedeId = document.getElementById('sedeSelect').value;
         const jornadaId = document.getElementById('jornadaSelect').value;
         const grupoSelect = document.getElementById('grupoSelect');
 
-        // Limpiar select de grupos
         grupoSelect.innerHTML = '<option value="">Seleccione grupo</option>';
 
         if (sedeId && jornadaId) {
@@ -466,17 +330,13 @@
                         grupoSelect.innerHTML = '<option value="">No hay grupos disponibles</option>';
                         return;
                     }
-
                     grupos.forEach(grupo => {
                         const option = document.createElement('option');
                         option.value = grupo.id;
                         option.textContent = `${grupo.grado}${grupo.nombre}`;
-
-                        // Si hay un grupo seleccionado (modo edición), seleccionarlo
                         if (grupoIdSeleccionado && grupo.id == grupoIdSeleccionado) {
                             option.selected = true;
                         }
-
                         grupoSelect.appendChild(option);
                     });
                 })
@@ -487,50 +347,73 @@
         }
     }
 
-    // Cargar datos automáticamente en modo edición
+    // 3. Inicialización y autocompletado de contraseña
     document.addEventListener('DOMContentLoaded', function() {
         const sedeSelect = document.getElementById('sedeSelect');
         const jornadaSelect = document.getElementById('jornadaSelect');
         const grupoSelect = document.getElementById('grupoSelect');
-
         const sedeId = sedeSelect.value;
         const jornadaId = jornadaSelect.value;
-
-        // Obtener el ID del grupo actual (si existe)
         const grupoIdActual = grupoSelect.querySelector('option[selected]')?.value || null;
 
+        // Carga inicial de datos en modo edición
         if (sedeId) {
-            // Cargar jornadas primero
             fetch(`/estudiantes/api/jornadas/${sedeId}`)
                 .then(response => response.json())
                 .then(jornadas => {
-                    // Guardar la selección actual de jornada
                     const jornadaSeleccionada = jornadaId;
-
-                    // Limpiar y recargar jornadas
                     jornadaSelect.innerHTML = '<option value="">Seleccione jornada</option>';
-
                     jornadas.forEach(jornada => {
                         const option = document.createElement('option');
                         option.value = jornada.id;
                         option.textContent = jornada.nombre;
-
-                        // Si es la jornada seleccionada (modo edición), marcarla
                         if (jornadaSeleccionada && jornada.id == jornadaSeleccionada) {
                             option.selected = true;
                         }
-
                         jornadaSelect.appendChild(option);
                     });
-
-                    // Si hay jornada seleccionada, cargar grupos
                     if (jornadaSeleccionada) {
                         cargarGrupos(grupoIdActual);
                     }
                 })
-                .catch(error => {
-                    console.error('Error cargando datos iniciales:', error);
+                .catch(error => console.error('Error cargando datos iniciales:', error));
+        }
+
+        // ✅ AUTOCOMPLETAR CONTRASEÑA CON DOCUMENTO (LÓGICA CORREGIDA)
+        const documentoInput = document.getElementById('documento');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const iconToggle = document.getElementById('iconToggle');
+
+        if (documentoInput && passwordInput) {
+            let ultimaContraseñaAutocompletada = passwordInput.value;
+
+            // Autocompletar contraseña cada vez que cambia el documento
+            documentoInput.addEventListener('input', function() {
+                // Si la contraseña actual es igual a la última autocompletada,
+                // significa que el usuario NO la ha modificado manualmente
+                if (passwordInput.value === ultimaContraseñaAutocompletada || passwordInput.value === '') {
+                    passwordInput.value = this.value;
+                    ultimaContraseñaAutocompletada = this.value;
+                }
+            });
+
+            // Si el usuario escribe manualmente en contraseña, actualizar el rastreador
+            passwordInput.addEventListener('input', function() {
+                ultimaContraseñaAutocompletada = this.value;
+            });
+
+            // Mostrar/Ocultar contraseña
+            if (togglePassword) {
+                togglePassword.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    if (iconToggle) {
+                        iconToggle.classList.toggle('bi-eye');
+                        iconToggle.classList.toggle('bi-eye-slash');
+                    }
                 });
+            }
         }
     });
 </script>

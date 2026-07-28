@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Examen con IA | SistPROF{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4 p-4">
+                    <h3 class="mb-0"><i class="bi bi-robot me-2"></i>Crear Examen con Asistencia de IA</h3>
+                    <p class="mb-0 opacity-75">Sube tu material de estudio y deja que la IA genere las preguntas automáticamente.</p>
+                </div>
+                
+                <div class="card-body p-5">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" enctype="multipart/form-data" id="formCrearExamen">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">1. Selecciona la Materia <span class="text-danger">*</span></label>
+                            <select name="materia_id" class="form-select form-select-lg" required>
+                                <option value="">-- Selecciona una materia --</option>
+                                {% for materia in materias %}
+                                    <option value="{{ materia.id }}">{{ materia.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">2. Grado <span class="text-danger">*</span></label>
+                                <select name="grado" class="form-select form-select-lg" required>
+                                    <option value="">-- Selecciona --</option>
+                                    <option value="6°">6°</option>
+                                    <option value="7°">7°</option>
+                                    <option value="8°">8°</option>
+                                    <option value="9°">9°</option>
+                                    <option value="10°">10°</option>
+                                    <option value="11°">11°</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">3. Cantidad de Preguntas</label>
+                                <input type="number" name="cantidad" class="form-control form-control-lg" value="5" min="1" max="20" required>
+                                <small class="text-muted">Máximo 20 preguntas por generación.</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">4. Subir Documento de Estudio <span class="text-danger">*</span></label>
+                            <input type="file" name="archivo" class="form-control form-control-lg" accept=".pdf,.docx" required>
+                            <div class="form-text">Formatos permitidos: PDF o DOCX. El texto debe ser seleccionable (no imágenes escaneadas).</div>
+                        </div>
+
+                        <div class="alert alert-info border-0 bg-info-subtle">
+                            <i class="bi bi-shield-check me-2"></i>
+                            <strong>Privacidad garantizada:</strong> El sistema anonimiza automáticamente los datos sensibles antes de enviar el texto a la IA.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                                <i class="bi bi-magic me-2"></i>Generar Preguntas con IA
+                            </button>
+                            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary rounded-pill">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Spinner de carga al enviar
+    document.getElementById('formCrearExamen').addEventListener('submit', function() {
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando documento...';
+    });
+</script>
+{% endblock %}

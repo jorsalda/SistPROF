@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - SistPRO</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="login-icon">🔐</div>
+                <h2>Iniciar Sesión</h2>
+                <p>Gestión de Permisos Escolares</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="alert alert-info">
+                <strong>💡 Recordatorio:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Nuevos usuarios: <strong>15 días de acceso gratuito</strong></li>
+                    <li>Aprueba permanente dentro de los 15 días</li>
+                    <li>Consulta días restantes en tu panel</li>
+                </ul>
+            </div>
+
+            <form method="POST" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="email" class="form-label required">Correo electrónico</label>
+                    <input type="email" name="email" id="email" class="form-control" placeholder="tu@email.com" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label required">Contraseña</label>
+                    <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('auth.forgot_password') }}" class="text-muted small">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
+                </div>
+            </form>
+
+            <div class="auth-links">
+                <a href="{{ url_for('auth.register') }}">¿No tienes cuenta? Regístrate aquí</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

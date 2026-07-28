@@ -1,7 +1,7 @@
 # models/examen.py
 from app.extensions import db
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import JSONB  # <-- Agregar esta importación
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Examen(db.Model):
@@ -16,10 +16,9 @@ class Examen(db.Model):
 
     descripcion = db.Column(db.Text)
 
-    fecha = db.Column(
-        db.Date,
-        nullable=False
-    )
+    tiempo_limite_minutos = db.Column(db.Integer, default=60)
+
+    activo = db.Column(db.Boolean, default=True)
 
     fecha_creacion = db.Column(
         db.DateTime,
@@ -38,10 +37,15 @@ class Examen(db.Model):
         nullable=False
     )
 
-    archivo_json = db.Column(db.String(200))  # ← Nombre del archivo (legacy)
+    archivo_json = db.Column(db.String(200))
 
-    # 🔥 NUEVO CAMPO
-    contenido_json = db.Column(JSONB)  # ← Contenido completo del examen
+    contenido_json = db.Column(JSONB)
+
+    tipo_examen_id = db.Column(
+        db.Integer,
+        db.ForeignKey("tipo_examen.id"),
+        nullable=True
+    )
 
     # Relaciones
     materia = db.relationship(
@@ -52,6 +56,12 @@ class Examen(db.Model):
     colegio = db.relationship(
         "Colegio",
         backref="examenes"
+    )
+
+    tipo_examen = db.relationship(
+        "TipoExamen",
+        backref="examenes",
+        lazy=True
     )
 
     def __repr__(self):

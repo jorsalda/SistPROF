@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Membresías - SistPROF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/coordinador.css') }}">
+</head>
+<body>
+
+<div class="coordinador-container">
+    <aside class="coordinador-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="bi bi-building"></i> Estudiantes Independientes</h2>
+            <p>Panel Administrativo</p>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.dashboard') }}" class="menu-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.lista_docentes') }}" class="menu-link">
+                    <i class="bi bi-person"></i> Docentes
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.listar') }}" class="menu-link">
+                    <i class="bi bi-mortarboard"></i> Estudiantes
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('membresia.gestionar_membresias') }}" class="menu-link active">
+                    <i class="bi bi-credit-card"></i> Gestionar Membresías
+                </a>
+            </li>
+            <li class="menu-item logout-item">
+                <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                </button>
+            </li>
+        </ul>
+    </aside>
+
+    <main class="coordinador-content">
+        <header class="coordinador-header">
+            <h1>Gestionar Membresías</h1>
+            <div class="user-info"><i class="bi bi-person-circle"></i> {{ current_user.email }}</div>
+        </header>
+        
+        <div class="coordinador-main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h2>⚙️ Gestión de Membresías</h2>
+            
+            <h4 class="mt-4">⏳ Pendientes de Aprobación</h4>
+            {% if membresias_pendientes %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>Plan</th>
+                        <th>Monto</th>
+                        <th>Método Pago</th>
+                        <th>Fecha Solicitud</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in membresias_pendientes %}
+                    <tr>
+                        <td>{{ m.usuario.nombre }}</td>
+                        <td>{{ m.usuario.email }}</td>
+                        <td>{{ m.tipo_plan }}</td>
+                        <td>${{ "{:,.0f}".format(m.monto) }} COP</td>
+                        <td>{{ m.metodo_pago }}</td>
+                        <td>{{ m.fecha_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('membresia.aprobar_membresia', membresia_id=m.id) }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-success">✅ Aprobar</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('membresia.rechazar_membresia', membresia_id=m.id) }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger">❌ Rechazar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-info">No hay membresías pendientes de aprobación</div>
+            {% endif %}
+
+            <h4 class="mt-4">✅ Aprobadas Recientemente</h4>
+            {% if membresias_aprobadas %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Plan</th>
+                        <th>Monto</th>
+                        <th>Fecha Pago</th>
+                        <th>Fecha Fin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in membresias_aprobadas %}
+                    <tr>
+                        <td>{{ m.usuario.nombre }}</td>
+                        <td>{{ m.tipo_plan }}</td>
+                        <td>${{ "{:,.0f}".format(m.monto) }} COP</td>
+                        <td>{{ m.fecha_pago.strftime('%d/%m/%Y') if m.fecha_pago else '-' }}</td>
+                        <td>{{ m.fecha_fin.strftime('%d/%m/%Y') if m.fecha_fin else 'Vitalicio' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-secondary">No hay membresías aprobadas recientemente</div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

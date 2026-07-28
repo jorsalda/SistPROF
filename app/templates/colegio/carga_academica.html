@@ -1,0 +1,211 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Gestión de Carga Académica | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<style>
+    .scroll-box {
+        width: 100%;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        border: 1px solid #dee2e6;
+        background-color: #fff;
+        margin-bottom: 2rem;
+    }
+    .tabla-ancha {
+        width: max-content !important;
+        min-width: 100%;
+        margin-bottom: 0;
+        border-collapse: collapse;
+    }
+    .col-fija {
+        position: sticky !important;
+        left: 0 !important;
+        background-color: #f8f9fa !important;
+        z-index: 100 !important;
+        border-right: 2px solid #dee2e6 !important;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        min-width: 150px;
+        text-align: center;
+        vertical-align: middle;
+    }
+    thead th.col-fija { z-index: 101 !important; background-color: #e9ecef !important; }
+    .tabla-ancha th, .tabla-ancha td {
+        white-space: nowrap !important;
+        padding: 8px;
+        vertical-align: middle;
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+    /* Barras de scroll visibles */
+    .scroll-box::-webkit-scrollbar { height: 16px !important; display: block !important; }
+    .scroll-box::-webkit-scrollbar-track { background: #e0e0e0 !important; }
+    .scroll-box::-webkit-scrollbar-thumb { background: #666 !important; border-radius: 4px; border: 2px solid #e0e0e0 !important; }
+    .scroll-box::-webkit-scrollbar-thumb:hover { background: #333 !important; }
+    .scroll-box { scrollbar-width: thick !important; scrollbar-color: #666 #e0e0e0 !important; }
+
+    /* Colores por nivel */
+    .header-preescolar { background-color: #fff3cd !important; color: #856404 !important; }
+    .header-primaria { background-color: #d4edda !important; color: #155724 !important; }
+    .header-bachillerato { background-color: #cce5ff !important; color: #004085 !important; }
+    .header-media { background-color: #d1ecf1 !important; color: #0c5460 !important; }
+    .header-otras { background-color: #e2e3e5 !important; color: #383d41 !important; }
+</style>
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>Gestión de Carga Académica</h2>
+            <p class="text-muted mb-0">Asigne materias a grupos y distribuya la carga docente</p>
+        </div>
+        <a href="{{ url_for('colegio.resumen_carga_academica') }}" class="btn btn-outline-primary">
+            <i class="bi bi-bar-chart me-2"></i>Ver Resumen
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form method="GET" action="{{ url_for('colegio.gestion_carga_academica') }}">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Filtrar por Sede</label>
+                        <select name="sede_id" class="form-select">
+                            <option value="">Todas las sedes</option>
+                            {% for sede in sedes %}
+                            <option value="{{ sede.id }}" {% if current_sede_id == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Filtrar por Jornada</label>
+                        <select name="jornada_id" class="form-select">
+                            <option value="">Todas las jornadas</option>
+                            {% for jornada in jornadas %}
+                            <option value="{{ jornada.id }}" {% if current_jornada_id == jornada.id %}selected{% endif %}>{{ jornada.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Filtrar por Grado</label>
+                        <select name="grado" class="form-select">
+                            <option value="">Todos los grados</option>
+                            {% for grado in grados_unicos %}
+                            <option value="{{ grado }}" {% if current_grado == grado %}selected{% endif %}>{{ grado }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrar</button>
+                    </div>
+                </div>
+                {% if current_sede_id or current_jornada_id or current_grado %}
+                <div class="mt-3">
+                    <a href="{{ url_for('colegio.gestion_carga_academica') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Formulario único que envuelve TODAS las tablas -->
+    <form method="POST" action="{{ url_for('colegio.guardar_carga_academica') }}">
+
+        {% for nivel, datos in datos_por_nivel.items() %}
+        {% if datos.grupos and datos.materias %}
+
+        <!-- ENCABEZADO DEL NIVEL -->
+        <div class="d-flex align-items-center mb-2 mt-4">
+            {% if nivel == 'PREESCOLAR' %}
+                <span class="badge header-preescolar px-3 py-2 fs-6"><i class="bi bi-heart-fill me-1"></i>{{ nivel }}</span>
+            {% elif nivel == 'PRIMARIA' %}
+                <span class="badge header-primaria px-3 py-2 fs-6"><i class="bi bi-square-fill me-1"></i>{{ nivel }}</span>
+            {% elif nivel == 'BACHILLERATO' %}
+                <span class="badge header-bachillerato px-3 py-2 fs-6"><i class="bi bi-book-fill me-1"></i>{{ nivel }}</span>
+            {% elif nivel == 'MEDIA ACADÉMICA' %}
+                <span class="badge header-media px-3 py-2 fs-6"><i class="bi bi-star-fill me-1"></i>{{ nivel }}</span>
+            {% else %}
+                <span class="badge header-otras px-3 py-2 fs-6"><i class="bi bi-gear-fill me-1"></i>{{ nivel }}</span>
+            {% endif %}
+            <span class="badge bg-light text-dark ms-2">{{ datos.grupos|length }} grupos - {{ datos.materias|length }} materias</span>
+        </div>
+
+        <!-- TABLA DEL NIVEL CON SCROLL -->
+        <div class="scroll-box">
+            <table class="table table-bordered tabla-ancha">
+                <thead class="table-light">
+                    <tr>
+                        <th class="col-fija"><strong>Grupo</strong></th>
+                        {% for materia in datos.materias %}
+                        <th class="bg-light" style="min-width: 140px;">
+                            <strong>{{ materia.nombre }}</strong><br><small class="text-muted">Horas</small>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grupo in datos.grupos %}
+                    <tr>
+                        <td class="col-fija fw-bold">
+                            {{ grupo.grado }}{{ grupo.nombre }}<br>
+                            <small class="text-muted fw-normal">{{ grupo.sede.nombre if grupo.sede else '' }}</small>
+                        </td>
+                        {% for materia in datos.materias %}
+                        <td style="min-width: 140px;">
+                            {% set docente_id = asignaciones_dict.get((grupo.id, materia.id)) %}
+                            <select name="docente_{{ grupo.id }}_{{ materia.id }}" class="form-select form-select-sm mb-1">
+                                <option value="">Sin asignar</option>
+                                {% for docente in docentes %}
+                                <option value="{{ docente.id }}" {% if docente_id == docente.id %}selected{% endif %}>
+                                    {{ docente.nombre.split(' ')[0] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% set horas_default = 2 %}
+                            {% if horas_plan_dict %}
+                                {% set horas_encontradas = horas_plan_dict.get((grupo.grado, materia.id)) %}
+                                {% if horas_encontradas is not none %}
+                                    {% set horas_default = horas_encontradas %}
+                                {% endif %}
+                            {% endif %}
+                            <input type="number" name="horas_{{ grupo.id }}_{{ materia.id }}"
+                                   value="{{ horas_default }}" min="0" max="10"
+                                   class="form-control form-control-sm" placeholder="Horas">
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% endif %}
+        {% endfor %}
+
+        <!-- Botones de acción (una sola vez al final) -->
+        <div class="card-footer bg-light d-flex justify-content-end gap-2 p-3 mt-3">
+            <button type="reset" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-2"></i>Cancelar</button>
+            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-save me-2"></i>Guardar Cambios</button>
+        </div>
+    </form>
+
+    <!-- Instrucciones -->
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-info-circle me-2"></i><strong>Instrucciones:</strong>
+        <ul class="mb-0 mt-2">
+            <li>Seleccione el docente responsable para cada materia en cada grupo</li>
+            <li>Indique el número de horas semanales para cada asignatura</li>
+            <li>Deje en "Sin asignar" si la materia no se dicta en ese grupo</li>
+            <li>Presione "Guardar Cambios" para aplicar las asignaciones</li>
+            <li>Los docentes verán automáticamente estas materias en su dashboard</li>
+        </ul>
+    </div>
+
+</div>
+
+{% endblock %}

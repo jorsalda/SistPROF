@@ -1,0 +1,60 @@
+{% extends "estudiantes/dashboard_estudiante.html" %}
+
+{% block estudiante_page_title %}Mi Plan de Membresía{% endblock %}
+
+{% block estudiante_content %}
+<div class="container mt-4">
+    <h2>📋 Mi Plan de Membresía</h2>
+
+    <div class="alert alert-info">
+        <strong>Días restantes:</strong> {{ dias_restantes }} días
+        {% if dias_restantes <= 0 %}
+            <br>⚠️ Tu periodo de prueba ha vencido. Por favor renueva tu membresía.
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('membresia.renovar_membresia') }}" class="btn btn-primary mb-3">
+        💳 Solicitar Renovación
+    </a>
+
+    <h4>Historial de Membresías</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Plan</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+                <th>Método de Pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in membresias %}
+            <tr>
+                <td>{{ m.tipo_plan }}</td>
+                <td>${{ "{:,.0f}".format(m.monto) }} COP</td>
+                <td>
+                    {% if m.estado == 'pendiente' %}
+                        <span class="badge bg-warning">Pendiente</span>
+                    {% elif m.estado == 'aprobado' %}
+                        <span class="badge bg-success">Aprobado</span>
+                    {% elif m.estado == 'rechazado' %}
+                        <span class="badge bg-danger">Rechazado</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ m.estado }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ m.fecha_inicio.strftime('%d/%m/%Y') if m.fecha_inicio else '-' }}</td>
+                <td>{{ m.fecha_fin.strftime('%d/%m/%Y') if m.fecha_fin else 'Vitalicio' }}</td>
+                <td>{{ m.metodo_pago or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center">No tienes membresías registradas</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

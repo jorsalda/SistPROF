@@ -55,10 +55,11 @@
                 </a>
             </li>
             <li class="menu-item">
-    <a href="{{ url_for('colegio.lista_materias') }}" class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
-        <i class="bi bi-book"></i> Materias
-    </a>
-</li>
+                <a href="{{ url_for('colegio.lista_materias') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
+                    <i class="bi bi-book"></i> Materias
+                </a>
+            </li>
             <!-- Docentes -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_docentes') }}"
@@ -66,7 +67,12 @@
                     <i class="bi bi-people"></i> Docentes
                 </a>
             </li>
-
+            <!-- En el menú de Plan de Estudios o similar -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('colegio.gestion_carga_academica') }}">
+                    <i class="bi bi-journal-bookmark me-2"></i>Carga Académica
+                </a>
+            </li>
             <!-- Coordinadores -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_coordinadores') }}"

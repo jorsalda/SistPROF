@@ -118,6 +118,16 @@ Dashboard del Colegio
         </div>
     </div>
 
+    <!-- En el sidebar del admin, después de "Estudiantes" o donde prefieras -->
+{% if current_user.colegio_id == 46 %}
+<li class="menu-item">
+    <a href="{{ url_for('membresia.gestionar_membresias') }}" class="menu-link">
+        <i class="bi bi-credit-card-2-front"></i> Gestionar Membresías
+    </a>
+</li>
+{% endif %}
+
+
 </div>
 
 <!-- Últimos permisos -->

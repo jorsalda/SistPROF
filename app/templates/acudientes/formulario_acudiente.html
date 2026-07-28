@@ -61,11 +61,11 @@
                     <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- FILA 1: Nombre y Email (2 columnas) -->
+                        <!-- FILA 1: Nombre, Apellido y Documento (3 columnas) -->
                         <div class="row g-4 mb-4">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">
-                                    Nombre completo <span class="text-danger">*</span>
+                                    Nombre <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
@@ -73,10 +73,70 @@
                                     </span>
                                     <input type="text"
                                            name="nombre"
+                                           id="nombre"
                                            class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: María González Pérez"
-                                           value="{{ acudiente.nombre if acudiente else '' }}"
+                                           placeholder="Ej: María"
+                                           value="{{ acudiente.nombre.split(' ')[0] if acudiente and acudiente.nombre else '' }}"
                                            required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Apellido <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="apellido"
+                                           id="apellido"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: González"
+                                           value="{{ ' '.join(acudiente.nombre.split(' ')[1:]) if acudiente and acudiente.nombre else '' }}"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    Documento de identidad <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-credit-card text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="documento"
+                                           id="documento"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 1234567890"
+                                           value="{{ acudiente.documento if acudiente and hasattr(acudiente, 'documento') else '' }}"
+                                           required
+                                           oninput="autocompletarContrasena()">
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> El documento se usará como contraseña inicial
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 2: Teléfono y Email (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 300 123 4567"
+                                           value="{{ acudiente.telefono if acudiente else '' }}">
                                 </div>
                             </div>
 
@@ -98,24 +158,8 @@
                             </div>
                         </div>
 
-                        <!-- FILA 2: Teléfono y Dirección (2 columnas) -->
+                        <!-- FILA 3: Dirección y Parentesco (2 columnas) -->
                         <div class="row g-4 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Teléfono
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-telephone text-muted"></i>
-                                    </span>
-                                    <input type="tel"
-                                           name="telefono"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: 300 123 4567"
-                                           value="{{ acudiente.telefono if acudiente else '' }}">
-                                </div>
-                            </div>
-
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Dirección
@@ -131,10 +175,7 @@
                                            value="{{ acudiente.direccion if acudiente else '' }}">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- FILA 3: Parentesco y Contraseña (2 columnas) -->
-                        <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Parentesco
@@ -166,9 +207,11 @@
                                     </select>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Contraseña (solo para nuevo acudiente) -->
-                            {% if not acudiente %}
+                        <!-- FILA 4: Contraseña con toggle (solo para nuevo acudiente) -->
+                        {% if not acudiente %}
+                        <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Contraseña <span class="text-danger">*</span>
@@ -179,16 +222,27 @@
                                     </span>
                                     <input type="password"
                                            name="password"
+                                           id="password"
                                            class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Mínimo 6 caracteres"
+                                           placeholder="Se autocompleta con el documento"
                                            required
-                                           minlength="6">
+                                           minlength="6"
+                                           autocomplete="new-password"
+                                           oninput="marcarManual()">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary"
+                                            onclick="togglePassword()"
+                                            title="Mostrar/Ocultar contraseña">
+                                        <i class="bi bi-eye" id="toggleIcon"></i>
+                                    </button>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> La contraseña debe tener al menos 6 caracteres
+                                    <i class="bi bi-info-circle"></i> La contraseña se autocompleta con el documento. Puede cambiarla si lo desea.
                                 </div>
                             </div>
-                            {% else %}
+                        </div>
+                        {% else %}
+                        <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Contraseña
@@ -207,8 +261,8 @@
                                     <i class="bi bi-info-circle"></i> Para cambiar la contraseña, use la opción correspondiente
                                 </div>
                             </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
 
                         <!-- Información Adicional -->
                         <div class="alert alert-info rounded-3 mb-4">
@@ -224,6 +278,7 @@
                                             • El acudiente puede acceder al sistema con su correo y contraseña.<br>
                                             • Puede cambiar la contraseña desde el perfil del acudiente.
                                         {% else %}
+                                            • El documento de identidad se usará como contraseña inicial.<br>
                                             • El acudiente podrá acceder al sistema con su correo y contraseña.<br>
                                             • El acudiente podrá ver la información académica de sus estudiantes.<br>
                                             • Puede cambiar la contraseña más tarde desde la lista de acudientes.
@@ -298,5 +353,59 @@
         text-decoration: underline;
     }
 </style>
+
+<script>
+    let documentoAnterior = '';
+
+    // Función para autocompletar la contraseña con el documento
+    function autocompletarContrasena() {
+        const documentoInput = document.getElementById('documento');
+        const passwordInput = document.getElementById('password');
+
+        if (documentoInput && passwordInput) {
+            const documento = documentoInput.value.trim();
+
+            // Solo autocompletar si el valor cambió y el usuario no escribió manualmente
+            if (documento && documento !== documentoAnterior && passwordInput.dataset.manual !== 'true') {
+                passwordInput.value = documento;
+                documentoAnterior = documento;
+            }
+        }
+    }
+
+    // Función para detectar si el usuario escribió manualmente
+    function marcarManual() {
+        const passwordInput = document.getElementById('password');
+        if (passwordInput && passwordInput.value !== '') {
+            passwordInput.dataset.manual = 'true';
+        }
+    }
+
+    // Función para mostrar/ocultar contraseña
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        if (passwordInput && toggleIcon) {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+    }
+
+    // Agregar listener al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        const documentoInput = document.getElementById('documento');
+        if (documentoInput) {
+            documentoInput.addEventListener('input', autocompletarContrasena);
+        }
+    });
+</script>
 
 {% endblock %}

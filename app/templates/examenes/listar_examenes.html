@@ -1,0 +1,79 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Mis Exámenes | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+Mis Exámenes
+{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes</h2>
+            <a href="{{ url_for('examen.crear_examen_ia') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Examen con IA
+            </a>
+        </div>
+    </div>
+
+    {% if examenes %}
+    <div class="row">
+        {% for examen in examenes %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ examen.titulo }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-2">{{ examen.descripcion }}</p>
+
+                    <div class="mb-2">
+                        <strong><i class="bi bi-clock me-1"></i>Tiempo:</strong>
+                        {{ examen.tiempo_limite_minutos }} minutos
+                    </div>
+
+                    <div class="mb-2">
+                        <strong><i class="bi bi-question-circle me-1"></i>Preguntas:</strong>
+                        {% if examen.contenido_json %}
+                        {{ examen.contenido_json|length }}
+                        {% else %}
+                        0
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-2">
+                        <strong><i class="bi bi-calendar me-1"></i>Creado:</strong>
+                        {{ examen.fecha_creacion.strftime('%d/%m/%Y') }}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong><i class="bi bi-book me-1"></i>Materia:</strong>
+                        {{ examen.materia.nombre if examen.materia else 'Sin materia' }}
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="btn-group w-100">
+                        <a href="{{ url_for('examen.ver_examen', id=examen.id) }}"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>Ver
+                        </a>
+                        
+                        <a href="{{ url_for('examen.editar_examen', id=examen.id) }}"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil me-1"></i>Editar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle me-2"></i>
+        No tienes exámenes creados aún. ¡Crea tu primer examen con IA!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

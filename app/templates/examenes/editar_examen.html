@@ -1,0 +1,124 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Editar {{ examen.titulo }} | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+    Editar Examen
+{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-2"></i>Volver
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">Editar {{ examen.titulo }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- Datos básicos -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Título del Examen</label>
+                    <input type="text" name="titulo" class="form-control" value="{{ examen.titulo }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descripción</label>
+                    <textarea name="descripcion" class="form-control" rows="2">{{ examen.descripcion }}</textarea>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Tiempo límite (minutos)</label>
+                        <input type="number" name="tiempo_limite" class="form-control" value="{{ examen.tiempo_limite_minutos }}" min="5" max="180">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Total preguntas</label>
+                        <input type="text" class="form-control" value="{{ examen.contenido_json|length }}" disabled>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h4 class="mb-3">Preguntas del Examen</h4>
+
+                <!-- Editar preguntas -->
+                {% for pregunta in examen.contenido_json %}
+                <div class="card mb-3 border-0 bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">Pregunta {{ pregunta.numero }}</h5>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Enunciado</label>
+                            <textarea name="preguntas[{{ loop.index0 }}][texto]" class="form-control" rows="2" required>{{ pregunta.texto }}</textarea>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small">Opción A</label>
+                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_a]" class="form-control" value="{{ pregunta.opciones.A }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Opción B</label>
+                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_b]" class="form-control" value="{{ pregunta.opciones.B }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Opción C</label>
+                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_c]" class="form-control" value="{{ pregunta.opciones.C }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Opción D</label>
+                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_d]" class="form-control" value="{{ pregunta.opciones.D }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Respuesta Correcta</label>
+                                <select name="preguntas[{{ loop.index0 }}][respuesta_correcta]" class="form-select" required>
+                                    <option value="A" {% if pregunta.respuesta_correcta == 'A' %}selected{% endif %}>A</option>
+                                    <option value="B" {% if pregunta.respuesta_correcta == 'B' %}selected{% endif %}>B</option>
+                                    <option value="C" {% if pregunta.respuesta_correcta == 'C' %}selected{% endif %}>C</option>
+                                    <option value="D" {% if pregunta.respuesta_correcta == 'D' %}selected{% endif %}>D</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Dificultad</label>
+                                <select name="preguntas[{{ loop.index0 }}][dificultad]" class="form-select">
+                                    <option value="baja" {% if pregunta.dificultad == 'baja' %}selected{% endif %}>Baja</option>
+                                    <option value="media" {% if pregunta.dificultad == 'media' %}selected{% endif %}>Media</option>
+                                    <option value="alta" {% if pregunta.dificultad == 'alta' %}selected{% endif %}>Alta</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Puntos</label>
+                                <input type="number" name="preguntas[{{ loop.index0 }}][puntos]" class="form-control" value="{{ pregunta.puntos_maximos }}" min="1">
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label small text-muted">Explicación (Retroalimentación)</label>
+                            <textarea name="preguntas[{{ loop.index0 }}][explicacion]" class="form-control" rows="2">{{ pregunta.explicacion }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="d-flex gap-3 justify-content-end mt-4">
+                    <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

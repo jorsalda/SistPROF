@@ -1,11 +1,13 @@
 from app.extensions import db
 from flask_login import UserMixin
 from datetime import datetime
+from sqlalchemy import event
 
 
 class Usuario(db.Model, UserMixin):
     __tablename__ = "usuarios"
-    __table_args__ = {'extend_existing': True}  # ← Agrega SOLO esta línea
+    __table_args__ = {'extend_existing': True}
+
     # --------------------
     # Datos básicos
     # --------------------
@@ -74,7 +76,7 @@ class Usuario(db.Model, UserMixin):
         db.Enum(
             'superadmin',
             'admin_colegio',
-            'coordinador',  # <--- DEBE DECIR SOLO 'coordinador'
+            'coordinador',
             'docente',
             'estudiante',
             'acudiente',
@@ -235,7 +237,7 @@ class Usuario(db.Model, UserMixin):
             ).days
 
             if dias >= 0:
-                return f"⏳ En prueba ({dias} días restantes)"
+                return f" En prueba ({dias} días restantes)"
 
             return "❌ Prueba vencida"
 
@@ -257,3 +259,18 @@ class Usuario(db.Model, UserMixin):
             return f"⏳ En prueba ({dias_restantes} días restantes)"
 
         return "❌ Bloqueado - Prueba vencida"
+
+
+# ============================================
+# EVENTO: Los superadmins NUNCA tienen fecha de expiración
+# ============================================
+
+@event.listens_for(Usuario, 'before_insert')
+@event.listens_for(Usuario, 'before_update')
+def validar_superadmin(mapper, connection, target):
+    """
+    Los superadmins NUNCA deben tener fecha de expiración.
+    Esto se ejecuta automáticamente antes de crear/actualizar un usuario.
+    """
+    if target.rol == 'superadmin':
+        target.fecha_expiracion = None

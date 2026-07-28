@@ -8,12 +8,13 @@ class Acudiente(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
+    apellido = db.Column(db.String(100), nullable=True)  # ← NUEVO CAMPO
     telefono = db.Column(db.String(20), nullable=False)
     direccion = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     parentesco = db.Column(db.String(50), nullable=True)
 
-    # ✅ NUEVO: Relación con colegio
+    # Relación con colegio
     colegio_id = db.Column(
         db.Integer,
         db.ForeignKey("colegios.id", ondelete="SET NULL"),
@@ -30,8 +31,6 @@ class Acudiente(db.Model):
 
     # Relaciones
     usuario = db.relationship("Usuario", foreign_keys=[usuario_id], lazy=True)
-
-    # ✅ NUEVO: Relación con colegio
     colegio = db.relationship("Colegio", foreign_keys=[colegio_id], lazy=True)
 
     # Relación con estudiantes a través de la tabla intermedia
@@ -42,5 +41,12 @@ class Acudiente(db.Model):
         lazy=True
     )
 
+    @property
+    def nombre_completo(self):
+        """Retorna el nombre completo combinando nombre y apellido"""
+        if self.apellido:
+            return f"{self.nombre} {self.apellido}"
+        return self.nombre
+
     def __repr__(self):
-        return f'<Acudiente {self.nombre}>'
+        return f'<Acudiente {self.nombre_completo}>'

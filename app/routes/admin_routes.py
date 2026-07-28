@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
+from werkzeug.security import generate_password_hash
+
 from app.extensions import db
 from app.models.usuario import Usuario
 from app.models.colegio import Colegio
@@ -70,6 +72,103 @@ def dashboard():
 
 
 # ════════════════════════════════════════════════════════════════
+# GESTIÓN DE COLEGIOS
+# ════════════════════════════════════════════════════════════════
+
+@admin_bp.route("/colegio/<int:colegio_id>/detalle")
+@login_required
+@superuser_required
+def detalle_colegio(colegio_id):
+    """Muestra los detalles de un colegio específico"""
+    colegio = Colegio.query.get_or_404(colegio_id)
+
+    # Calcular estado
+    estado_info = _calcular_estado_colegio(colegio)
+
+    # Contar usuarios del colegio
+    total_usuarios = len(colegio.usuarios)
+    usuarios_activos = sum(1 for u in colegio.usuarios if u.is_active)
+
+    return render_template(
+        "admin/detalle_colegio.html",
+        colegio=colegio,
+        estado=estado_info['estado'],
+        badge_class=estado_info['badge_class'],
+        dias_restantes=estado_info['dias_restantes'],
+        total_usuarios=total_usuarios,
+        usuarios_activos=usuarios_activos
+    )
+
+
+@admin_bp.route("/colegio/<int:colegio_id>/aprobar", methods=["POST"])
+@login_required
+@superuser_required
+def aprobar_colegio(colegio_id):
+    """Aprueba un colegio - lo saca de período de prueba"""
+    colegio = Colegio.query.get_or_404(colegio_id)
+
+    # Marcar como aprobado (ya no está en prueba)
+    colegio.en_prueba = False
+    colegio.activo = True
+    colegio.fecha_expiracion = None  # Ya no tiene fecha de vencimiento
+
+    db.session.commit()
+
+    flash(f"Colegio '{colegio.nombre}' ha sido APROBADO exitosamente", "success")
+    return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
+
+
+@admin_bp.route("/colegio/<int:colegio_id>/bloquear", methods=["POST"])
+@login_required
+@superuser_required
+def bloquear_colegio(colegio_id):
+    """Bloquea un colegio - impide el acceso"""
+    colegio = Colegio.query.get_or_404(colegio_id)
+
+    colegio.activo = False
+
+    db.session.commit()
+
+    flash(f"Colegio '{colegio.nombre}' ha sido BLOQUEADO", "warning")
+    return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
+
+
+@admin_bp.route("/colegio/<int:colegio_id>/desbloquear", methods=["POST"])
+@login_required
+@superuser_required
+def desbloquear_colegio(colegio_id):
+    """Desbloquea un colegio previamente bloqueado"""
+    colegio = Colegio.query.get_or_404(colegio_id)
+
+    colegio.activo = True
+
+    db.session.commit()
+
+    flash(f"Colegio '{colegio.nombre}' ha sido DESBLOQUEADO", "success")
+    return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
+
+
+@admin_bp.route("/colegio/<int:colegio_id>/modificar_dias", methods=["POST"])
+@login_required
+@superuser_required
+def modificar_dias_prueba(colegio_id):
+    """Modifica los días de prueba de un colegio"""
+    colegio = Colegio.query.get_or_404(colegio_id)
+
+    dias = int(request.form.get('dias_prueba', 15))
+
+    # Calcular nueva fecha de expiración desde hoy
+    from datetime import datetime, timedelta
+    nueva_fecha = datetime.utcnow() + timedelta(days=dias)
+
+    colegio.fecha_expiracion = nueva_fecha
+    colegio.en_prueba = True  # Asegurar que siga en prueba
+
+    db.session.commit()
+
+    flash(f"Período de prueba modificado a {dias} días. Nueva fecha: {nueva_fecha.strftime('%d/%m/%Y')}", "info")
+    return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
+# ════════════════════════════════════════════════════════════════
 # HELPER INTERNO
 # ════════════════════════════════════════════════════════════════
 
@@ -87,3 +186,39 @@ def _calcular_estado_colegio(colegio):
         return {'estado': 'Prueba Vencida', 'badge_class': 'danger', 'dias_restantes': dias}
 
     return {'estado': 'Aprobado', 'badge_class': 'success', 'dias_restantes': None}
+
+# ════════════════════════════════════════════════════════════════
+# [TEMPORAL] CREAR ADMIN COLEGIO INDEPENDIENTES
+# ═══════════════════════════════════════════════════════════════
+
+@admin_bp.route("/crear-admin-independientes")
+@login_required
+@superuser_required
+def crear_admin_independientes():
+    """
+    [TEMPORAL] Crear usuario admin para el colegio independiente (ID 46)
+    ELIMINAR ESTA RUTA DESPUÉS DE USARLA UNA VEZ
+    """
+    # Verificar si ya existe
+    usuario_existente = Usuario.query.filter_by(
+        email='admin.independientes@sistprof.com'
+    ).first()
+
+    if usuario_existente:
+        return "⚠️ El usuario ya existe en la base de datos"
+
+    # Crear usuario admin
+    usuario = Usuario(
+        nombre='Admin Independientes',
+        email='admin.independientes@sistprof.com',
+        password_hash=generate_password_hash('jes8026!!!'),
+        rol='admin',
+        colegio_id=46,  # Colegio Estudiantes Independientes
+        is_active=True,
+        is_approved=True
+    )
+
+    db.session.add(usuario)
+    db.session.commit()
+
+    return

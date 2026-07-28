@@ -5,7 +5,11 @@ from app.extensions import db
 from app.models.docente import Docente
 from app.models.permiso import Permiso
 from app.models.estudiante import Estudiante
-
+from app.models.grupo import Grupo
+from app.models.usuario import Usuario
+from app.models.sede import Sede
+from werkzeug.security import generate_password_hash
+from app.models.grupo import Grupo, GrupoAreas
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
 
 
@@ -26,11 +30,71 @@ def dashboard():
 
     hoy = datetime.now().date()
 
-    total_estudiantes = Estudiante.query.filter_by(
+    # =====================================================
+    # 1. GRUPOS QUE DIRIGE (rol administrativo)
+    # =====================================================
+    grupos_dirigidos = Grupo.query.filter_by(
+        director_docente_id=docente.id,
+        activo=True
+    ).all()
+
+    ids_grupos_dirigidos = [g.id for g in grupos_dirigidos]
+
+    # Contar estudiantes de grupos dirigidos
+    if ids_grupos_dirigidos:
+        total_estudiantes_dirigidos = Estudiante.query.filter(
+            Estudiante.grupo_id.in_(ids_grupos_dirigidos),
+            Estudiante.activo == True
+        ).count()
+    else:
+        total_estudiantes_dirigidos = 0
+
+    # =====================================================
+    # 2. ÁREAS QUE ENSEÑA (rol académico) - NUEVO
+    # =====================================================
+    # Obtener todas las asignaciones de áreas del docente
+    asignaciones_areas = db.session.query(GrupoAreas).filter_by(
         docente_id=docente.id,
         activo=True
-    ).count()
+    ).all()
 
+    # Estructura: {area_nombre: [grupos]}
+    carga_academica = {}
+    grupos_ids_academicos = set()
+
+    for asignacion in asignaciones_areas:
+        area_nombre = asignacion.area.nombre if asignacion.area else "Sin área"
+        grupo = asignacion.grupo
+
+        if area_nombre not in carga_academica:
+            carga_academica[area_nombre] = []
+
+        grupo_info = {
+            'id': grupo.id,
+            'nombre': f"{grupo.grado}{grupo.nombre}",
+            'sede': grupo.sede.nombre if grupo.sede else "N/A"
+        }
+
+        # Evitar duplicados
+        if grupo_info not in carga_academica[area_nombre]:
+            carga_academica[area_nombre].append(grupo_info)
+            grupos_ids_academicos.add(grupo.id)
+
+    # =====================================================
+    # 3. ESTUDIANTES DE GRUPOS ACADÉMICOS - NUEVO
+    # =====================================================
+    # Obtener estudiantes de los grupos donde enseña
+    if grupos_ids_academicos:
+        estudiantes_academicos = Estudiante.query.filter(
+            Estudiante.grupo_id.in_(list(grupos_ids_academicos)),
+            Estudiante.activo == True
+        ).order_by(Estudiante.nombre).all()
+    else:
+        estudiantes_academicos = []
+
+    # =====================================================
+    # 4. PERMISOS (sin cambios)
+    # =====================================================
     total_permisos = Permiso.query.filter_by(
         docente_id=docente.id
     ).count()
@@ -41,21 +105,27 @@ def dashboard():
         Permiso.fecha_fin >= hoy
     ).count()
 
-    # ✅ NUEVO: Obtener últimos 5 permisos
     ultimos_permisos = Permiso.query.filter_by(
         docente_id=docente.id
     ).order_by(Permiso.fecha_inicio.desc()).limit(5).all()
 
+    # =====================================================
+    # RETORNAR TEMPLATE
+    # =====================================================
     return render_template(
         "docentes/dashboard.html",
         docente=docente,
-        total_estudiantes=total_estudiantes,
+        total_estudiantes=total_estudiantes_dirigidos,  # Para mantener compatibilidad
         total_permisos=total_permisos,
         permisos_activos=permisos_activos,
-        ultimos_permisos=ultimos_permisos,  # ← NUEVO
-        hoy=hoy
+        ultimos_permisos=ultimos_permisos,
+        hoy=hoy,
+        # NUEVO: Carga académica
+        carga_academica=carga_academica,
+        estudiantes_academicos=estudiantes_academicos,
+        total_areas=len(carga_academica),
+        total_grupos_academicos=len(grupos_ids_academicos)
     )
-
 
 @docente_bp.route("/mis-estudiantes")
 @login_required
@@ -68,17 +138,63 @@ def mis_estudiantes():
         flash("No se encontró información del docente", "danger")
         return redirect(url_for("auth.logout"))
 
-    estudiantes_lista = Estudiante.query.filter_by(
-        docente_id=docente.id,
+    # Obtener filtros
+    search = request.args.get('search', '').strip()
+    sede_id = request.args.get('sede_id', type=int)
+
+    # Buscar estudiantes a través de los grupos que dirige
+    grupos_del_docente = Grupo.query.filter_by(
+        director_docente_id=docente.id,
         activo=True
-    ).order_by(Estudiante.nombre).all()
+    ).all()
+
+    ids_grupos = [g.id for g in grupos_del_docente]
+
+    # Consulta base
+    if ids_grupos:
+        consulta = Estudiante.query.filter(
+            Estudiante.grupo_id.in_(ids_grupos),
+            Estudiante.activo == True
+        )
+
+        # Aplicar filtros
+        if search:
+            from sqlalchemy import or_
+            consulta = consulta.filter(
+                or_(
+                    Estudiante.nombre.ilike(f"%{search}%"),
+                    Estudiante.apellido.ilike(f"%{search}%")
+                )
+            )
+
+        if sede_id:
+            consulta = consulta.filter_by(sede_id=sede_id)
+
+        estudiantes_lista = consulta.order_by(Estudiante.nombre).all()
+    else:
+        estudiantes_lista = []
+
+    # Obtener sedes para el filtro
+    from app.models.sede import Sede
+    sedes = Sede.query.filter_by(
+        colegio_id=docente.colegio_id,
+        activo=True
+    ).order_by(Sede.nombre).all()
+
+    # Estadísticas
+    total_estudiantes = len(estudiantes_lista)
+    activos = sum(1 for e in estudiantes_lista if e.activo)
 
     return render_template(
-        "docente/estudiantes.html",
+        "docentes/estudiantes.html",
         estudiantes=estudiantes_lista,
-        docente=docente
+        docente=docente,
+        sedes=sedes,
+        search=search,
+        current_sede_id=sede_id,
+        total_estudiantes=total_estudiantes,
+        activos=activos
     )
-
 
 @docente_bp.route("/mis-permisos")
 @login_required
@@ -98,7 +214,7 @@ def mis_permisos():
     hoy = datetime.now().date()
 
     return render_template(
-        "docente/permisos.html",
+        "docentes/permisos.html",
         permisos=permisos_lista,
         docente=docente,
         hoy=hoy
@@ -145,9 +261,33 @@ def nuevo_permiso_docente():
             db.session.rollback()
             flash(f"Error: {str(e)}", "danger")
 
-    return render_template("docente/nuevo_permiso.html", docente=docente)
+    return render_template("docentes/nuevo_permiso.html", docente=docente)
 
+@docente_bp.route("/mis-permisos/eliminar/<int:permiso_id>", methods=["POST"])
+@login_required
+def eliminar_permiso_docente(permiso_id):
+    if current_user.rol != 'docente':
+        abort(403)
 
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("No se encontró información del docente", "danger")
+        return redirect(url_for("auth.logout"))
+
+    permiso = Permiso.query.filter_by(
+        id=permiso_id,
+        docente_id=docente.id
+    ).first_or_404()
+
+    try:
+        db.session.delete(permiso)
+        db.session.commit()
+        flash("Permiso eliminado correctamente", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al eliminar: {str(e)}", "danger")
+
+    return redirect(url_for("docente.mis_permisos"))
 @docente_bp.route("/mi-perfil", methods=["GET", "POST"])
 @login_required
 def mi_perfil():
@@ -164,7 +304,6 @@ def mi_perfil():
             telefono = request.form.get("telefono", "").strip()
             email = request.form.get("email", "").strip()
 
-            from app.models.usuario import Usuario
             email_existente = Usuario.query.filter(
                 Usuario.email == email,
                 Usuario.id != current_user.id
@@ -188,7 +327,7 @@ def mi_perfil():
 
         return redirect(url_for("docente.mi_perfil"))
 
-    return render_template("docente/perfil.html", docente=docente)
+    return render_template("docentes/perfil.html", docente=docente)
 
 
 @docente_bp.route("/cambiar-password", methods=["GET", "POST"])
@@ -198,7 +337,6 @@ def cambiar_password_docente():
         abort(403)
 
     if request.method == "POST":
-        from werkzeug.security import generate_password_hash
         nueva_password = request.form.get("password", "").strip()
 
         if not nueva_password or len(nueva_password) < 6:
@@ -214,7 +352,8 @@ def cambiar_password_docente():
             db.session.rollback()
             flash(f"Error: {str(e)}", "danger")
 
-    return render_template("docente/cambiar_password.html")
+    return render_template("docentes/cambiar_password.html")
+
 
 # ==========================================================
 # MÓDULOS FUTUROS DEL DOCENTE
@@ -245,8 +384,10 @@ def seguimiento():
         abort(403)
 
     return render_template("docentes/seguimiento.html")
+
+
 # ==========================================================
-# CRUD DE DOCENTES (PARA EL COLEGIO) - YA EXISTENTE
+# CRUD DE DOCENTES (PARA EL COLEGIO) - ADMIN COLEGIO
 # ==========================================================
 
 # ========== LISTAR DOCENTES ==========
@@ -264,43 +405,128 @@ def listar():
 @docente_bp.route("/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo():
-    if request.method == "POST":
-        nombre = request.form.get("nombre", "").strip()
-        documento = request.form.get("documento", "").strip()
-        telefono = request.form.get("telefono", "").strip()
-        email = request.form.get("email", "").strip()
+    # Obtener sedes para el formulario
+    sedes = Sede.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(Sede.nombre).all()
 
+    if request.method == "POST":
+        # Capturar campos del formulario
+        nombre = request.form.get("nombre", "").strip()
+        apellido = request.form.get("apellido", "").strip()
+        documento = request.form.get("documento", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        telefono = request.form.get("telefono", "").strip()
+        sede_id = request.form.get("sede_id", "").strip()
+
+        # ==========================================
+        # VALIDACIONES
+        # ==========================================
         if not nombre:
-            flash("El nombre del docente es requerido", "danger")
+            flash("El nombre es requerido", "danger")
             return redirect(url_for("docente.nuevo"))
 
-        # Verificar si ya existe
-        existe = Docente.query.filter_by(
-            nombre=nombre,
+        if not apellido:
+            flash("El apellido es requerido", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        if not documento:
+            flash("El documento de identidad es requerido", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        if len(documento) < 6:
+            flash("El documento debe tener al menos 6 caracteres (será la contraseña inicial)", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        if not email:
+            flash("El correo electrónico es requerido", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        # Validar formato de email
+        import re
+        if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+            flash("El correo electrónico no tiene un formato válido", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        # Validar sede
+        if not sede_id:
+            flash("Debe seleccionar una sede", "danger")
+            return redirect(url_for("docente.nuevo"))
+
+        # ==========================================
+        # VERIFICAR DUPLICADOS
+        # ==========================================
+
+        # Verificar si ya existe un docente con ese documento en el colegio
+        existe_docente_doc = Docente.query.filter_by(
+            documento=documento,
             colegio_id=current_user.colegio_id
         ).first()
 
-        if existe:
-            flash("Este docente ya está registrado", "warning")
+        if existe_docente_doc:
+            flash("Ya existe un docente registrado con ese documento de identidad", "danger")
             return redirect(url_for("docente.nuevo"))
 
-        # Crear docente
-        docente = Docente(
-            nombre=nombre,
-            documento=documento if documento else None,
-            telefono=telefono if telefono else None,
-            email=email if email else None,
-            colegio_id=current_user.colegio_id,
-            activo=True
-        )
+        # Verificar si ya existe un usuario con ese email
+        existe_usuario = Usuario.query.filter_by(email=email).first()
+        if existe_usuario:
+            flash("El correo electrónico ya está registrado en el sistema", "danger")
+            return redirect(url_for("docente.nuevo"))
 
-        db.session.add(docente)
-        db.session.commit()
+        # ==========================================
+        # CREAR USUARIO Y DOCENTE
+        # ==========================================
+        try:
+            # 1️⃣ Crear el usuario (credenciales de acceso)
+            usuario = Usuario(
+                email=email,
+                password_hash=generate_password_hash(documento),
+                nombre=nombre,
+                apellido=apellido,
+                rol='docente',
+                colegio_id=current_user.colegio_id,
+                sede_id=int(sede_id),
+                is_active=True,
+                is_approved=True,
+                fecha_aprobacion=datetime.now(),
+                failed_attempts=0
+            )
+            db.session.add(usuario)
+            db.session.flush()
 
-        flash(f"Docente '{nombre}' registrado correctamente", "success")
-        return redirect(url_for("docente.listar"))
+            # 2️⃣ Crear el docente vinculado al usuario
+            docente = Docente(
+                nombre=nombre,
+                apellido=apellido,
+                documento=documento,
+                telefono=telefono if telefono else None,
+                email=email,
+                colegio_id=current_user.colegio_id,
+                usuario_id=usuario.id,
+                sede_id=int(sede_id),
+                activo=True
+            )
+            db.session.add(docente)
+            db.session.commit()
 
-    return render_template("docentes/formulario.html", docente=None, titulo="Nuevo Docente")
+            flash(
+                f"✅ Docente '{nombre} {apellido}' registrado correctamente. "
+                f"📧 Usuario: {email} | 🔑 Contraseña inicial: {documento}",
+                "success"
+            )
+            return redirect(url_for("docente.listar"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al registrar el docente: {str(e)}", "danger")
+
+    return render_template(
+        "docentes/formulario.html",
+        docente=None,
+        titulo="Nuevo Docente",
+        sedes=sedes
+    )
 
 
 # ========== EDITAR DOCENTE ==========
@@ -312,41 +538,98 @@ def editar(id):
         colegio_id=current_user.colegio_id
     ).first_or_404()
 
+    # Obtener sedes para el formulario
+    sedes = Sede.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(Sede.nombre).all()
+
     if request.method == "POST":
+        # Capturar campos
         nombre = request.form.get("nombre", "").strip()
+        apellido = request.form.get("apellido", "").strip()
         documento = request.form.get("documento", "").strip()
+        email = request.form.get("email", "").strip().lower()
         telefono = request.form.get("telefono", "").strip()
-        email = request.form.get("email", "").strip()
+        sede_id = request.form.get("sede_id", "").strip()
         activo = request.form.get("activo") == "on"
 
+        # ==========================================
+        # VALIDACIONES
+        # ==========================================
         if not nombre:
-            flash("El nombre del docente es requerido", "danger")
+            flash("El nombre es requerido", "danger")
             return redirect(url_for("docente.editar", id=id))
 
-        # Verificar si el nombre ya existe (excluyendo este docente)
-        existe = Docente.query.filter(
-            Docente.nombre == nombre,
-            Docente.colegio_id == current_user.colegio_id,
-            Docente.id != id
+        if not apellido:
+            flash("El apellido es requerido", "danger")
+            return redirect(url_for("docente.editar", id=id))
+
+        if not email:
+            flash("El correo electrónico es requerido", "danger")
+            return redirect(url_for("docente.editar", id=id))
+
+        # ==========================================
+        # VERIFICAR DUPLICADOS (excluyendo este docente)
+        # ==========================================
+
+        # Verificar email duplicado
+        existe_email = Usuario.query.filter(
+            Usuario.email == email,
+            Usuario.id != docente.usuario_id
         ).first()
 
-        if existe:
-            flash("Ya existe otro docente con ese nombre", "warning")
+        if existe_email:
+            flash("El correo electrónico ya está registrado por otro usuario", "danger")
             return redirect(url_for("docente.editar", id=id))
 
-        # Actualizar
-        docente.nombre = nombre
-        docente.documento = documento if documento else None
-        docente.telefono = telefono if telefono else None
-        docente.email = email if email else None
-        docente.activo = activo
+        # Verificar documento duplicado
+        if documento:
+            existe_doc = Docente.query.filter(
+                Docente.documento == documento,
+                Docente.colegio_id == current_user.colegio_id,
+                Docente.id != id
+            ).first()
 
-        db.session.commit()
+            if existe_doc:
+                flash("Ya existe otro docente con ese documento de identidad", "danger")
+                return redirect(url_for("docente.editar", id=id))
 
-        flash(f"Docente '{nombre}' actualizado correctamente", "success")
-        return redirect(url_for("docente.listar"))
+        # ==========================================
+        # ACTUALIZAR DATOS
+        # ==========================================
+        try:
+            # Actualizar docente
+            docente.nombre = nombre
+            docente.apellido = apellido
+            docente.documento = documento if documento else None
+            docente.telefono = telefono if telefono else None
+            docente.email = email
+            docente.sede_id = int(sede_id) if sede_id else None
+            docente.activo = activo
 
-    return render_template("docentes/formulario.html", docente=docente, titulo="Editar Docente")
+            # Actualizar usuario asociado (si existe)
+            if docente.usuario:
+                docente.usuario.nombre = nombre
+                docente.usuario.apellido = apellido
+                docente.usuario.email = email
+                docente.usuario.sede_id = int(sede_id) if sede_id else None
+
+            db.session.commit()
+
+            flash(f"✅ Docente '{nombre} {apellido}' actualizado correctamente", "success")
+            return redirect(url_for("docente.listar"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar: {str(e)}", "danger")
+
+    return render_template(
+        "docentes/formulario.html",
+        docente=docente,
+        titulo="Editar Docente",
+        sedes=sedes
+    )
 
 
 # ========== ELIMINAR DOCENTE ==========

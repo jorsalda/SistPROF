@@ -63,3 +63,5 @@ webassets-cache/
 .pytest_cache/
 .coverage
 htmlcov/
+# archivos  de pyacharm
+.idea/

@@ -1,48 +1,164 @@
-{% extends "base.html" %}
+{% extends "docentes/docente_base.html" %}
 
 {% block title %}Mis Estudiantes | SistPROF{% endblock %}
 
-{% block content %}
+{% block docente_page_title %}
+Mis Estudiantes
+{% endblock %}
+
+{% block docente_content %}
 
 <div class="container-fluid px-4 py-4">
+
+    <!-- Encabezado con título y total -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Mis Estudiantes</h1>
+        <h2 class="h4 mb-0">
+            <i class="bi bi-people-fill me-2"></i>Mis Estudiantes
+        </h2>
         <span class="badge bg-primary fs-6 px-3 py-2">
-            <i class="bi bi-people-fill me-1"></i> Total: {{ estudiantes|length }}
+            <i class="bi bi-people-fill me-1"></i> Total: {{ total_estudiantes }}
         </span>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4">
+    <!-- Tarjetas de estadísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Estudiantes</h6>
+                            <h2 class="fw-bold mb-0">{{ total_estudiantes }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Activos</h6>
+                            <h2 class="fw-bold mb-0">{{ activos }}</h2>
+                        </div>
+                        <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-4">
+            <form method="GET" action="{{ url_for('docente.mis_estudiantes') }}">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-search me-1"></i>Buscar por nombre
+                        </label>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="Nombre del estudiante"
+                               value="{{ search }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1"></i>Filtrar por sede
+                        </label>
+                        <select name="sede_id" class="form-select">
+                            <option value="">Todas las sedes</option>
+                            {% for sede in sedes %}
+                            <option value="{{ sede.id }}"
+                                    {% if current_sede_id == sede.id %}selected{% endif %}>
+                                {{ sede.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i>Buscar
+                        </button>
+                    </div>
+                </div>
+
+                {% if search or current_sede_id %}
+                <div class="mt-3">
+                    <a href="{{ url_for('docente.mis_estudiantes') }}"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de estudiantes -->
+    {% if estudiantes %}
+    <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-4">
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>#</th>
-                            <th><i class="bi bi-person"></i> Nombre</th>
-                            <th><i class="bi bi-credit-card"></i> Documento</th>
-                            <th><i class="bi bi-telephone"></i> Teléfono</th>
-                            <th><i class="bi bi-envelope"></i> Email</th>
-                            <th><i class="bi bi-building"></i> Sede</th>
-                            <th><i class="bi bi-calendar"></i> Jornada</th>
+                            <th style="width: 50px;">#</th>
+                            <th><i class="bi bi-person me-1"></i>Nombre</th>
+                            <th><i class="bi bi-credit-card me-1"></i>Documento</th>
+                            <th><i class="bi bi-telephone me-1"></i>Teléfono</th>
+                            <th><i class="bi bi-envelope me-1"></i>Email</th>
+                            <th><i class="bi bi-building me-1"></i>Sede</th>
+                            <th><i class="bi bi-calendar me-1"></i>Jornada</th>
+                            <th><i class="bi bi-mortarboard me-1"></i>Grado/Grupo</th>
+                            <th class="text-center">Estado</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for estudiante in estudiantes %}
                         <tr>
-                            <td>{{ loop.index }}</td>
-                            <td class="fw-semibold">{{ estudiante.nombre }}</td>
+                            <td class="fw-bold">{{ loop.index }}</td>
+                            <td class="fw-semibold">
+                                {{ estudiante.apellido }}, {{ estudiante.nombre }}
+                            </td>
                             <td>{{ estudiante.documento or 'N/A' }}</td>
                             <td>{{ estudiante.telefono or 'N/A' }}</td>
                             <td>{{ estudiante.email or 'N/A' }}</td>
-                            <td>{{ estudiante.sede.nombre if estudiante.sede else 'N/A' }}</td>
+                            <td>
+                                {% if estudiante.sede %}
+                                <span class="badge bg-light text-dark">
+                                    {{ estudiante.sede.nombre }}
+                                </span>
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </td>
                             <td>{{ estudiante.jornada.nombre if estudiante.jornada else 'N/A' }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
-                                No hay estudiantes asignados
+                            <td>
+                                {% if estudiante.grupo_rel %}
+                                <span class="badge bg-primary">
+                                    {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre }}
+                                </span>
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if estudiante.activo %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Activo
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    Inactivo
+                                </span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -51,6 +167,20 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="alert alert-info d-flex align-items-center">
+        <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+        <div>
+            <strong>No se encontraron estudiantes</strong><br>
+            {% if search or current_sede_id %}
+                Intente ajustar los filtros de búsqueda.
+            {% else %}
+                No tiene estudiantes asignados en este momento.
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
 {% endblock %}

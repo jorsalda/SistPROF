@@ -61,11 +61,13 @@
                     <form method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- FILA 1: Nombre y Documento -->
+                        <!-- ============================================ -->
+                        <!-- FILA 1: Nombre y Apellido                    -->
+                        <!-- ============================================ -->
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Nombre completo <span class="text-danger">*</span>
+                                    Nombre <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
@@ -73,16 +75,40 @@
                                     </span>
                                     <input type="text"
                                            name="nombre"
+                                           id="nombre"
                                            class="form-control border-start-0 ps-0 form-control-lg"
                                            value="{{ docente.nombre if docente else '' }}"
-                                           placeholder="Ej: Carlos Rodríguez Méndez"
+                                           placeholder="Ej: Carlos"
                                            required>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Documento de identidad
+                                    Apellido <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="apellido"
+                                           id="apellido"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           value="{{ docente.apellido if docente and docente.apellido else '' }}"
+                                           placeholder="Ej: Rodríguez Méndez"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ============================================ -->
+                        <!-- FILA 2: Documento y Email                    -->
+                        <!-- ============================================ -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Documento de identidad <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
@@ -90,29 +116,17 @@
                                     </span>
                                     <input type="text"
                                            name="documento"
+                                           id="documento"
                                            class="form-control border-start-0 ps-0 form-control-lg"
                                            value="{{ docente.documento if docente else '' }}"
-                                           placeholder="Ej: 1234567890">
+                                           placeholder="Ej: 1234567890"
+                                           {% if not docente %}required{% endif %}>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- FILA 2: Teléfono y Email -->
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Teléfono
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-telephone text-muted"></i>
-                                    </span>
-                                    <input type="tel"
-                                           name="telefono"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           value="{{ docente.telefono if docente else '' }}"
-                                           placeholder="Ej: 300 123 4567">
+                                {% if not docente %}
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-key-fill"></i> Este documento será la <strong>contraseña inicial</strong>
                                 </div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-6">
@@ -125,15 +139,23 @@
                                     </span>
                                     <input type="email"
                                            name="email"
+                                           id="email"
                                            class="form-control border-start-0 ps-0 form-control-lg"
                                            value="{{ docente.email if docente else '' }}"
                                            placeholder="Ej: docente@colegio.edu.co"
                                            {% if not docente %}required{% endif %}>
                                 </div>
+                                {% if not docente %}
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-person-badge"></i> Este correo será el <strong>usuario de acceso</strong>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
-                        <!-- FILA 3: Contraseña (solo para nuevo) y Sede -->
+                        <!-- ============================================ -->
+                        <!-- FILA 3: Contraseña y Sede                    -->
+                        <!-- ============================================ -->
                         <div class="row g-4 mb-4">
                             {% if not docente %}
                             <div class="col-md-6">
@@ -146,13 +168,21 @@
                                     </span>
                                     <input type="password"
                                            name="password"
+                                           id="password"
                                            class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Mínimo 6 caracteres"
+                                           placeholder="Se autocompleta con el documento"
                                            required
                                            minlength="6">
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            id="togglePassword"
+                                            title="Mostrar/ocultar contraseña">
+                                        <i class="bi bi-eye" id="iconToggle"></i>
+                                    </button>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> La contraseña debe tener al menos 6 caracteres
+                                    <i class="bi bi-info-circle"></i>
+                                    Se autocompleta con el documento de identidad. Puede cambiarla después.
                                 </div>
                             </div>
                             {% endif %}
@@ -178,7 +208,31 @@
                             </div>
                         </div>
 
-                        <!-- FILA 4: Estado (solo para edición) -->
+                        <!-- ============================================ -->
+                        <!-- FILA 4: Teléfono                             -->
+                        <!-- ============================================ -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           id="telefono"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           value="{{ docente.telefono if docente else '' }}"
+                                           placeholder="Ej: 300 123 4567">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ============================================ -->
+                        <!-- FILA 5: Estado (solo para edición)           -->
+                        <!-- ============================================ -->
                         {% if docente %}
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
@@ -208,7 +262,9 @@
                         </div>
                         {% endif %}
 
-                        <!-- Información Adicional -->
+                        <!-- ============================================ -->
+                        <!-- Información Adicional                        -->
+                        <!-- ============================================ -->
                         <div class="alert alert-info rounded-3 mb-4">
                             <div class="d-flex">
                                 <div class="flex-shrink-0">
@@ -221,7 +277,9 @@
                                         • Los cambios se reflejarán inmediatamente en el sistema.<br>
                                         • Para cambiar la contraseña, use la opción correspondiente en la lista de docentes.
                                         {% else %}
-                                        • El docente podrá acceder al sistema con su correo y contraseña.<br>
+                                        • <strong>Usuario de acceso:</strong> El correo electrónico registrado.<br>
+                                        • <strong>Contraseña inicial:</strong> El documento de identidad.<br>
+                                        • El docente podrá cambiar su contraseña después del primer ingreso.<br>
                                         • El rol se asigna automáticamente como "Docente".
                                         {% endif %}
                                     </small>
@@ -229,7 +287,9 @@
                             </div>
                         </div>
 
-                        <!-- Botones de Acción -->
+                        <!-- ============================================ -->
+                        <!-- Botones de Acción                            -->
+                        <!-- ============================================ -->
                         <div class="d-flex gap-3 justify-content-end pt-3 border-top">
                             <a href="{{ url_for('colegio.lista_docentes') }}"
                                class="btn btn-outline-secondary px-4 py-2 rounded-pill">
@@ -247,6 +307,47 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT: Autocompletar contraseña         -->
+<!-- ============================================ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentoInput = document.getElementById('documento');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const iconToggle = document.getElementById('iconToggle');
+
+    // 🔑 Autocompletar contraseña con el documento
+    if (documentoInput && passwordInput) {
+        documentoInput.addEventListener('input', function() {
+            // Copiar el valor del documento al campo contraseña
+            passwordInput.value = this.value;
+
+            // Validar longitud mínima
+            if (this.value.length >= 6) {
+                passwordInput.setCustomValidity('');
+            } else if (this.value.length > 0) {
+                passwordInput.setCustomValidity('El documento debe tener al menos 6 caracteres para ser contraseña');
+            }
+        });
+
+        // Mostrar/ocultar contraseña
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                // Cambiar icono
+                if (iconToggle) {
+                    iconToggle.classList.toggle('bi-eye');
+                    iconToggle.classList.toggle('bi-eye-slash');
+                }
+            });
+        }
+    }
+});
+</script>
 
 <style>
     .bg-gradient-primary {

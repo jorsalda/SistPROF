@@ -1,21 +1,23 @@
-from flask import Flask
+from flask import Flask, render_template
 import os
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+#from routes.membresia_routes import membresia_bp
+from app.routes.membresia_routes import membresia_bp
 from .extensions import db, login_manager, mail
 from app.routes.examen_routes import examen_bp
-
-# Blueprints
 from app.routes.estudiantes_routes import estudiante_bp
 from app.routes.coordinador_routes import coordinador_bp
 
-
 from .models.pregunta import Pregunta
-# Modelos
 from .models import *
+import logging
+
+logger = logging.getLogger(__name__)
 
 migrate = Migrate()
 
@@ -54,8 +56,6 @@ def create_app():
     migrate.init_app(app, db)
     mail.init_app(app)
 
-    CSRFProtect(app)
-
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
@@ -63,7 +63,7 @@ def create_app():
             "200 per day",
             "50 per hour"
         ],
-        storage_uri="memory://"
+        storage_uri=os.environ.get("REDIS_URL", "memory://")
     )
 
     # -----------------------------------------
@@ -72,7 +72,6 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-
         return db.session.get(
             Usuario,
             int(user_id)
@@ -88,12 +87,8 @@ def create_app():
     from .routes.admin_routes import admin_bp
     from .routes.colegio_routes import colegio_bp
     from app.routes.api_examen_bp import api_examen_bp
-
     from .routes.acudiente import acudiente_bp
     from .routes.api_acudiente import api_acudiente_bp
-
-    # ... dentro de create_app(), donde están los otros registros:
-
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(permiso_bp)
@@ -106,31 +101,44 @@ def create_app():
     app.register_blueprint(api_examen_bp)
     app.register_blueprint(acudiente_bp)
     app.register_blueprint(api_acudiente_bp)
+    app.register_blueprint(membresia_bp)
+
     app.limiter = limiter
+
+    # -----------------------------------------
+    # CSRF - Eximir APIs después de registrar blueprints
+    # -----------------------------------------
+
+    csrf = CSRFProtect(app)
+    csrf.exempt(api_examen_bp)
+    csrf.exempt(api_acudiente_bp)
+
+    # ==========================================
+    # Manejadores de errores HTTP
+    # ==========================================
+
+    @app.errorhandler(404)
+    def pagina_no_encontrada(error):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(500)
+    def error_interno(error):
+        return render_template("errors/500.html"), 500
 
     # ==========================================
     # Scheduler de notificaciones
     # ==========================================
 
-    from apscheduler.schedulers.background import (
-        BackgroundScheduler
-    )
-
+    from apscheduler.schedulers.background import BackgroundScheduler
     from datetime import datetime
-
-    import logging
-
-    logger = logging.getLogger(__name__)
+    import atexit
 
     scheduler = BackgroundScheduler(
         timezone='America/Bogota'
     )
 
     try:
-
-        from app.services.notification_worker import (
-            process_pending_citaciones
-        )
+        from app.services.notification_worker import process_pending_citaciones
 
         scheduler.add_job(
             func=process_pending_citaciones,
@@ -144,15 +152,14 @@ def create_app():
 
         scheduler.start()
 
-        print(
-            "⏰ Scheduler de notificaciones INICIADO."
-        )
+        logger.info("⏰ Scheduler de notificaciones INICIADO.")
+
+        # ✅ Shutdown graceful cuando la app termina
+        atexit.register(lambda: scheduler.shutdown())
 
     except Exception as e:
 
-        print(
-            f"⚠️ Scheduler no iniciado: {str(e)}"
-        )
+        logger.error(f"⚠️ Scheduler no iniciado: {str(e)}")
 
     # ==========================================
 

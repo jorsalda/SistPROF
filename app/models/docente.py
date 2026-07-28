@@ -8,7 +8,8 @@ class Docente(db.Model):
 
     # ========== COLUMNAS ==========
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(150), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    apellido = db.Column(db.String(100), nullable=True)  # ✅ NUEVO
     documento = db.Column(db.String(20), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(120), nullable=True)
@@ -66,7 +67,7 @@ class Docente(db.Model):
         lazy=True
     )
 
-    # ⭐ NUEVO: Clases que imparte este docente
+    # ⭐ Clases que imparte este docente
     clases = db.relationship(
         "Clase",
         foreign_keys="Clase.docente_id",
@@ -88,5 +89,13 @@ class Docente(db.Model):
         cascade="all, delete-orphan"
     )
 
+    # ✅ NUEVO: Método para obtener nombre completo
+    @property
+    def nombre_completo(self):
+        """Retorna el nombre completo del docente"""
+        if self.apellido:
+            return f"{self.nombre} {self.apellido}"
+        return self.nombre
+
     def __repr__(self):
-        return f'<Docente {self.nombre}>'
+        return f'<Docente {self.nombre_completo}>'
