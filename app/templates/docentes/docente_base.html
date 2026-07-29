@@ -52,7 +52,9 @@
                     Mis Permisos
                 </a>
             </li>
-
+            <a href="{{ url_for('docente.banco_preguntas') }}" class="nav-link">
+                <i class="bi bi-database"></i> Mi Banco de Preguntas
+            </a>
             <!-- Solicitar Permiso -->
             <li class="menu-item">
                 <a href="{{ url_for('docente.nuevo_permiso_docente') }}"
@@ -88,7 +90,14 @@
                     Citaciones
                 </a>
             </li>
-
+            <!-- Crear examenes desde el banco -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.crear_desde_banco') }}"
+                   class="menu-link {% if request.endpoint == 'docente.crear_desde_banco' %}active{% endif %}">
+                    <i class="bi bi-journal-plus"></i>
+                    Crear Examen (Banco)
+                </a>
+            </li>
             <!-- Crear Examen con IA -->
             <li class="menu-item">
                 <a href="{{ url_for('examen.crear_examen_ia') }}"
@@ -129,8 +138,8 @@
 
         <!-- Logout -->
         <button
-            onclick="window.location.href='{{ url_for('auth.logout') }}'"
-            class="logout-btn">
+                onclick="window.location.href='{{ url_for('auth.logout') }}'"
+                class="logout-btn">
             <i class="bi bi-box-arrow-right"></i>
             Cerrar Sesión
         </button>
@@ -145,7 +154,7 @@
 
             <h1>
                 {% block docente_page_title %}
-                    Dashboard Docente
+                Dashboard Docente
                 {% endblock %}
             </h1>
 
@@ -160,18 +169,18 @@
         <div class="colegio-main-content">
 
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
+            {% if messages %}
+            {% for category, message in messages %}
 
-                        <div class="alert alert-{{ category }} alert-dismissible fade show">
-                            {{ message }}
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="alert"></button>
-                        </div>
+            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"></button>
+            </div>
 
-                    {% endfor %}
-                {% endif %}
+            {% endfor %}
+            {% endif %}
             {% endwith %}
 
             {% block docente_content %}

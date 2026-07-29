@@ -23,11 +23,20 @@ class Pregunta(db.Model):
     dificultad = db.Column(db.String(20))
 
     materia_id = db.Column(db.Integer, db.ForeignKey("materias.id"))
+
+    # NUEVAS COLUMNAS PARA EL BANCO DE PREGUNTAS
+    docente_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    examen_id = db.Column(db.Integer, db.ForeignKey('examenes.id'), nullable=True)
+
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     activo = db.Column(db.Boolean, default=True)
 
-    # Relación con Materia (opcional pero muy útil)
+    # Relaciones existentes y nuevas
     materia = db.relationship("Materia", backref="preguntas")
+
+    # NUEVAS RELACIONES
+    docente = db.relationship("Usuario", backref="preguntas_creadas", foreign_keys=[docente_id])
+    examen = db.relationship("Examen", backref="preguntas_asignadas", foreign_keys=[examen_id])
 
     def to_dict(self):
         return {
@@ -39,7 +48,10 @@ class Pregunta(db.Model):
             'explicacion': self.explicacion,
             'tema': self.tema,
             'dificultad': self.dificultad,
-            'materia_id': self.materia_id
+            'materia_id': self.materia_id,
+            # Agregamos los nuevos campos al diccionario por si los necesitas en APIs
+            'docente_id': self.docente_id,
+            'examen_id': self.examen_id
         }
 
     def __repr__(self):

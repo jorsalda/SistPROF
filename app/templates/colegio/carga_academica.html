@@ -5,52 +5,84 @@
 {% block colegio_content %}
 
 <style>
+    /* ─── CONTENEDOR SCROLL ─── */
     .scroll-box {
         width: 100%;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
+        overflow-x: auto;
+        overflow-y: visible;           /* ✅ cambiado: deja que crezca verticalmente */
         border: 1px solid #dee2e6;
         background-color: #fff;
         margin-bottom: 2rem;
+        display: block;                /* ✅ asegura comportamiento de bloque */
+        position: relative;            /* ✅ contexto para z-index */
     }
+
+    /* ─── TABLA ANCHA ─── */
     .tabla-ancha {
-        width: max-content !important;
+        width: max-content;            /* ✅ fuerza expansión horizontal */
         min-width: 100%;
         margin-bottom: 0;
-        border-collapse: collapse;
+        border-collapse: separate;     /* ✅ cambiado: sticky funciona mejor */
+        border-spacing: 0;
+        table-layout: auto !important; /* ✅ evita que Bootstrap la comprima */
     }
+
+    /* ─── COLUMNA GRUPO FIJA ─── */
     .col-fija {
-        position: sticky !important;
-        left: 0 !important;
-        background-color: #f8f9fa !important;
-        z-index: 100 !important;
-        border-right: 2px solid #dee2e6 !important;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+        border-right: 2px solid #dee2e6;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.08);
         min-width: 150px;
+        max-width: 180px;
         text-align: center;
         vertical-align: middle;
     }
-    thead th.col-fija { z-index: 101 !important; background-color: #e9ecef !important; }
-    .tabla-ancha th, .tabla-ancha td {
-        white-space: nowrap !important;
-        padding: 8px;
+    thead th.col-fija {
+        z-index: 11;
+        background-color: #e9ecef;
+    }
+
+    /* ─── CELDAS ─── */
+    .tabla-ancha th,
+    .tabla-ancha td {
+        white-space: nowrap;
+        padding: 10px 12px;
         vertical-align: middle;
         text-align: center;
         border: 1px solid #dee2e6;
     }
-    /* Barras de scroll visibles */
-    .scroll-box::-webkit-scrollbar { height: 16px !important; display: block !important; }
-    .scroll-box::-webkit-scrollbar-track { background: #e0e0e0 !important; }
-    .scroll-box::-webkit-scrollbar-thumb { background: #666 !important; border-radius: 4px; border: 2px solid #e0e0e0 !important; }
-    .scroll-box::-webkit-scrollbar-thumb:hover { background: #333 !important; }
-    .scroll-box { scrollbar-width: thick !important; scrollbar-color: #666 #e0e0e0 !important; }
 
-    /* Colores por nivel */
-    .header-preescolar { background-color: #fff3cd !important; color: #856404 !important; }
-    .header-primaria { background-color: #d4edda !important; color: #155724 !important; }
-    .header-bachillerato { background-color: #cce5ff !important; color: #004085 !important; }
-    .header-media { background-color: #d1ecf1 !important; color: #0c5460 !important; }
-    .header-otras { background-color: #e2e3e5 !important; color: #383d41 !important; }
+    /* ─── BARRAS DE SCROLL VISIBLES ─── */
+    .scroll-box::-webkit-scrollbar {
+        height: 14px;
+        display: block;
+    }
+    .scroll-box::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 7px;
+    }
+    .scroll-box::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 7px;
+        border: 3px solid #f1f1f1;
+    }
+    .scroll-box::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    .scroll-box {
+        scrollbar-width: auto;
+        scrollbar-color: #888 #f1f1f1;
+    }
+
+    /* ─── COLORES POR NIVEL ─── */
+    .header-preescolar  { background-color: #fff3cd !important; color: #856404 !important; }
+    .header-primaria    { background-color: #d4edda !important; color: #155724 !important; }
+    .header-bachillerato{ background-color: #cce5ff !important; color: #004085 !important; }
+    .header-media       { background-color: #d1ecf1 !important; color: #0c5460 !important; }
+    .header-otras       { background-color: #e2e3e5 !important; color: #383d41 !important; }
 </style>
 
 <div class="container-fluid px-4 py-4">
@@ -113,13 +145,12 @@
         </div>
     </div>
 
-    <!-- Formulario único que envuelve TODAS las tablas -->
+    <!-- Formulario único -->
     <form method="POST" action="{{ url_for('colegio.guardar_carga_academica') }}">
 
         {% for nivel, datos in datos_por_nivel.items() %}
         {% if datos.grupos and datos.materias %}
 
-        <!-- ENCABEZADO DEL NIVEL -->
         <div class="d-flex align-items-center mb-2 mt-4">
             {% if nivel == 'PREESCOLAR' %}
                 <span class="badge header-preescolar px-3 py-2 fs-6"><i class="bi bi-heart-fill me-1"></i>{{ nivel }}</span>
@@ -135,14 +166,14 @@
             <span class="badge bg-light text-dark ms-2">{{ datos.grupos|length }} grupos - {{ datos.materias|length }} materias</span>
         </div>
 
-        <!-- TABLA DEL NIVEL CON SCROLL -->
+        <!-- TABLA CON SCROLL -->
         <div class="scroll-box">
             <table class="table table-bordered tabla-ancha">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th class="col-fija"><strong>Grupo</strong></th>
                         {% for materia in datos.materias %}
-                        <th class="bg-light" style="min-width: 140px;">
+                        <th style="min-width: 150px; background-color: #f8f9fa;">
                             <strong>{{ materia.nombre }}</strong><br><small class="text-muted">Horas</small>
                         </th>
                         {% endfor %}
@@ -156,7 +187,7 @@
                             <small class="text-muted fw-normal">{{ grupo.sede.nombre if grupo.sede else '' }}</small>
                         </td>
                         {% for materia in datos.materias %}
-                        <td style="min-width: 140px;">
+                        <td style="min-width: 150px;">
                             {% set docente_id = asignaciones_dict.get((grupo.id, materia.id)) %}
                             <select name="docente_{{ grupo.id }}_{{ materia.id }}" class="form-select form-select-sm mb-1">
                                 <option value="">Sin asignar</option>
@@ -187,7 +218,7 @@
         {% endif %}
         {% endfor %}
 
-        <!-- Botones de acción (una sola vez al final) -->
+        <!-- Botones -->
         <div class="card-footer bg-light d-flex justify-content-end gap-2 p-3 mt-3">
             <button type="reset" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-2"></i>Cancelar</button>
             <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-save me-2"></i>Guardar Cambios</button>

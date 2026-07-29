@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from datetime import datetime
+
+from app.models.pregunta import Pregunta
+from app.models.materia import Materia
 from app.extensions import db
 from app.models.docente import Docente
 from app.models.permiso import Permiso
@@ -10,6 +13,9 @@ from app.models.usuario import Usuario
 from app.models.sede import Sede
 from werkzeug.security import generate_password_hash
 from app.models.grupo import Grupo, GrupoAreas
+from app.models.examen import Examen
+from app.models.examen_contenido import ExamenContenido
+import json
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
 
 
@@ -695,3 +701,109 @@ def cambiar_estado(id):
         "message": f"Docente {estado} correctamente",
         "activo": docente.activo
     })
+
+
+@docente_bp.route("/banco-preguntas")
+@login_required
+def banco_preguntas():
+    # AHORA: Trae TODAS las preguntas del docente, estén o no en exámenes
+    preguntas_banco = Pregunta.query.filter_by(
+        docente_id=current_user.id
+    ).order_by(Pregunta.fecha_creacion.desc()).all()
+
+    materias = Materia.query.all()
+
+    return render_template(
+        "docentes/banco_preguntas.html",
+        preguntas=preguntas_banco,
+        materias=materias
+    )
+
+
+# ==========================================================
+# CREAR EXAMEN DESDE EL BANCO (NUEVO)
+# ==========================================================
+@docente_bp.route("/crear-desde-banco", methods=["GET", "POST"])
+@login_required
+def crear_desde_banco():
+    """Ruta dedicada para armar exámenes seleccionando del banco"""
+    if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
+        abort(403)
+
+    # Obtener contexto necesario
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    materias = Materia.query.all()
+    preguntas_banco = Pregunta.query.filter_by(docente_id=current_user.id).all()
+
+    if request.method == "POST":
+        try:
+            # 1. Datos generales
+            titulo = request.form.get("titulo_examen", "").strip()
+            materia_id = request.form.get("materia_id")
+            grado = request.form.get("grado")
+
+            if not titulo or not materia_id:
+                flash("Título y materia son obligatorios.", "danger")
+                return redirect(url_for("docente.crear_desde_banco"))
+
+            # 2. Obtener IDs seleccionados del banco
+            ids_seleccionados_json = request.form.get("ids_preguntas_banco")
+            if not ids_seleccionados_json:
+                flash("Debes seleccionar al menos una pregunta del banco.", "warning")
+                return redirect(url_for("docente.crear_desde_banco"))
+
+            import json
+            ids_seleccionados = json.loads(ids_seleccionados_json)
+
+            # Validar que existan las preguntas
+            preguntas_validas = Pregunta.query.filter(Pregunta.id.in_(ids_seleccionados)).all()
+            if len(preguntas_validas) != len(ids_seleccionados):
+                flash("Algunas preguntas seleccionadas no son válidas.", "danger")
+                return redirect(url_for("docente.crear_desde_banco"))
+
+            # 3. Crear el Examen
+            nuevo_examen = Examen(
+                titulo=titulo,
+                nombre=titulo,
+                descripcion=f"Examen creado desde banco para {grado}",
+                materia_id=materia_id,
+                colegio_id=current_user.colegio_id,
+                tiempo_limite_minutos=30,
+                fecha_creacion=datetime.now(),
+                activo=True
+            )
+            db.session.add(nuevo_examen)
+            db.session.flush()  # Para obtener el ID
+
+            # 4. Guardar en examen_contenido (JSONB)
+            contenido_para_guardar = [
+                {"pregunta_id": p.id, "orden": idx + 1}
+                for idx, p in enumerate(preguntas_validas)
+            ]
+
+            from app.models.examen_contenido import ExamenContenido
+            nuevo_contenido = ExamenContenido(
+                examen_id=nuevo_examen.id,
+                contenido_json=contenido_para_guardar,
+                version=1,
+                activo=True
+            )
+            db.session.add(nuevo_contenido)
+
+            db.session.commit()
+
+            flash(f"✅ Examen '{titulo}' creado con {len(preguntas_validas)} preguntas.", "success")
+            return redirect(url_for("examen.listar_examenes"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al crear examen: {str(e)}", "danger")
+            import traceback;
+            traceback.print_exc()
+
+    return render_template(
+        "examenes/crear_examen.html",
+        docente=docente,
+        materias=materias,
+        preguntas_banco=preguntas_banco
+    )

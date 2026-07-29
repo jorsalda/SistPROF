@@ -1,0 +1,162 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block docente_page_title %}
+    Mi Banco de Preguntas
+{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+    <!-- Encabezado con acciones -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-database me-2"></i>Gestión de Preguntas
+        </h2>
+        <div>
+            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-arrow-left"></i> Volver al Dashboard
+            </a>
+            <!-- Botón para crear nueva pregunta manualmente -->
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaPregunta">
+                <i class="bi bi-plus-lg"></i> Nueva Pregunta
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros Rápidos -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="GET" action="{{ url_for('docente.banco_preguntas') }}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Buscar por tema o texto</label>
+                    <input type="text" name="search" class="form-control form-control-sm"
+                           placeholder="Ej: Cálculo, Derivadas..."
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Materia</label>
+                    <select name="materia_id" class="form-select form-select-sm">
+                        <option value="">Todas las materias</option>
+                        {% for m in materias %}
+                            <option value="{{ m.id }}"
+                                {% if request.args.get('materia_id')|int == m.id %}selected{% endif %}>
+                                {{ m.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Preguntas -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Preguntas Disponibles en el Banco</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if preguntas %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%">ID</th>
+                            <th style="width: 15%">Materia / Tema</th>
+                            <th style="width: 40%">Enunciado</th>
+                            <th style="width: 10%">Tipo</th>
+                            <th style="width: 10%">Dificultad</th>
+                            <th style="width: 10%">Fecha</th>
+                            <th style="width: 10%" class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in preguntas %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ p.id }}</span></td>
+                            <td>
+                                <strong>{{ p.materia.nombre if p.materia else 'Sin materia' }}</strong><br>
+                                <small class="text-muted">{{ p.tema or 'Sin tema' }}</small>
+                            </td>
+                            <td class="text-truncate" style="max-width: 300px;" title="{{ p.texto }}">
+                                {{ p.texto[:100] }}{% if p.texto|length > 100 %}...{% endif %}
+                            </td>
+                            <td>
+                                {% if p.tipo == 'icfes' %}
+                                    <span class="badge bg-info">ICFES</span>
+                                {% elif p.tipo == 'abierta' %}
+                                    <span class="badge bg-warning text-dark">Abierta</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ p.tipo }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.dificultad == 'baja' %}
+                                    <span class="text-success"><i class="bi bi-arrow-down-circle"></i> Baja</span>
+                                {% elif p.dificultad == 'media' %}
+                                    <span class="text-warning"><i class="bi bi-dash-circle"></i> Media</span>
+                                {% elif p.dificultad == 'alta' %}
+                                    <span class="text-danger"><i class="bi bi-arrow-up-circle"></i> Alta</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ p.fecha_creacion.strftime('%d/%m/%Y') }}</small></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" title="Ver detalle" onclick="verPregunta({{ p.id }})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="eliminarPregunta({{ p.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <p class="mt-3 text-muted">Tu banco de preguntas está vacío.</p>
+                <p class="small text-muted">Crea preguntas nuevas o usa la IA para generarlas y empezar a construir tu banco.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ver Pregunta (Placeholder) -->
+<div class="modal fade" id="modalVerPregunta" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle de la Pregunta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detallePreguntaContent">
+                <!-- Contenido dinámico aquí -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function verPregunta(id) {
+        alert('Función para ver detalle de pregunta ID: ' + id);
+        // Aquí podrías hacer un fetch AJAX para llenar el modal
+    }
+
+    function eliminarPregunta(id) {
+        if(confirm('¿Estás seguro de eliminar esta pregunta del banco? Esta acción no se puede deshacer.')) {
+            console.log('Eliminando pregunta:', id);
+            // Lógica de eliminación POST
+        }
+    }
+</script>
+{% endblock %}

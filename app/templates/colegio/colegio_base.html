@@ -13,6 +13,30 @@
 
     <!-- CSS del Colegio -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/colegio.css') }}">
+
+    <!-- ─── ESTILOS PREVENTIVOS PARA SCROLL ─── -->
+    <style>
+        /* Garantiza que el contenido principal NO corte el scroll horizontal */
+        .colegio-main-content {
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            min-width: 0;
+        }
+
+        /* El contenedor flex principal debe permitir que los hijos crezcan */
+        .colegio-content {
+            overflow-x: visible !important;
+            min-width: 0;
+        }
+
+        /* Corrección: todos los items del menú usan la misma estructura */
+        .sidebar-menu .nav-link {
+            display: block;
+            padding: 0;
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
 </head>
 <body>
 
@@ -49,17 +73,22 @@
                 </a>
             </li>
 
+            <!-- Plan de Estudios -->
             <li class="menu-item">
-                <a class="nav-link" href="{{ url_for('colegio.plan_estudios') }}">
+                <a href="{{ url_for('colegio.plan_estudios') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
                     <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
                 </a>
             </li>
+
+            <!-- Materias -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_materias') }}"
                    class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
                     <i class="bi bi-book"></i> Materias
                 </a>
             </li>
+
             <!-- Docentes -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_docentes') }}"
@@ -67,12 +96,15 @@
                     <i class="bi bi-people"></i> Docentes
                 </a>
             </li>
-            <!-- En el menú de Plan de Estudios o similar -->
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('colegio.gestion_carga_academica') }}">
-                    <i class="bi bi-journal-bookmark me-2"></i>Carga Académica
+
+            <!-- Carga Académica -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.gestion_carga_academica') }}"
+                   class="menu-link {% if request.endpoint == 'colegio.gestion_carga_academica' %}active{% endif %}">
+                    <i class="bi bi-journal-bookmark"></i> Carga Académica
                 </a>
             </li>
+
             <!-- Coordinadores -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_coordinadores') }}"
@@ -96,6 +128,7 @@
                     <i class="bi bi-person-heart"></i> Acudientes
                 </a>
             </li>
+
             <!-- Áreas -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_areas') }}"
@@ -103,6 +136,7 @@
                     <i class="bi bi-book"></i> Áreas
                 </a>
             </li>
+
             <!-- Permisos -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_permisos') }}"
@@ -150,11 +184,12 @@
                     <i class="bi bi-file-earmark-medical-fill"></i> PIAR
                 </a>
             </li>
+
             <!-- Configuración del Sistema -->
             <li class="menu-item">
                 <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
                     <i class="bi bi-sliders2"></i> Configuración
-                    <i class="bi bi-chevron-right"></i>
+                    <i class="bi bi-chevron-right ms-auto"></i>
                 </a>
                 <ul class="collapse sub-menu" id="configSubmenu">
                     <li class="menu-item">

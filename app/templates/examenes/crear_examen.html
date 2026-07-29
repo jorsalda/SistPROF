@@ -1,0 +1,263 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Crear Nuevo Examen | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+    Crear Nuevo Examen
+{% endblock %}
+
+{% block docente_content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4 p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0 h5"><i class="bi bi-journal-plus me-2"></i>Armar Evaluación</h3>
+                        <p class="mb-0 opacity-75 small">Elige cómo deseas armar tu evaluación</p>
+                    </div>
+                    <!-- Selector de Método -->
+                    <select id="metodoCreacion" class="form-select form-select-sm w-auto bg-white text-dark">
+                        <option value="banco">🏦 Desde mi Banco</option>
+                        <option value="ia">🤖 Generar con IA</option>
+                        <option value="manual">️ Crear Manualmente</option>
+                        <option value="archivo">📄 Importar Archivo</option>
+                    </select>
+                </div>
+
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" enctype="multipart/form-data" id="formCrearExamen">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <!-- Input oculto para guardar IDs seleccionados del banco -->
+                        <input type="hidden" name="ids_preguntas_banco" id="ids_preguntas_banco">
+
+                        <!-- DATOS GENERALES (Común a todos los métodos) -->
+                        <div class="row mb-4 border-bottom pb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold small">Título del Examen <span class="text-danger">*</span></label>
+                                <input type="text" name="titulo_examen" class="form-control form-control-sm" placeholder="Ej: Parcial 1 - Geometría Analítica" required>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold small">Materia <span class="text-danger">*</span></label>
+                                <select name="materia_id" class="form-select form-select-sm" required>
+                                    <option value="">-- Selecciona --</option>
+                                    {% for materia in materias %}
+                                        <option value="{{ materia.id }}">{{ materia.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold small">Grado <span class="text-danger">*</span></label>
+                                <select name="grado" class="form-select form-select-sm" required>
+                                    <option value="">-- Selecciona --</option>
+                                    <option value="6°">6°</option><option value="7°">7°</option>
+                                    <option value="8°">8°</option><option value="9°">9°</option>
+                                    <option value="10°">10°</option><option value="11°">11°</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN DINÁMICA: CAMBIA SEGÚN EL MÉTODO SELECCIONADO -->
+
+                        <!-- 1. OPCIÓN BANCO (Por defecto visible) -->
+                        <div id="seccion-banco" class="metodo-seccion">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold h6">Selecciona preguntas de tu banco personal</h5>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBancoPreguntas">
+                                    <i class="bi bi-database"></i> Abrir Banco de Preguntas
+                                </button>
+                            </div>
+                            <div class="alert alert-secondary py-2">
+                                <i class="bi bi-info-circle me-2"></i> Has seleccionado <strong id="count-banco">0</strong> preguntas.
+                                <small class="d-block mt-1">Estas se agregarán al examen.</small>
+                            </div>
+                        </div>
+
+                        <!-- 2. OPCIÓN IA -->
+                        <div id="seccion-ia" class="metodo-seccion d-none">
+                            <div class="alert alert-info border-0 bg-info-subtle mb-4">
+                                <i class="bi bi-robot me-2"></i> Sube tu material de estudio y deja que la IA genere las preguntas automáticamente.
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small">Documento de Estudio (PDF/DOCX)</label>
+                                <input type="file" name="archivo_ia" class="form-control form-control-sm" accept=".pdf,.docx">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small">Cantidad de Preguntas</label>
+                                <input type="number" name="cantidad_ia" class="form-control form-control-sm" value="5" min="1" max="20">
+                            </div>
+                        </div>
+
+                        <!-- 3. OPCIÓN MANUAL -->
+                        <div id="seccion-manual" class="metodo-seccion d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold h6">Redactar preguntas manualmente</h5>
+                                <button type="button" class="btn btn-success btn-sm" onclick="agregarPreguntaManual()">
+                                    <i class="bi bi-plus-lg"></i> Agregar Pregunta
+                                </button>
+                            </div>
+                            <div id="contenedor-preguntas-manuales">
+                                <!-- Aquí se insertarán las preguntas dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- 4. OPCIÓN ARCHIVO -->
+                        <div id="seccion-archivo" class="metodo-seccion d-none">
+                            <div class="alert alert-warning border-0 bg-warning-subtle mb-4">
+                                <i class="bi bi-file-earmark-text me-2"></i> Sube un cuestionario en Word o PDF. El sistema intentará convertirlo a formato JSON automáticamente.
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small">Cuestionario (PDF/DOCX)</label>
+                                <input type="file" name="archivo_cuestionario" class="form-control form-control-sm" accept=".pdf,.docx">
+                            </div>
+                        </div>
+
+                        <!-- BOTONES DE ACCIÓN -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-5">
+                            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-save me-2"></i>Guardar Examen
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DEL BANCO -->
+<div class="modal fade" id="modalBancoPreguntas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-database me-2"></i>Seleccionar del Banco</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3 p-2 bg-light rounded">
+                    <div class="col-md-4">
+                        <input type="text" id="filtroTexto" class="form-control form-control-sm" placeholder="Buscar tema...">
+                    </div>
+                    <div class="col-md-3">
+                        <select id="filtroMateria" class="form-select form-select-sm">
+                            <option value="">Todas las materias</option>
+                            {% for m in materias %}<option value="{{ m.id }}">{{ m.nombre }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button onclick="filtrarPreguntas()" class="btn btn-sm btn-outline-primary w-100">Filtrar</button>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="badge bg-success fs-6" id="contadorSeleccionModal">0 seleccionadas</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light sticky-top">
+                            <tr><th width="5%">Sel.</th><th width="10%">ID</th><th width="15%">Materia</th><th width="50%">Enunciado</th><th width="10%">Tipo</th><th width="10%">Dif.</th></tr>
+                        </thead>
+                        <tbody id="listaPreguntasBanco">
+                            {% for p in preguntas_banco %}
+                            <tr class="fila-pregunta" data-id="{{ p.id }}" data-texto="{{ p.texto|lower }}" data-materia="{{ p.materia_id }}">
+                                <td class="text-center"><input type="checkbox" class="form-check-input chk-pregunta" value="{{ p.id }}"></td>
+                                <td><span class="badge bg-secondary">{{ p.id }}</span></td>
+                                <td><small class="fw-bold">{{ p.materia.nombre if p.materia else 'N/A' }}</small></td>
+                                <td class="text-truncate" style="max-width: 250px;">{{ p.texto[:60] }}...</td>
+                                <td><span class="badge bg-info">{{ p.tipo }}</span></td>
+                                <td>{{ p.dificultad|capitalize }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarSeleccionBanco()">Confirmar Selección</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Lógica de Cambio de Pestañas/Métodos
+    document.getElementById('metodoCreacion').addEventListener('change', function() {
+        document.querySelectorAll('.metodo-seccion').forEach(el => el.classList.add('d-none'));
+        document.getElementById('seccion-' + this.value).classList.remove('d-none');
+    });
+
+    // 2. Lógica del Banco
+    let preguntasSeleccionadas = [];
+
+    document.querySelectorAll('.chk-pregunta').forEach(chk => {
+        chk.addEventListener('change', function() {
+            const id = parseInt(this.value);
+            if(this.checked) {
+                if(!preguntasSeleccionadas.includes(id)) preguntasSeleccionadas.push(id);
+            } else {
+                preguntasSeleccionadas = preguntasSeleccionadas.filter(p => p !== id);
+            }
+            actualizarContadores();
+        });
+    });
+
+    function actualizarContadores() {
+        const count = preguntasSeleccionadas.length;
+        document.getElementById('contadorSeleccionModal').innerText = `${count} seleccionadas`;
+        document.getElementById('count-banco').innerText = count;
+        document.getElementById('ids_preguntas_banco').value = JSON.stringify(preguntasSeleccionadas);
+    }
+
+    function filtrarPreguntas() {
+        const texto = document.getElementById('filtroTexto').value.toLowerCase();
+        const materia = document.getElementById('filtroMateria').value;
+        document.querySelectorAll('.fila-pregunta').forEach(fila => {
+            const matchTexto = fila.dataset.texto.includes(texto);
+            const matchMateria = !materia || fila.dataset.materia === materia;
+            fila.style.display = (matchTexto && matchMateria) ? '' : 'none';
+        });
+    }
+
+    function confirmarSeleccionBanco() {
+        bootstrap.Modal.getInstance(document.getElementById('modalBancoPreguntas')).hide();
+    }
+
+    // 3. Lógica Manual
+    function agregarPreguntaManual() {
+        const contenedor = document.getElementById('contenedor-preguntas-manuales');
+        const index = contenedor.children.length;
+        const html = `
+            <div class="card mb-3 border-primary">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold small">Pregunta ${index + 1}</h6>
+                    <textarea name="preguntas_manual[${index}][texto]" class="form-control form-control-sm mb-2" rows="2" placeholder="Enunciado..." required></textarea>
+                    <div class="row g-2">
+                        <div class="col-md-6"><input type="text" name="preguntas_manual[${index}][opcion_a]" class="form-control form-control-sm" placeholder="Opción A" required></div>
+                        <div class="col-md-6"><input type="text" name="preguntas_manual[${index}][opcion_b]" class="form-control form-control-sm" placeholder="Opción B" required></div>
+                        <div class="col-md-6"><input type="text" name="preguntas_manual[${index}][opcion_c]" class="form-control form-control-sm" placeholder="Opción C" required></div>
+                        <div class="col-md-6"><input type="text" name="preguntas_manual[${index}][opcion_d]" class="form-control form-control-sm" placeholder="Opción D" required></div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="small fw-bold">Respuesta Correcta:</label>
+                        <select name="preguntas_manual[${index}][correcta]" class="form-select form-select-sm w-auto">
+                            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                        </select>
+                    </div>
+                </div>
+            </div>`;
+        contenedor.insertAdjacentHTML('beforeend', html);
+    }
+</script>
+{% endblock docente_content %}
