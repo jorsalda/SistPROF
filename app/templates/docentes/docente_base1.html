@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistPROF - Docente</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- CSS Docente -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/colegio.css') }}">
+</head>
+<body>
+
+<div class="colegio-container">
+
+    <!-- Sidebar -->
+    <aside class="colegio-sidebar">
+
+        <!-- Encabezado -->
+        <div class="sidebar-header">
+            <h2>
+                <i class="bi bi-person-workspace"></i>
+                {{ docente.nombre if docente else 'Docente' }}
+            </h2>
+            <p>Panel Docente</p>
+        </div>
+
+        <!-- Menú -->
+        <ul class="sidebar-menu">
+
+            <!-- Dashboard -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.dashboard') }}"
+                   class="menu-link {% if request.endpoint == 'docente.dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i>
+                    Dashboard
+                </a>
+            </li>
+
+            <!-- Mis Permisos -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.mis_permisos') }}"
+                   class="menu-link {% if request.endpoint in ['docente.mis_permisos','docente.nuevo_permiso_docente'] %}active{% endif %}">
+                    <i class="bi bi-clipboard-check"></i>
+                    Mis Permisos
+                </a>
+            </li>
+
+            <!-- Solicitar Permiso -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.nuevo_permiso_docente') }}"
+                   class="menu-link {% if request.endpoint == 'docente.nuevo_permiso_docente' %}active{% endif %}">
+                    <i class="bi bi-plus-circle"></i>
+                    Solicitar Permiso
+                </a>
+            </li>
+
+            <!-- Mis Estudiantes -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.mis_estudiantes') }}"
+                   class="menu-link {% if request.endpoint == 'docente.mis_estudiantes' %}active{% endif %}">
+                    <i class="bi bi-people"></i>
+                    Mis Estudiantes
+                </a>
+            </li>
+
+            <!-- Observador -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.observador') }}"
+                   class="menu-link {% if request.endpoint == 'docente.observador' %}active{% endif %}">
+                    <i class="bi bi-eye-fill"></i>
+                    Observador
+                </a>
+            </li>
+
+            <!-- Citaciones -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.citaciones') }}"
+                   class="menu-link {% if request.endpoint == 'docente.citaciones' %}active{% endif %}">
+                    <i class="bi bi-calendar-event-fill"></i>
+                    Citaciones
+                </a>
+            </li>
+            <!-- Opción para Crear Examen con IA -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('examen.crear_examen_ia') }}">
+                    <i class="bi bi-magic me-2"></i> Crear Examen IA
+                </a>
+            </li>
+            </tr>
+            º<!-- En el sidebar, después de "Dashboard" o donde corresponda -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('examen.listar_examenes') }}">
+                        <i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes
+                    </a>
+                </li>
+            <!-- Seguimiento Académico -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.seguimiento') }}"
+                   class="menu-link {% if request.endpoint == 'docente.seguimiento' %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    Seguimiento Académico
+                </a>
+            </li>
+
+            <!-- Mi Cuenta -->
+            <li class="menu-item">
+                <a href="{{ url_for('auth.estado_cuenta') }}"
+                   class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
+                    <i class="bi bi-person-badge"></i>
+                    Mi Cuenta
+                </a>
+            </li>
+
+        </ul>
+
+        <!-- Logout -->
+        <button
+            onclick="window.location.href='{{ url_for('auth.logout') }}'"
+            class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i>
+            Cerrar Sesión
+        </button>
+
+    </aside>
+
+    <!-- Contenido -->
+    <main class="colegio-content">
+
+        <!-- Header -->
+        <header class="colegio-header">
+
+            <h1>
+                {% block docente_page_title %}
+                    Dashboard Docente
+                {% endblock %}
+            </h1>
+
+            <div class="user-info">
+                <i class="bi bi-person-circle"></i>
+                {{ current_user.email }}
+            </div>
+
+        </header>
+
+        <!-- Main -->
+        <div class="colegio-main-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+
+                        <div class="alert alert-{{ category }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="alert"></button>
+                        </div>
+
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block docente_content %}
+            {% endblock %}
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
