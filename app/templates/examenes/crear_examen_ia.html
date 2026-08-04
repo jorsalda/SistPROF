@@ -1,18 +1,22 @@
-{% extends "base.html" %}
+{% extends "docentes/docente_base.html" %}
 
 {% block title %}Crear Examen con IA | SistPROF{% endblock %}
 
-{% block content %}
-<div class="container py-5">
+{% block docente_page_title %}
+    Crear Examen con Asistencia de IA
+{% endblock %}
+
+{% block docente_content %}
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-lg border-0 rounded-4">
+        <div class="col-lg-9">
+            <div class="card shadow-sm border-0 rounded-4">
                 <div class="card-header bg-primary text-white rounded-top-4 p-4">
-                    <h3 class="mb-0"><i class="bi bi-robot me-2"></i>Crear Examen con Asistencia de IA</h3>
-                    <p class="mb-0 opacity-75">Sube tu material de estudio y deja que la IA genere las preguntas automáticamente.</p>
+                    <h3 class="mb-0 h5"><i class="bi bi-robot me-2"></i>Generador Inteligente de Preguntas</h3>
+                    <p class="mb-0 opacity-75 small">Sube tu material de estudio y deja que la IA genere las preguntas automáticamente.</p>
                 </div>
-                
-                <div class="card-body p-5">
+
+                <div class="card-body p-4">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
                             {% for category, message in messages %}
@@ -27,8 +31,9 @@
                     <form method="POST" enctype="multipart/form-data" id="formCrearExamen">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+                        <!-- Fila 1: Materia -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold">1. Selecciona la Materia <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold small">1. Selecciona la Materia <span class="text-danger">*</span></label>
                             <select name="materia_id" class="form-select form-select-lg" required>
                                 <option value="">-- Selecciona una materia --</option>
                                 {% for materia in materias %}
@@ -37,9 +42,10 @@
                             </select>
                         </div>
 
+                        <!-- Fila 2: Grado y Cantidad -->
                         <div class="row mb-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">2. Grado <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold small">2. Grado <span class="text-danger">*</span></label>
                                 <select name="grado" class="form-select form-select-lg" required>
                                     <option value="">-- Selecciona --</option>
                                     <option value="6°">6°</option>
@@ -51,28 +57,36 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">3. Cantidad de Preguntas</label>
+                                <label class="form-label fw-bold small">3. Cantidad de Preguntas</label>
                                 <input type="number" name="cantidad" class="form-control form-control-lg" value="5" min="1" max="20" required>
                                 <small class="text-muted">Máximo 20 preguntas por generación.</small>
                             </div>
                         </div>
 
+                        <!-- Fila 3: Archivo -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold">4. Subir Documento de Estudio <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold small">4. Subir Documento de Estudio <span class="text-danger">*</span></label>
                             <input type="file" name="archivo" class="form-control form-control-lg" accept=".pdf,.docx" required>
-                            <div class="form-text">Formatos permitidos: PDF o DOCX. El texto debe ser seleccionable (no imágenes escaneadas).</div>
+                            <div class="form-text mt-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Formatos permitidos: PDF o DOCX. El texto debe ser seleccionable (no imágenes escaneadas).
+                            </div>
                         </div>
 
-                        <div class="alert alert-info border-0 bg-info-subtle">
+                        <!-- Aviso de Privacidad -->
+                        <div class="alert alert-info border-0 bg-info-subtle mb-4">
                             <i class="bi bi-shield-check me-2"></i>
                             <strong>Privacidad garantizada:</strong> El sistema anonimiza automáticamente los datos sensibles antes de enviar el texto a la IA.
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill">
-                                <i class="bi bi-magic me-2"></i>Generar Preguntas con IA
+                        <!-- Botones de Acción -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                <i class="bi bi-magic me-2"></i>Generar Preguntas
                             </button>
-                            <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary rounded-pill">Cancelar</a>
                         </div>
                     </form>
                 </div>

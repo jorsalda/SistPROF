@@ -3,77 +3,160 @@
 {% block title %}Mis Exámenes | SistPROF{% endblock %}
 
 {% block docente_page_title %}
-Mis Exámenes
+    Mis Exámenes
 {% endblock %}
 
 {% block docente_content %}
 <div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes</h2>
-            <a href="{{ url_for('examen.crear_examen_ia') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Examen con IA
+
+    <!-- Encabezado con Acciones -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 fw-bold text-primary mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes
+        </h2>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('docente.crear_desde_banco') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-database me-1"></i> Crear desde Banco
+            </a>
+            <a href="{{ url_for('examen.crear_examen_ia') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-stars me-1"></i> Crear con IA
             </a>
         </div>
     </div>
 
     {% if examenes %}
-    <div class="row">
-        {% for examen in examenes %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">{{ examen.titulo }}</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text text-muted mb-2">{{ examen.descripcion }}</p>
+    <div class="row g-4">
+        {% for item in examenes %}
+            {% set e = item.examen %}
+            {% set total_preguntas = item.total_preguntas %}
 
-                    <div class="mb-2">
-                        <strong><i class="bi bi-clock me-1"></i>Tiempo:</strong>
-                        {{ examen.tiempo_limite_minutos }} minutos
+            <!-- ✅ LÓGICA DE ESTADO VISUAL -->
+            {% set tiene_programacion = e.programaciones|selectattr('activo', 'equalto', true)|list|length > 0 %}
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 exam-card">
+                    <!-- Cabecera con Badge de Estado -->
+                    <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-start">
+                        <span class="badge rounded-pill {% if tiene_programacion %}bg-success{% else %}bg-warning text-dark{% endif %} mb-2">
+                            {% if tiene_programacion %}
+                            <a href="{{ url_for('examen.ver_resultados_examen', id=e.id) }}"
+                               class="btn btn-info btn-sm w-100 text-white fw-semibold shadow-sm">
+                               <i class="bi bi-bar-chart-fill me-1"></i> Ver Resultados
+                            </a>
+                            {% else %}
+                            <!-- ✅ MEJORADO: Gris claro + borde punteado + candado -->
+                            <button class="btn btn-light btn-sm w-100 text-muted border-dashed"
+                                    style="border-style: dashed;" disabled>
+                                <i class="bi bi-lock-fill me-1"></i> Requiere asignación previa
+                            </button>
+                            {% endif %}
+                        </span>
+                        <small class="text-muted">{{ e.fecha_creacion.strftime('%d/%m/%Y') }}</small>
                     </div>
 
-                    <div class="mb-2">
-                        <strong><i class="bi bi-question-circle me-1"></i>Preguntas:</strong>
-                        {% if examen.contenido_json %}
-                        {{ examen.contenido_json|length }}
-                        {% else %}
-                        0
-                        {% endif %}
+                    <div class="card-body pt-2">
+                        <h5 class="card-title fw-bold text-truncate mb-1" title="{{ e.titulo }}">{{ e.titulo }}</h5>
+                        <p class="card-text text-muted small mb-3" style="min-height: 40px;">
+                            {{ e.descripcion[:80] + '...' if e.descripcion and e.descripcion|length > 80 else (e.descripcion or 'Sin descripción') }}
+                        </p>
+
+                        <!-- Metadatos Rápidos -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-clock me-1"></i>{{ e.tiempo_limite_minutos }} min
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-question-circle me-1"></i>{{ total_preguntas }} Preg.
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-book me-1"></i>{{ e.materia.nombre if e.materia else 'N/A' }}
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="mb-2">
-                        <strong><i class="bi bi-calendar me-1"></i>Creado:</strong>
-                        {{ examen.fecha_creacion.strftime('%d/%m/%Y') }}
-                    </div>
+                    <!-- ✅ FOOTER REORGANIZADO Y LIMPIO -->
+                    <div class="card-footer bg-white border-top-0 pb-3 px-3">
+                        <div class="d-grid gap-2">
 
-                    <div class="mb-3">
-                        <strong><i class="bi bi-book me-1"></i>Materia:</strong>
-                        {{ examen.materia.nombre if examen.materia else 'Sin materia' }}
-                    </div>
-                </div>
-                <div class="card-footer bg-white">
-                    <div class="btn-group w-100">
-                        <a href="{{ url_for('examen.ver_examen', id=examen.id) }}"
-                           class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye me-1"></i>Ver
-                        </a>
-                        
-                        <a href="{{ url_for('examen.editar_examen', id=examen.id) }}"
-                           class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-pencil me-1"></i>Editar
-                        </a>
+                            <!-- Fila 1: Ver y Editar (Juntos) -->
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('examen.ver_examen', id=e.id) }}"
+                                   class="btn btn-outline-primary btn-sm flex-fill" title="Ver detalles">
+                                    <i class="bi bi-eye"></i> Ver
+                                </a>
+                                {% if total_preguntas > 0 %}
+                                <a href="{{ url_for('examen.editar_examen', id=e.id) }}"
+                                   class="btn btn-outline-secondary btn-sm flex-fill" title="Editar contenido">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                {% else %}
+                                <button class="btn btn-outline-secondary btn-sm flex-fill" disabled title="Sin preguntas">
+                                    <i class="bi bi-lock"></i> Solo Lectura
+                                </button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Fila 2: Ver Resultados (Separado y destacado sutilmente) -->
+                            {% if tiene_programacion %}
+                            <a href="{{ url_for('examen.ver_resultados_examen', id=e.id) }}"
+                               class="btn btn-info btn-sm w-100 text-white fw-semibold shadow-sm">
+                               <i class="bi bi-bar-chart-fill me-1"></i> Ver Resultados
+                            </a>
+                            {% else %}
+                            <button class="btn btn-light btn-sm w-100 text-muted" disabled>
+                                <i class="bi bi-bar-chart me-1"></i> Ver Resultados (Requiere asignación)
+                            </button>
+                            {% endif %}
+
+                            <!-- Fila 3: Asignar a Grupo (Acción Principal Pendiente) -->
+                            <a href="/docentes/examen/{{ e.id }}/asignar"
+                               class="btn btn-warning btn-sm w-100 text-dark fw-semibold">
+                               <i class="bi bi-calendar-plus me-1"></i> Asignar a Grupo
+                            </a>
+
+                            <!-- Fila 4: Eliminar (Separado visualmente) -->
+                            <form action="/api/examen/eliminar/{{ e.id }}" method="POST"
+                                  onsubmit="return confirm('¿Eliminar este examen? Se marcará como borrado lógico.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-link text-danger text-decoration-none w-100 btn-sm p-0 py-1">
+                                    <i class="bi bi-trash me-1"></i> Eliminar examen
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="alert alert-info text-center">
-        <i class="bi bi-info-circle me-2"></i>
-        No tienes exámenes creados aún. ¡Crea tu primer examen con IA!
+    <div class="alert alert-info text-center py-5 shadow-sm border-0">
+        <i class="bi bi-inbox display-4 d-block mb-3 text-primary opacity-50"></i>
+        <h4 class="fw-bold">No tienes exámenes creados aún</h4>
+        <p class="text-muted mb-4">Comienza creando tu primera evaluación desde el banco de preguntas o usando nuestra IA.</p>
+        <a href="{{ url_for('docente.crear_desde_banco') }}" class="btn btn-primary px-4">
+            <i class="bi bi-plus-lg me-2"></i>Crear Primer Examen
+        </a>
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Estilos extra para dar toque profesional */
+    .exam-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .exam-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.1)!important;
+    }
+    .card-title {
+        font-size: 1.1rem;
+        line-height: 1.4;
+    }
+    /* Ajuste para el botón de eliminar tipo link */
+    .btn-link.text-danger:hover {
+        background-color: #fff5f5;
+        border-radius: 4px;
+    }
+</style>
 {% endblock %}

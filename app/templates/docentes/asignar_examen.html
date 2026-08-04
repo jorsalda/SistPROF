@@ -1,0 +1,97 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Asignar Examen | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+Programar Examen
+{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h5 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>Asignar Examen a Grupo</h5>
+                </div>
+                <div class="card-body p-4">
+
+                    <!-- Información del Examen -->
+                    <div class="alert alert-info mb-4 d-flex align-items-start">
+                        <i class="bi bi-journal-text fs-4 me-3 mt-1"></i>
+                        <div>
+                            <strong class="d-block mb-1">{{ examen.titulo }}</strong>
+                            <small class="text-muted">
+                                Materia: {{ examen.materia.nombre if examen.materia else 'N/A' }} |
+                                Preguntas: {{ examen.numero_preguntas or '?' }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <form method="POST">
+                        <!-- ✅ Token CSRF Obligatorio -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <!-- Selector de Grupo -->
+                        <div class="mb-3">
+                            <label for="grupo_id" class="form-label fw-semibold">
+                                <i class="bi bi-people-fill me-1"></i>Seleccionar Grupo
+                            </label>
+                            <select name="grupo_id" id="grupo_id" class="form-select form-select-lg" required>
+                                <option value="" disabled selected>-- Seleccione un grupo --</option>
+                                {% for grupo in grupos %}
+                                <option value="{{ grupo.id }}">
+                                    {{ grupo.grado }}{{ grupo.nombre }} - {{ grupo.sede.nombre if grupo.sede else 'Sin
+                                    Sede' }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if not grupos %}
+                            <div class="form-text text-danger">
+                                ️ No tienes grupos asignados en tu carga académica.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Fechas -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="fecha_apertura" class="form-label fw-semibold">
+                                    <i class="bi bi-play-circle me-1"></i>Apertura
+                                </label>
+                                <input type="datetime-local"
+                                       name="fecha_apertura"
+                                       id="fecha_apertura"
+                                       class="form-control"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fecha_cierre" class="form-label fw-semibold">
+                                    <i class="bi bi-stop-circle me-1"></i>Cierre
+                                </label>
+                                <input type="datetime-local"
+                                       name="fecha_cierre"
+                                       id="fecha_cierre"
+                                       class="form-control"
+                                       required>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                            <!-- ✅ VERSIÓN SEGURA: URL directa sin url_for -->
+                            <a href="/docentes/mis-examenes" class="btn btn-outline-secondary flex-grow-1">
+                                <i class="bi bi-x-circle me-1"></i> Cancelar
+                            </a>
+                            <button type="submit"
+                                    class="btn btn-success flex-grow-1"
+                                    {% if not grupos %}disabled{% endif %}>
+                                <i class="bi bi-check-circle me-1"></i> Guardar Programación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

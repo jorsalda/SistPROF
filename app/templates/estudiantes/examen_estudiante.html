@@ -85,13 +85,23 @@ Presentar Examen
 <script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
 
 <script>
+    // ✅ INYECCIÓN DIRECTA DEL ID DESDE FLASK (No depende de URL params)
+    const EXAMEN_ID_FLASK = {{ examen_id | default(0) }};
+
     $(document).ready(function() {
         if (typeof clsEstudiante !== 'undefined') {
+            // Usar el ID inyectado O el de la URL (fallback por si acaso)
             const urlParams = new URLSearchParams(window.location.search);
-            const examenId = urlParams.get('id');
-            if (examenId) {
-                clsEstudiante.seleccionarExamen(parseInt(examenId));
+            const examenId = EXAMEN_ID_FLASK || parseInt(urlParams.get('id'));
+
+            if (examenId && examenId > 0) {
+                console.log('>>>>> Iniciando examen ID:', examenId);
+                clsEstudiante.seleccionarExamen(examenId);
+            } else {
+                $('#question').html('<div class="alert alert-danger">Error: No se recibió ID de examen. Contacta al docente.</div>');
             }
+        } else {
+            $('#question').html('<div class="alert alert-danger">Error: No se pudo cargar el motor del examen (ClsEstudiante).</div>');
         }
     });
 </script>

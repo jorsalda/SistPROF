@@ -8,90 +8,164 @@
 
 {% block docente_content %}
 <div class="container-fluid py-4">
+
     <!-- Botón volver -->
     <div class="mb-4">
-        <a href="{{ url_for('examen.listar_examenes') }}" class="btn btn-outline-secondary btn-sm">
+        <a href="/api/examen/mis-examenes" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-2"></i>Volver a Mis Exámenes
         </a>
     </div>
 
     <!-- Encabezado del examen -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-primary text-white">
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-primary text-white p-3">
             <h3 class="mb-0">{{ examen.titulo }}</h3>
         </div>
-        <div class="card-body">
-            <p class="text-muted">{{ examen.descripcion }}</p>
-            <div class="row mt-3">
-                <div class="col-md-3">
-                    <strong><i class="bi bi-clock me-2"></i>Tiempo:</strong>
-                    <p>{{ examen.tiempo_limite_minutos }} min</p>
+        <div class="card-body p-4">
+            <p class="text-muted mb-4">{{ examen.descripcion or 'Sin descripción disponible' }}</p>
+
+            <div class="row g-3">
+                <div class="col-md-3 col-6">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-clock fs-4 text-primary me-3"></i>
+                        <div>
+                            <small class="text-muted d-block">Tiempo límite</small>
+                            <strong>{{ examen.tiempo_limite_minutos }} min</strong>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong><i class="bi bi-question-circle me-2"></i>Preguntas:</strong>
-                    <p>{{ examen.contenido_json|length }}</p>
+                <div class="col-md-3 col-6">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-question-circle fs-4 text-primary me-3"></i>
+                        <div>
+                            <small class="text-muted d-block">Preguntas</small>
+                            <!-- ✅ CONTEO SEGURO: Muestra 0 si es NULL -->
+                            <strong>{{ examen.contenido_json|length if examen.contenido_json else 0 }}</strong>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong><i class="bi bi-calendar me-2"></i>Fecha:</strong>
-                    <p>{{ examen.fecha_creacion.strftime('%d/%m/%Y') }}</p>
+                <div class="col-md-3 col-6">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar fs-4 text-primary me-3"></i>
+                        <div>
+                            <small class="text-muted d-block">Fecha creación</small>
+                            <strong>{{ examen.fecha_creacion.strftime('%d/%m/%Y') if examen.fecha_creacion else 'N/A' }}</strong>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong><i class="bi bi-book me-2"></i>Materia:</strong>
-                    <p>{{ examen.materia.nombre if examen.materia else 'Sin materia' }}</p>
+                <div class="col-md-3 col-6">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-book fs-4 text-primary me-3"></i>
+                        <div>
+                            <small class="text-muted d-block">Materia</small>
+                            <strong>{{ examen.materia.nombre if examen.materia else 'Sin materia' }}</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-footer bg-white">
-            <div class="btn-group">
-                <a href="{{ url_for('examen.editar_examen', id=examen.id) }}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-pencil me-2"></i>Editar
-                </a>
-                <a href="{{ url_for('examen.eliminar_examen', id=examen.id) }}"
-                   class="btn btn-danger btn-sm"
-                   onclick="return confirm('¿Estás seguro de eliminar este examen?')">
-                    <i class="bi bi-trash me-2"></i>Eliminar
-                </a>
-            </div>
-        </div>
-    </div>
 
-    <!-- Preguntas -->
-    <h4 class="mb-4"><i class="bi bi-list-ol me-2"></i>Preguntas del Examen</h4>
-
-    {% for pregunta in examen.contenido_json %}
-    <div class="card mb-3 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <span class="badge bg-primary me-2">Pregunta {{ pregunta.numero }}</span>
-            </h5>
-            <span class="badge bg-{% if pregunta.dificultad == 'baja' %}success{% elif pregunta.dificultad == 'media' %}warning{% else %}danger{% endif %}">
-                {{ pregunta.dificultad|capitalize }}
-            </span>
-        </div>
-        <div class="card-body">
-            <p class="card-text mb-3"><strong>{{ pregunta.texto }}</strong></p>
-
-            <div class="row mb-3">
-                {% for letra, opcion in pregunta.opciones.items() %}
-                <div class="col-md-6 mb-2">
-                    <div class="alert alert-{% if letra == pregunta.respuesta_correcta %}success{% else %}light{% endif %} border {% if letra == pregunta.respuesta_correcta %}border-success{% endif %}">
-                        <strong>{{ letra }})</strong> {{ opcion }}
-                        {% if letra == pregunta.respuesta_correcta %}
-                            <span class="badge bg-success float-end">✓ Correcta</span>
-                        {% endif %}
+        <!-- ✅ NUEVA SECCIÓN: Estado de Programación -->
+        {% if programaciones %}
+        <div class="card-footer bg-light border-top p-3">
+            <h6 class="fw-bold mb-3"><i class="bi bi-calendar-check me-2 text-success"></i>Grupos Asignados</h6>
+            <div class="row g-2">
+                {% for prog in programaciones %}
+                <div class="col-md-6">
+                    <div class="bg-white border rounded p-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-success me-2">Activo</span>
+                            <strong>{{ prog.grupo.grado }}{{ prog.grupo.nombre }}</strong>
+                            {% if prog.grupo.sede %}
+                                <small class="text-muted ms-1">({{ prog.grupo.sede.nombre }})</small>
+                            {% endif %}
+                        </div>
+                        <div class="text-end small text-muted">
+                            <div><i class="bi bi-play-circle me-1"></i>{{ prog.fecha_apertura.strftime('%d/%m %H:%M') }}</div>
+                            <div><i class="bi bi-stop-circle me-1"></i>{{ prog.fecha_cierre.strftime('%d/%m %H:%M') }}</div>
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-
-            {% if pregunta.explicacion %}
-            <div class="alert alert-info">
-                <strong><i class="bi bi-lightbulb me-2"></i>Retroalimentación:</strong>
-                <p class="mb-0">{{ pregunta.explicacion }}</p>
+        </div>
+        {% else %}
+        <div class="card-footer bg-warning bg-opacity-10 border-warning border-top p-3">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-3 mt-1"></i>
+                <div>
+                    <strong class="text-dark">Este examen no está asignado a ningún grupo.</strong>
+                    <p class="mb-0 text-muted small mt-1">Usa el botón "Asignar a Grupo" desde la lista de exámenes para activarlo y permitir que los estudiantes lo presenten.</p>
+                </div>
             </div>
+        </div>
+        {% endif %}
+
+        <!-- ✅ BOTONES DE ACCIÓN INTELIGENTES -->
+        <div class="card-footer bg-white border-top-0 p-3 d-flex gap-2">
+
+            <!-- Solo mostrar Editar si hay preguntas reales -->
+            {% if examen.contenido_json and examen.contenido_json|length > 0 %}
+                <a href="{{ url_for('examen.editar_examen', id=examen.id) }}" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-pencil me-2"></i>Editar Examen
+                </a>
+            {% else %}
+                <button class="btn btn-secondary btn-sm flex-grow-1" disabled title="Este examen no tiene preguntas para editar">
+                    <i class="bi bi-lock me-2"></i>Solo Lectura (Sin preguntas)
+                </button>
             {% endif %}
+
         </div>
     </div>
-    {% endfor %}
+
+    <!-- Preguntas -->
+    <h4 class="mb-4 fw-bold"><i class="bi bi-list-ol me-2 text-primary"></i>Preguntas del Examen</h4>
+
+    {% if examen.contenido_json and examen.contenido_json|length > 0 %}
+        {% for pregunta in examen.contenido_json %}
+        <div class="card mb-3 shadow-sm border-0">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center p-3">
+                <h5 class="mb-0 fs-6">
+                    <span class="badge bg-primary me-2">Pregunta {{ pregunta.numero }}</span>
+                </h5>
+                <span class="badge bg-{% if pregunta.dificultad == 'baja' %}success{% elif pregunta.dificultad == 'media' %}warning{% else %}danger{% endif %}">
+                    {{ pregunta.dificultad|capitalize }}
+                </span>
+            </div>
+            <div class="card-body p-4">
+                <p class="card-text mb-4 fs-5"><strong>{{ pregunta.texto }}</strong></p>
+
+                <div class="row g-3 mb-4">
+                    {% for letra, opcion in pregunta.opciones.items() %}
+                    <div class="col-md-6">
+                        <div class="alert alert-{% if letra == pregunta.respuesta_correcta %}success{% else %}light{% endif %} border {% if letra == pregunta.respuesta_correcta %}border-success{% endif %} mb-0 py-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ letra }})</strong> {{ opcion }}
+                                </div>
+                                {% if letra == pregunta.respuesta_correcta %}
+                                    <span class="badge bg-success ms-2">✓ Correcta</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if pregunta.explicacion %}
+                <div class="alert alert-info border-0 bg-info bg-opacity-10">
+                    <strong><i class="bi bi-lightbulb me-2"></i>Retroalimentación:</strong>
+                    <p class="mb-0 mt-1">{{ pregunta.explicacion }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-secondary text-center py-5">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            <p class="mb-0">Este examen aún no tiene preguntas cargadas.</p>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

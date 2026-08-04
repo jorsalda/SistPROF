@@ -22,7 +22,6 @@ docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
 # ==========================================================
 # DASHBOARD DEL DOCENTE (NUEVO - PARA DOCENTE LOGUEADO)
 # ==========================================================
-
 @docente_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -43,67 +42,63 @@ def dashboard():
         director_docente_id=docente.id,
         activo=True
     ).all()
-
     ids_grupos_dirigidos = [g.id for g in grupos_dirigidos]
 
-    # Contar estudiantes de grupos dirigidos
-    if ids_grupos_dirigidos:
-        total_estudiantes_dirigidos = Estudiante.query.filter(
-            Estudiante.grupo_id.in_(ids_grupos_dirigidos),
-            Estudiante.activo == True
-        ).count()
-    else:
-        total_estudiantes_dirigidos = 0
+    # =====================================================
+    # 2. GRUPOS DONDE ENSEÑA MATERIAS (rol académico)
+    # =====================================================
+    from app.models.grupo_materia import GrupoMateria
 
-    # =====================================================
-    # 2. ÁREAS QUE ENSEÑA (rol académico) - NUEVO
-    # =====================================================
-    # Obtener todas las asignaciones de áreas del docente
-    asignaciones_areas = db.session.query(GrupoAreas).filter_by(
+    asignaciones_materias = GrupoMateria.query.filter_by(
         docente_id=docente.id,
         activo=True
     ).all()
+    ids_grupos_materias = list(set([gm.grupo_id for gm in asignaciones_materias]))
 
-    # Estructura: {area_nombre: [grupos]}
+    # Unir ambos sets de IDs (evitando duplicados)
+    todos_ids_grupos = list(set(ids_grupos_dirigidos + ids_grupos_materias))
+
+    # Contar estudiantes de TODOS los grupos relacionados
+    if todos_ids_grupos:
+        total_estudiantes = Estudiante.query.filter(
+            Estudiante.grupo_id.in_(todos_ids_grupos),
+            Estudiante.activo == True
+        ).count()
+    else:
+        total_estudiantes = 0
+
+    # =====================================================
+    # 3. CARGA ACADÉMICA DETALLADA (materias por grupo)
+    # =====================================================
     carga_academica = {}
-    grupos_ids_academicos = set()
 
-    for asignacion in asignaciones_areas:
-        area_nombre = asignacion.area.nombre if asignacion.area else "Sin área"
+    for asignacion in asignaciones_materias:
+        materia_nombre = asignacion.materia.nombre if asignacion.materia else "Sin materia"
         grupo = asignacion.grupo
 
-        if area_nombre not in carga_academica:
-            carga_academica[area_nombre] = []
+        if not grupo or not grupo.activo:
+            continue
+
+        grupo_key = f"{grupo.grado}{grupo.nombre}"
+
+        if materia_nombre not in carga_academica:
+            carga_academica[materia_nombre] = []
 
         grupo_info = {
             'id': grupo.id,
-            'nombre': f"{grupo.grado}{grupo.nombre}",
-            'sede': grupo.sede.nombre if grupo.sede else "N/A"
+            'nombre': grupo_key,
+            'sede': grupo.sede.nombre if grupo.sede else "N/A",
+            'horas': asignacion.horas_semanales or 0
         }
 
-        # Evitar duplicados
-        if grupo_info not in carga_academica[area_nombre]:
-            carga_academica[area_nombre].append(grupo_info)
-            grupos_ids_academicos.add(grupo.id)
-
-    # =====================================================
-    # 3. ESTUDIANTES DE GRUPOS ACADÉMICOS - NUEVO
-    # =====================================================
-    # Obtener estudiantes de los grupos donde enseña
-    if grupos_ids_academicos:
-        estudiantes_academicos = Estudiante.query.filter(
-            Estudiante.grupo_id.in_(list(grupos_ids_academicos)),
-            Estudiante.activo == True
-        ).order_by(Estudiante.nombre).all()
-    else:
-        estudiantes_academicos = []
+        # Evitar duplicados exactos
+        if grupo_info not in carga_academica[materia_nombre]:
+            carga_academica[materia_nombre].append(grupo_info)
 
     # =====================================================
     # 4. PERMISOS (sin cambios)
     # =====================================================
-    total_permisos = Permiso.query.filter_by(
-        docente_id=docente.id
-    ).count()
+    total_permisos = Permiso.query.filter_by(docente_id=docente.id).count()
 
     permisos_activos = Permiso.query.filter(
         Permiso.docente_id == docente.id,
@@ -121,17 +116,16 @@ def dashboard():
     return render_template(
         "docentes/dashboard.html",
         docente=docente,
-        total_estudiantes=total_estudiantes_dirigidos,  # Para mantener compatibilidad
+        total_estudiantes=total_estudiantes,
         total_permisos=total_permisos,
         permisos_activos=permisos_activos,
         ultimos_permisos=ultimos_permisos,
         hoy=hoy,
-        # NUEVO: Carga académica
         carga_academica=carga_academica,
-        estudiantes_academicos=estudiantes_academicos,
-        total_areas=len(carga_academica),
-        total_grupos_academicos=len(grupos_ids_academicos)
+        total_materias=len(carga_academica),
+        total_grupos=len(todos_ids_grupos)
     )
+
 
 @docente_bp.route("/mis-estudiantes")
 @login_required
@@ -147,23 +141,41 @@ def mis_estudiantes():
     # Obtener filtros
     search = request.args.get('search', '').strip()
     sede_id = request.args.get('sede_id', type=int)
+    grupo_id = request.args.get('grupo_id', type=int)  # NUEVO: Filtro por grupo
 
-    # Buscar estudiantes a través de los grupos que dirige
-    grupos_del_docente = Grupo.query.filter_by(
-        director_docente_id=docente.id,
-        activo=True
+    # =====================================================
+    # CORRECCIÓN: Obtener grupos por DOS vías
+    # =====================================================
+    from app.models.grupo_materia import GrupoMateria
+
+    # Vía 1: Director de grupo
+    grupos_dirigidos = Grupo.query.filter_by(
+        director_docente_id=docente.id, activo=True
     ).all()
+    ids_grupos_dirigidos = [g.id for g in grupos_dirigidos]
 
-    ids_grupos = [g.id for g in grupos_del_docente]
+    # Vía 2: Materias asignadas en grupo_materias
+    asignaciones_materias = GrupoMateria.query.filter_by(
+        docente_id=docente.id, activo=True
+    ).all()
+    ids_grupos_materias = list(set([gm.grupo_id for gm in asignaciones_materias]))
 
-    # Consulta base
-    if ids_grupos:
+    # Unir ambos sets de IDs
+    todos_ids_grupos = list(set(ids_grupos_dirigidos + ids_grupos_materias))
+
+    # Obtener objetos Grupo completos para el filtro dropdown
+    grupos_disponibles = Grupo.query.filter(
+        Grupo.id.in_(todos_ids_grupos), Grupo.activo == True
+    ).order_by(Grupo.grado, Grupo.nombre).all() if todos_ids_grupos else []
+
+    # Consulta base de estudiantes
+    if todos_ids_grupos:
         consulta = Estudiante.query.filter(
-            Estudiante.grupo_id.in_(ids_grupos),
+            Estudiante.grupo_id.in_(todos_ids_grupos),
             Estudiante.activo == True
         )
 
-        # Aplicar filtros
+        # Aplicar filtros adicionales
         if search:
             from sqlalchemy import or_
             consulta = consulta.filter(
@@ -176,6 +188,10 @@ def mis_estudiantes():
         if sede_id:
             consulta = consulta.filter_by(sede_id=sede_id)
 
+        # NUEVO: Filtrar por grupo específico si se seleccionó
+        if grupo_id:
+            consulta = consulta.filter_by(grupo_id=grupo_id)
+
         estudiantes_lista = consulta.order_by(Estudiante.nombre).all()
     else:
         estudiantes_lista = []
@@ -183,8 +199,7 @@ def mis_estudiantes():
     # Obtener sedes para el filtro
     from app.models.sede import Sede
     sedes = Sede.query.filter_by(
-        colegio_id=docente.colegio_id,
-        activo=True
+        colegio_id=docente.colegio_id, activo=True
     ).order_by(Sede.nombre).all()
 
     # Estadísticas
@@ -196,11 +211,14 @@ def mis_estudiantes():
         estudiantes=estudiantes_lista,
         docente=docente,
         sedes=sedes,
+        grupos_disponibles=grupos_disponibles,  # NUEVO: Para el dropdown
         search=search,
         current_sede_id=sede_id,
+        current_grupo_id=grupo_id,  # NUEVO: Para mantener seleccionado
         total_estudiantes=total_estudiantes,
         activos=activos
     )
+
 
 @docente_bp.route("/mis-permisos")
 @login_required
@@ -806,4 +824,92 @@ def crear_desde_banco():
         docente=docente,
         materias=materias,
         preguntas_banco=preguntas_banco
+    )
+
+# ==========================================================
+# ASIGNAR EXAMEN
+# ==========================================================
+
+@docente_bp.route("/examen/<int:id>/asignar", methods=["GET", "POST"])
+@login_required
+def asignar_examen(id):
+    if current_user.rol != 'docente':
+        abort(403)
+
+    # ✅ IMPORTS CORREGIDOS: Apuntando directamente a examen.py
+    from app.models.examen import Examen, ProgramacionExamen
+    from app.models.grupo import Grupo
+    from app.models.grupo_materia import GrupoMateria
+
+    examen = Examen.query.get_or_404(id)
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+
+    if not docente:
+        flash("Error: No se encontró perfil de docente.", "danger")
+        return redirect(url_for("docente.mis_examenes"))
+
+    # Obtener SOLO los grupos donde este docente tiene carga académica activa
+    ids_grupos_docente = db.session.query(GrupoMateria.grupo_id).filter_by(
+        docente_id=docente.id,
+        activo=True
+    ).all()
+
+    # Convertir lista de tuplas a lista simple de IDs
+    ids_grupos_docente = [g[0] for g in ids_grupos_docente]
+
+    # Traer objetos Grupo completos para el formulario
+    grupos_disponibles = []
+    if ids_grupos_docente:
+        grupos_disponibles = Grupo.query.filter(
+            Grupo.id.in_(ids_grupos_docente),
+            Grupo.activo == True
+        ).order_by(Grupo.grado, Grupo.nombre).all()
+
+    if request.method == "POST":
+        grupo_id = request.form.get("grupo_id")
+        fecha_apertura = request.form.get("fecha_apertura")
+        fecha_cierre = request.form.get("fecha_cierre")
+
+        # Validación básica
+        if not grupo_id or not fecha_apertura or not fecha_cierre:
+            flash("Todos los campos son obligatorios", "danger")
+            return redirect(url_for("docente.asignar_examen", id=id))
+
+        # Verificar si ya existe programación para este examen+grupo
+        existe = ProgramacionExamen.query.filter_by(
+            examen_id=id,
+            grupo_id=int(grupo_id)
+        ).first()
+
+        try:
+            if existe:
+                # Si existe, actualizamos fechas y reactivamos
+                existe.fecha_apertura = fecha_apertura
+                existe.fecha_cierre = fecha_cierre
+                existe.activo = True
+                flash("Programación actualizada correctamente", "success")
+            else:
+                # Crear nueva programación
+                nueva_prog = ProgramacionExamen(
+                    examen_id=id,
+                    grupo_id=int(grupo_id),
+                    fecha_apertura=fecha_apertura,
+                    fecha_cierre=fecha_cierre,
+                    activo=True
+                )
+                db.session.add(nueva_prog)
+                flash("Examen asignado al grupo exitosamente", "success")
+
+            db.session.commit()
+            return redirect("/api/examen/mis-examenes")
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al guardar: {str(e)}", "danger")
+
+    # Renderizar formulario (GET)
+    return render_template(
+        "docentes/asignar_examen.html",
+        examen=examen,
+        grupos=grupos_disponibles
     )

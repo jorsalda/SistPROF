@@ -5,26 +5,26 @@
 {% block colegio_content %}
 
 <style>
-    /* ─── CONTENEDOR SCROLL ─── */
+    /* ── CONTENEDOR SCROLL ─── */
     .scroll-box {
         width: 100%;
         overflow-x: auto;
-        overflow-y: visible;           /* ✅ cambiado: deja que crezca verticalmente */
+        overflow-y: visible;
         border: 1px solid #dee2e6;
         background-color: #fff;
         margin-bottom: 2rem;
-        display: block;                /* ✅ asegura comportamiento de bloque */
-        position: relative;            /* ✅ contexto para z-index */
+        display: block;
+        position: relative;
     }
 
     /* ─── TABLA ANCHA ─── */
     .tabla-ancha {
-        width: max-content;            /* ✅ fuerza expansión horizontal */
+        width: max-content;
         min-width: 100%;
         margin-bottom: 0;
-        border-collapse: separate;     /* ✅ cambiado: sticky funciona mejor */
+        border-collapse: separate;
         border-spacing: 0;
-        table-layout: auto !important; /* ✅ evita que Bootstrap la comprima */
+        table-layout: auto !important;
     }
 
     /* ─── COLUMNA GRUPO FIJA ─── */
@@ -45,7 +45,7 @@
         background-color: #e9ecef;
     }
 
-    /* ─── CELDAS ─── */
+    /* ── CELDAS ─── */
     .tabla-ancha th,
     .tabla-ancha td {
         white-space: nowrap;
@@ -56,26 +56,11 @@
     }
 
     /* ─── BARRAS DE SCROLL VISIBLES ─── */
-    .scroll-box::-webkit-scrollbar {
-        height: 14px;
-        display: block;
-    }
-    .scroll-box::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 7px;
-    }
-    .scroll-box::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 7px;
-        border: 3px solid #f1f1f1;
-    }
-    .scroll-box::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-    .scroll-box {
-        scrollbar-width: auto;
-        scrollbar-color: #888 #f1f1f1;
-    }
+    .scroll-box::-webkit-scrollbar { height: 14px; display: block; }
+    .scroll-box::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 7px; }
+    .scroll-box::-webkit-scrollbar-thumb { background: #888; border-radius: 7px; border: 3px solid #f1f1f1; }
+    .scroll-box::-webkit-scrollbar-thumb:hover { background: #555; }
+    .scroll-box { scrollbar-width: auto; scrollbar-color: #888 #f1f1f1; }
 
     /* ─── COLORES POR NIVEL ─── */
     .header-preescolar  { background-color: #fff3cd !important; color: #856404 !important; }
@@ -93,9 +78,9 @@
             <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>Gestión de Carga Académica</h2>
             <p class="text-muted mb-0">Asigne materias a grupos y distribuya la carga docente</p>
         </div>
-        <a href="{{ url_for('colegio.resumen_carga_academica') }}" class="btn btn-outline-primary">
-            <i class="bi bi-bar-chart me-2"></i>Ver Resumen
-        </a>
+        <!-- <a href="#" class="btn btn-outline-primary disabled">
+    <i class="bi bi-bar-chart me-2"></i>Ver Resumen (Próximamente)
+</a> -->
     </div>
 
     <!-- Filtros -->
@@ -148,6 +133,9 @@
     <!-- Formulario único -->
     <form method="POST" action="{{ url_for('colegio.guardar_carga_academica') }}">
 
+        <!-- ✅ CORRECCIÓN 1: Token CSRF Obligatorio -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         {% for nivel, datos in datos_por_nivel.items() %}
         {% if datos.grupos and datos.materias %}
 
@@ -188,22 +176,29 @@
                         </td>
                         {% for materia in datos.materias %}
                         <td style="min-width: 150px;">
-                            {% set docente_id = asignaciones_dict.get((grupo.id, materia.id)) %}
+                            {# ✅ CORRECCIÓN 2: Lógica robusta para seleccionar docente #}
+                            {% set clave_asignacion = (grupo.id, materia.id) %}
+                            {% set id_docente_actual = asignaciones_dict.get(clave_asignacion) %}
+
                             <select name="docente_{{ grupo.id }}_{{ materia.id }}" class="form-select form-select-sm mb-1">
                                 <option value="">Sin asignar</option>
                                 {% for docente in docentes %}
-                                <option value="{{ docente.id }}" {% if docente_id == docente.id %}selected{% endif %}>
+                                <option value="{{ docente.id }}"
+                                    {% if id_docente_actual and id_docente_actual == docente.id %}selected{% endif %}>
                                     {{ docente.nombre.split(' ')[0] }}
                                 </option>
                                 {% endfor %}
                             </select>
+
+                            {# ✅ CORRECCIÓN 3: Normalización de grado para buscar horas del plan #}
+                            {% set grado_limpio = grupo.grado.replace('°', '').replace('º', '').strip() %}
                             {% set horas_default = 2 %}
-                            {% if horas_plan_dict %}
-                                {% set horas_encontradas = horas_plan_dict.get((grupo.grado, materia.id)) %}
-                                {% if horas_encontradas is not none %}
-                                    {% set horas_default = horas_encontradas %}
-                                {% endif %}
+                            {% if horas_plan_dict.get((grupo.grado, materia.id)) is not none %}
+                                {% set horas_default = horas_plan_dict.get((grupo.grado, materia.id)) %}
+                            {% elif horas_plan_dict.get((grado_limpio, materia.id)) is not none %}
+                                {% set horas_default = horas_plan_dict.get((grado_limpio, materia.id)) %}
                             {% endif %}
+
                             <input type="number" name="horas_{{ grupo.id }}_{{ materia.id }}"
                                    value="{{ horas_default }}" min="0" max="10"
                                    class="form-control form-control-sm" placeholder="Horas">

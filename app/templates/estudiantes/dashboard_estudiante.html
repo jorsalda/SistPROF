@@ -83,8 +83,6 @@ Dashboard Estudiante
     </div>
 </div>
 
-
-
 <!-- Información del Estudiante -->
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-primary text-white">
@@ -164,11 +162,10 @@ Dashboard Estudiante
                             <p class="text-muted mt-3">
                                 No has presentado ningún examen aún.
                             </p>
-                           <a href="{{ url_for('examen.listado_examenes') }}" class="btn btn-primary">
-                        <i class="bi bi-pencil-square"></i>
-                        Presentar Examen
-                    </a>
-
+                            <!-- ✅ CORREGIDO: Enlace a la ruta segura del estudiante -->
+                            <a href="{{ url_for('estudiante.examenes_disponibles') }}" class="btn btn-primary">
+                                <i class="bi bi-play-fill me-1"></i> Ver Exámenes Disponibles
+                            </a>
                         </td>
                     </tr>
                 {% endif %}

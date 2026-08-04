@@ -56,18 +56,20 @@ Mis Estudiantes
         <div class="card-body p-4">
             <form method="GET" action="{{ url_for('docente.mis_estudiantes') }}">
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <!-- Buscador por Nombre -->
+                    <div class="col-md-5">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-search me-1"></i>Buscar por nombre
                         </label>
                         <input type="text"
                                name="search"
                                class="form-control"
-                               placeholder="Nombre del estudiante"
+                               placeholder="Nombre o apellido del estudiante"
                                value="{{ search }}">
                     </div>
 
-                    <div class="col-md-4">
+                    <!-- Filtro por Sede -->
+                    <div class="col-md-3">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-building me-1"></i>Filtrar por sede
                         </label>
@@ -82,6 +84,23 @@ Mis Estudiantes
                         </select>
                     </div>
 
+                    <!-- ✅ NUEVO: Filtro por Grupo -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-collection me-1"></i>Filtrar por grupo
+                        </label>
+                        <select name="grupo_id" class="form-select">
+                            <option value="">Todos los grupos</option>
+                            {% for grupo in grupos_disponibles %}
+                            <option value="{{ grupo.id }}"
+                                    {% if current_grupo_id == grupo.id %}selected{% endif %}>
+                                {{ grupo.grado }}{{ grupo.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Botón Buscar -->
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-search me-1"></i>Buscar
@@ -89,7 +108,8 @@ Mis Estudiantes
                     </div>
                 </div>
 
-                {% if search or current_sede_id %}
+                <!-- Botón Limpiar Filtros (Mejorado) -->
+                {% if search or current_sede_id or current_grupo_id %}
                 <div class="mt-3">
                     <a href="{{ url_for('docente.mis_estudiantes') }}"
                        class="btn btn-outline-secondary btn-sm">
@@ -132,7 +152,7 @@ Mis Estudiantes
                             <td>{{ estudiante.email or 'N/A' }}</td>
                             <td>
                                 {% if estudiante.sede %}
-                                <span class="badge bg-light text-dark">
+                                <span class="badge bg-light text-dark border">
                                     {{ estudiante.sede.nombre }}
                                 </span>
                                 {% else %}
@@ -140,15 +160,18 @@ Mis Estudiantes
                                 {% endif %}
                             </td>
                             <td>{{ estudiante.jornada.nombre if estudiante.jornada else 'N/A' }}</td>
+
+                            <!-- ✅ CORREGIDO: Usa campos directos del modelo Estudiante -->
                             <td>
-                                {% if estudiante.grupo_rel %}
+                                {% if estudiante.grado and estudiante.grupo %}
                                 <span class="badge bg-primary">
-                                    {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre }}
+                                    {{ estudiante.grado }}{{ estudiante.grupo }}
                                 </span>
                                 {% else %}
-                                N/A
+                                <span class="text-muted fst-italic">Sin asignar</span>
                                 {% endif %}
                             </td>
+
                             <td class="text-center">
                                 {% if estudiante.activo %}
                                 <span class="badge bg-success">
@@ -172,7 +195,7 @@ Mis Estudiantes
         <i class="bi bi-info-circle-fill fs-4 me-3"></i>
         <div>
             <strong>No se encontraron estudiantes</strong><br>
-            {% if search or current_sede_id %}
+            {% if search or current_sede_id or current_grupo_id %}
                 Intente ajustar los filtros de búsqueda.
             {% else %}
                 No tiene estudiantes asignados en este momento.

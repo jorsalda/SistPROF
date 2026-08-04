@@ -1659,35 +1659,37 @@ def configurar_materias_nivel():
 
 
 # ==========================================================
-# GESTIÓN DE CARGA ACADÉMICA (CORREGIDO Y DEFINITIVO)
+# GESTIÓN DE CARGA ACADÉMICA (REFACTORIZADO Y DEFINITIVO)
 # ==========================================================
 
-@colegio_bp.route('/carga-academica')
-@login_required
-def gestion_carga_academica():
-    """Vista global para asignar MATERIAS a grupos con docentes, agrupada POR NIVEL REAL"""
+def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None):
+    """
+    Función auxiliar centralizada para cargar TODOS los datos necesarios
+    para la vista de carga académica. Se usa tanto en GET como en POST exitoso.
+    """
     from app.models.grupo_materia import GrupoMateria
     from app.models.plan_estudios import PlanEstudios
     from sqlalchemy import func
 
-    sede_id = request.args.get('sede_id', type=int)
-    jornada_id = request.args.get('jornada_id', type=int)
-    grado_url = request.args.get('grado', '').strip()
+    colegio_id = current_user.colegio_id
 
-    # 1. Obtener grupos
-    grupos_query = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True)
-    if sede_id: grupos_query = grupos_query.filter_by(sede_id=sede_id)
-    if jornada_id: grupos_query = grupos_query.filter_by(jornada_id=jornada_id)
-    if grado_url: grupos_query = grupos_query.filter_by(grado=grado_url)
+    # 1. Obtener grupos con filtros
+    grupos_query = Grupo.query.filter_by(colegio_id=colegio_id, activo=True)
+    if sede_id:
+        grupos_query = grupos_query.filter_by(sede_id=sede_id)
+    if jornada_id:
+        grupos_query = grupos_query.filter_by(jornada_id=jornada_id)
+    if grado_url:
+        grupos_query = grupos_query.filter(
+            func.replace(func.replace(Grupo.grado, '°', ''), 'º', '') == grado_url.replace('°', '').replace('º', ''))
+
     grupos = grupos_query.order_by(Grupo.grado, Grupo.nombre).all()
 
-    # 2. DETECTAR NIVEL AUTOMÁTICAMENTE según las materias del Plan de Estudios
+    # 2. Detectar nivel automáticamente basado en materias del Plan
     def detectar_nivel(grado_raw):
         grado_limpio = grado_raw.replace('°', '').replace('º', '').strip()
-
-        # Buscar materias configuradas para este grado
         plan_items = PlanEstudios.query.filter(
-            PlanEstudios.colegio_id == current_user.colegio_id,
+            PlanEstudios.colegio_id == colegio_id,
             func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
             PlanEstudios.activo == True,
             PlanEstudios.horas_semanales > 0
@@ -1696,12 +1698,9 @@ def gestion_carga_academica():
         if not plan_items:
             return 'OTRAS MODALIDADES'
 
-        # Obtener nombres de materias para detectar el nivel
         materia_ids = [p.materia_id for p in plan_items]
         materias_obj = Materia.query.filter(Materia.id.in_(materia_ids)).all()
         nombres_materias = [m.nombre.lower() for m in materias_obj]
-
-        # Lógica de detección por palabras clave en los nombres de materias
         texto_materias = ' '.join(nombres_materias)
 
         if any(kw in texto_materias for kw in
@@ -1728,7 +1727,7 @@ def gestion_carga_academica():
             grupos_por_nivel[nivel] = []
         grupos_por_nivel[nivel].append(g)
 
-    # 4. Para cada nivel, obtener sus materias y horas
+    # 4. Para cada nivel, obtener sus materias y horas del plan
     datos_por_nivel = {}
     horas_plan_dict = {}
 
@@ -1737,7 +1736,7 @@ def gestion_carga_academica():
         for g in grupos_nivel:
             grado_limpio = g.grado.replace('°', '').replace('º', '').strip()
             ids = db.session.query(PlanEstudios.materia_id).filter(
-                PlanEstudios.colegio_id == current_user.colegio_id,
+                PlanEstudios.colegio_id == colegio_id,
                 func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
                 PlanEstudios.activo == True,
                 PlanEstudios.horas_semanales > 0
@@ -1750,7 +1749,7 @@ def gestion_carga_academica():
         for g in grupos_nivel:
             grado_limpio = g.grado.replace('°', '').replace('º', '').strip()
             plan_items = PlanEstudios.query.filter(
-                PlanEstudios.colegio_id == current_user.colegio_id,
+                PlanEstudios.colegio_id == colegio_id,
                 func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
                 PlanEstudios.activo == True,
                 PlanEstudios.horas_semanales > 0
@@ -1761,36 +1760,55 @@ def gestion_carga_academica():
         datos_por_nivel[nivel] = {'grupos': grupos_nivel, 'materias': materias_nivel}
 
     # 5. Datos complementarios
-    docentes = Docente.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Docente.nombre).all()
-    asignaciones = GrupoMateria.query.filter(GrupoMateria.activo == True).join(Grupo,
-                                                                               GrupoMateria.grupo_id == Grupo.id).filter(
-        Grupo.colegio_id == current_user.colegio_id).all()
+    docentes = Docente.query.filter_by(colegio_id=colegio_id, activo=True).order_by(Docente.nombre).all()
+
+    grupo_ids = [g.id for g in grupos]
+    asignaciones = GrupoMateria.query.filter(
+        GrupoMateria.grupo_id.in_(grupo_ids),
+        GrupoMateria.activo == True
+    ).all() if grupo_ids else []
+
+    # Diccionario rápido: {(grupo_id, materia_id): docente_id}
     asignaciones_dict = {(a.grupo_id, a.materia_id): a.docente_id for a in asignaciones}
-    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
-    jornadas = Jornada.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Jornada.nombre).all()
-    grados_unicos = [g[0] for g in db.session.query(Grupo.grado).filter_by(colegio_id=current_user.colegio_id,
-                                                                           activo=True).distinct().order_by(
-        Grupo.grado).all()]
+
+    sedes = Sede.query.filter_by(colegio_id=colegio_id, activo=True).order_by(Sede.nombre).all()
+    jornadas = Jornada.query.filter_by(colegio_id=colegio_id, activo=True).order_by(Jornada.nombre).all()
+    grados_unicos = sorted(list(set([g.grado for g in grupos])))
+
+    return {
+        'datos_por_nivel': datos_por_nivel,
+        'docentes': docentes,
+        'asignaciones_dict': asignaciones_dict,
+        'sedes': sedes,
+        'jornadas': jornadas,
+        'grados_unicos': grados_unicos,
+        'horas_plan_dict': horas_plan_dict
+    }
+
+
+@colegio_bp.route('/carga-academica')
+@login_required
+def gestion_carga_academica():
+    """Vista GET: muestra la tabla de carga académica"""
+    sede_id = request.args.get('sede_id', type=int)
+    jornada_id = request.args.get('jornada_id', type=int)
+    grado_url = request.args.get('grado', '').strip()
+
+    data = _cargar_datos_carga_academica(sede_id, jornada_id, grado_url)
 
     return render_template(
         'colegio/carga_academica.html',
-        datos_por_nivel=datos_por_nivel,
-        docentes=docentes,
-        asignaciones_dict=asignaciones_dict,
-        sedes=sedes,
-        jornadas=jornadas,
-        grados_unicos=grados_unicos,
         current_sede_id=sede_id,
         current_jornada_id=jornada_id,
         current_grado=grado_url,
-        horas_plan_dict=horas_plan_dict
+        **data
     )
 
 
 @colegio_bp.route('/carga-academica/guardar', methods=['POST'])
 @login_required
 def guardar_carga_academica():
-    """Guarda asignaciones con validaciones robustas"""
+    """Guarda asignaciones con validaciones robustas y RENDERIZA directamente tras éxito"""
     from app.models.grupo_materia import GrupoMateria
     from app.models.plan_estudios import PlanEstudios
     from sqlalchemy import func
@@ -1798,10 +1816,7 @@ def guardar_carga_academica():
     try:
         # Obtener todos los grupos activos del colegio
         grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
-
-        # Obtener TODAS las materias posibles (para iterar sobre el formulario)
         todas_las_materias = Materia.query.all()
-
         nuevas_asignaciones = {}
 
         # 1. RECOPILAR DATOS DEL FORMULARIO
@@ -1809,14 +1824,10 @@ def guardar_carga_academica():
             for materia in todas_las_materias:
                 doc_id = request.form.get(f'docente_{grupo.id}_{materia.id}', type=int)
                 horas = request.form.get(f'horas_{grupo.id}_{materia.id}', 0, type=int)
-
-                # Solo procesar si hay docente y horas > 0
                 if doc_id and horas > 0:
                     nuevas_asignaciones[(grupo.id, materia.id)] = {
-                        'docente_id': doc_id,
-                        'horas': horas,
-                        'grupo': grupo,
-                        'materia': materia
+                        'docente_id': doc_id, 'horas': horas,
+                        'grupo': grupo, 'materia': materia
                     }
 
         # 2. VALIDAR HORAS POR GRADO VS PLAN DE ESTUDIOS
@@ -1826,18 +1837,13 @@ def guardar_carga_academica():
 
         errores_grado = {}
         for grado_raw, h_asignadas in horas_por_grado.items():
-            # Normalizar grado para búsqueda (quitar ° si existe)
             grado_limpio = grado_raw.replace('°', '').replace('º', '').strip()
-
-            # Buscar plan usando normalización SQL para asegurar coincidencia
             plan_items = PlanEstudios.query.filter(
                 PlanEstudios.colegio_id == current_user.colegio_id,
                 func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
                 PlanEstudios.activo == True
             ).all()
-
             h_plan = sum(int(p.horas_semanales) for p in plan_items)
-
             if h_asignadas > h_plan:
                 errores_grado[grado_raw] = {'plan': h_plan, 'asignadas': h_asignadas}
 
@@ -1845,6 +1851,7 @@ def guardar_carga_academica():
             msg = "; ".join(
                 [f"Grado {g}: Plan={d['plan']}h, Asignadas={d['asignadas']}h" for g, d in errores_grado.items()])
             flash(f"⚠️ Error: Horas exceden el Plan de Estudios. Detalles: {msg}", 'danger')
+            # En caso de error SÍ hacemos redirect para limpiar form
             return redirect(url_for('colegio.gestion_carga_academica'))
 
         # 3. VALIDAR MÁXIMO 22H POR DOCENTE
@@ -1865,29 +1872,21 @@ def guardar_carga_academica():
 
         # 4. GUARDAR ASIGNACIONES EN BASE DE DATOS
         cambios = 0
-
-        # Pre-calcular materias válidas por grado para optimizar
         materias_validas_por_grado = {}
 
         for grupo in grupos:
             grado_limpio = grupo.grado.replace('°', '').replace('º', '').strip()
-
-            # Obtener IDs de materias válidas para este grado según el Plan
             ids_validos = db.session.query(PlanEstudios.materia_id).filter(
                 PlanEstudios.colegio_id == current_user.colegio_id,
                 func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
                 PlanEstudios.activo == True,
                 PlanEstudios.horas_semanales > 0
             ).distinct().all()
-
             materias_validas_por_grado[grupo.id] = set([id[0] for id in ids_validos])
 
-        # Iterar y guardar
         for grupo in grupos:
             ids_validos = materias_validas_por_grado.get(grupo.id, set())
-
             for materia in todas_las_materias:
-                # Solo procesar si la materia es válida para este grado según el Plan
                 if materia.id not in ids_validos:
                     continue
 
@@ -1895,67 +1894,34 @@ def guardar_carga_academica():
                 horas = request.form.get(f'horas_{grupo.id}_{materia.id}', 0, type=int)
 
                 asignacion = GrupoMateria.query.filter_by(
-                    grupo_id=grupo.id,
-                    materia_id=materia.id,
-                    activo=True
+                    grupo_id=grupo.id, materia_id=materia.id, activo=True
                 ).first()
 
                 if doc_id and horas > 0:
                     if asignacion:
-                        # Actualizar existente
                         if asignacion.docente_id != doc_id or asignacion.horas_semanales != horas:
                             asignacion.docente_id = doc_id
                             asignacion.horas_semanales = horas
                             cambios += 1
                     else:
-                        # Crear nueva
                         db.session.add(GrupoMateria(
-                            grupo_id=grupo.id,
-                            materia_id=materia.id,
-                            docente_id=doc_id,
-                            horas_semanales=horas,
-                            activo=True
+                            grupo_id=grupo.id, materia_id=materia.id,
+                            docente_id=doc_id, horas_semanales=horas, activo=True
                         ))
                         cambios += 1
                 elif asignacion:
-                    # Si no hay docente/horas pero existía, desactivar
                     asignacion.activo = False
+                    cambios += 1
 
         db.session.commit()
         flash(f'✅ Carga académica actualizada. {cambios} cambios realizados.', 'success')
-        return redirect(url_for('colegio.gestion_carga_academica'))
+
+        # ✅ SOLUCIÓN CLAVE: Renderizar directamente con datos frescos tras éxito
+        # No usamos redirect, sino que recargamos los datos y pintamos la página
+        data = _cargar_datos_carga_academica()
+        return render_template('colegio/carga_academica.html', **data)
 
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ Error al guardar: {str(e)}', 'danger')
+        flash(f' Error al guardar: {str(e)}', 'danger')
         return redirect(url_for('colegio.gestion_carga_academica'))
-
-
-@colegio_bp.route('/carga-academica/resumen')
-@login_required
-def resumen_carga_academica():
-    """Muestra el resumen de horas por docente"""
-    from app.models.grupo_materia import GrupoMateria
-
-    docentes = Docente.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Docente.nombre).all()
-    carga_docentes = []
-
-    for docente in docentes:
-        asignaciones = GrupoMateria.query.filter_by(docente_id=docente.id, activo=True).join(Grupo,
-                                                                                             GrupoMateria.grupo_id == Grupo.id).filter(
-            Grupo.colegio_id == current_user.colegio_id).all()
-        materias_dict, total_horas = {}, 0
-
-        for a in asignaciones:
-            mat_nombre = a.materia.nombre if a.materia else "Sin materia"
-            grupo_nombre = f"{a.grupo.grado}{a.grupo.nombre}" if a.grupo else "N/A"
-            if mat_nombre not in materias_dict:
-                materias_dict[mat_nombre] = {'grupos': [], 'horas': 0}
-            materias_dict[mat_nombre]['grupos'].append(grupo_nombre)
-            materias_dict[mat_nombre]['horas'] += a.horas_semanales or 0
-            total_horas += a.horas_semanales or 0
-
-        carga_docentes.append({'docente': docente, 'materias': materias_dict, 'total_materias': len(materias_dict),
-                               'total_grupos': len(asignaciones), 'total_horas': total_horas})
-
-    return render_template('colegio/resumen_carga_academica.html', carga_docentes=carga_docentes)

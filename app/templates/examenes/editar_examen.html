@@ -10,114 +10,141 @@
 <div class="container-fluid py-4">
     <div class="mb-4">
         <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-2"></i>Volver
+            <i class="bi bi-arrow-left me-2"></i>Volver al Examen
         </a>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0">Editar {{ examen.titulo }}</h3>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white p-3">
+            <h3 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Editar {{ examen.titulo }}</h3>
         </div>
-        <div class="card-body">
-            <form method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
-                <!-- Datos básicos -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Título del Examen</label>
-                    <input type="text" name="titulo" class="form-control" value="{{ examen.titulo }}" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Descripción</label>
-                    <textarea name="descripcion" class="form-control" rows="2">{{ examen.descripcion }}</textarea>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Tiempo límite (minutos)</label>
-                        <input type="number" name="tiempo_limite" class="form-control" value="{{ examen.tiempo_limite_minutos }}" min="5" max="180">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Total preguntas</label>
-                        <input type="text" class="form-control" value="{{ examen.contenido_json|length }}" disabled>
+        <div class="card-body p-4">
+
+            <!-- ✅ VALIDACIÓN DE CONTENIDO VACÍO -->
+            {% if not examen.contenido_json or examen.contenido_json|length == 0 %}
+                <div class="alert alert-warning text-center py-5 mb-0">
+                    <i class="bi bi-exclamation-triangle-fill fs-1 d-block mb-3 text-warning"></i>
+                    <h4 class="fw-bold">Este examen no tiene preguntas cargadas</h4>
+                    <p class="text-muted mb-4">No es posible editar un examen vacío. Por favor, crea uno nuevo desde el Banco de Preguntas o usando la IA.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Volver
+                        </a>
+                        <a href="{{ url_for('docente.crear_desde_banco') }}" class="btn btn-primary">
+                            <i class="bi bi-database me-1"></i> Crear desde Banco
+                        </a>
                     </div>
                 </div>
+            {% else %}
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <hr class="my-4">
-                <h4 class="mb-3">Preguntas del Examen</h4>
-
-                <!-- Editar preguntas -->
-                {% for pregunta in examen.contenido_json %}
-                <div class="card mb-3 border-0 bg-light">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">Pregunta {{ pregunta.numero }}</h5>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Enunciado</label>
-                            <textarea name="preguntas[{{ loop.index0 }}][texto]" class="form-control" rows="2" required>{{ pregunta.texto }}</textarea>
+                    <!-- Datos básicos -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Título del Examen</label>
+                            <input type="text" name="titulo" class="form-control" value="{{ examen.titulo }}" required>
                         </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small">Opción A</label>
-                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_a]" class="form-control" value="{{ pregunta.opciones.A }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small">Opción B</label>
-                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_b]" class="form-control" value="{{ pregunta.opciones.B }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small">Opción C</label>
-                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_c]" class="form-control" value="{{ pregunta.opciones.C }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small">Opción D</label>
-                                <input type="text" name="preguntas[{{ loop.index0 }}][opcion_d]" class="form-control" value="{{ pregunta.opciones.D }}" required>
-                            </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Tiempo límite (minutos)</label>
+                            <input type="number" name="tiempo_limite_minutos" class="form-control"
+                                   value="{{ examen.tiempo_limite_minutos }}" min="5" max="180" required>
                         </div>
-
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Respuesta Correcta</label>
-                                <select name="preguntas[{{ loop.index0 }}][respuesta_correcta]" class="form-select" required>
-                                    <option value="A" {% if pregunta.respuesta_correcta == 'A' %}selected{% endif %}>A</option>
-                                    <option value="B" {% if pregunta.respuesta_correcta == 'B' %}selected{% endif %}>B</option>
-                                    <option value="C" {% if pregunta.respuesta_correcta == 'C' %}selected{% endif %}>C</option>
-                                    <option value="D" {% if pregunta.respuesta_correcta == 'D' %}selected{% endif %}>D</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Dificultad</label>
-                                <select name="preguntas[{{ loop.index0 }}][dificultad]" class="form-select">
-                                    <option value="baja" {% if pregunta.dificultad == 'baja' %}selected{% endif %}>Baja</option>
-                                    <option value="media" {% if pregunta.dificultad == 'media' %}selected{% endif %}>Media</option>
-                                    <option value="alta" {% if pregunta.dificultad == 'alta' %}selected{% endif %}>Alta</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Puntos</label>
-                                <input type="number" name="preguntas[{{ loop.index0 }}][puntos]" class="form-control" value="{{ pregunta.puntos_maximos }}" min="1">
-                            </div>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="form-label small text-muted">Explicación (Retroalimentación)</label>
-                            <textarea name="preguntas[{{ loop.index0 }}][explicacion]" class="form-control" rows="2">{{ pregunta.explicacion }}</textarea>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea name="descripcion" class="form-control" rows="2">{{ examen.descripcion or '' }}</textarea>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
 
-                <div class="d-flex gap-3 justify-content-end mt-4">
-                    <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-secondary">
-                        Cancelar
-                    </a>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save me-2"></i>Guardar Cambios
-                    </button>
-                </div>
-            </form>
+                    <hr class="my-4">
+                    <h4 class="mb-3 fw-bold"><i class="bi bi-list-ol me-2 text-primary"></i>Preguntas del Examen</h4>
+
+                    <!-- Editar preguntas (Solo si hay contenido) -->
+                    {% for pregunta in examen.contenido_json %}
+                    {% set idx_pregunta = loop.index0 %} <!-- ✅ VARIABLE AUXILIAR PARA EL ÍNDICE EXTERNO -->
+
+                    <div class="card mb-3 border-0 bg-light question-card">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title text-primary mb-0">Pregunta {{ pregunta.numero }}</h5>
+                                <span class="badge bg-{% if pregunta.dificultad == 'baja' %}success{% elif pregunta.dificultad == 'media' %}warning{% else %}danger{% endif %}">
+                                    {{ pregunta.dificultad|capitalize }}
+                                </span>
+                            </div>
+
+                            <!-- ✅ CORREGIDO: Name correcto para el enunciado -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-muted">Enunciado</label>
+                                <textarea name="preguntas[{{ idx_pregunta }}][texto]" class="form-control" rows="2" required>{{ pregunta.texto }}</textarea>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                {% for letra in ['A', 'B', 'C', 'D'] %}
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Opción {{ letra }}</label>
+                                    <div class="input-group input-group-sm">
+                                        <!-- ✅ CORREGIDO: Usa idx_pregunta en lugar de loop.parent -->
+                                        <input type="text"
+                                               name="preguntas[{{ idx_pregunta }}][opcion_{{ letra|lower }}]"
+                                               class="form-control {% if letra == pregunta.respuesta_correcta %}border-success{% endif %}"
+                                               value="{{ pregunta.opciones.get(letra, '') }}"
+                                               {% if letra in ['A', 'B'] %}required{% endif %}>
+
+                                        {% if letra == pregunta.respuesta_correcta %}
+                                        <span class="input-group-text bg-success text-white border-success">
+                                            <i class="bi bi-check-lg"></i>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Respuesta Correcta</label>
+                                    <select name="preguntas[{{ idx_pregunta }}][respuesta_correcta]" class="form-select form-select-sm" required>
+                                        <option value="A" {% if pregunta.respuesta_correcta == 'A' %}selected{% endif %}>A</option>
+                                        <option value="B" {% if pregunta.respuesta_correcta == 'B' %}selected{% endif %}>B</option>
+                                        <option value="C" {% if pregunta.respuesta_correcta == 'C' %}selected{% endif %}>C</option>
+                                        <option value="D" {% if pregunta.respuesta_correcta == 'D' %}selected{% endif %}>D</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Dificultad</label>
+                                    <select name="preguntas[{{ idx_pregunta }}][dificultad]" class="form-select form-select-sm">
+                                        <option value="baja" {% if pregunta.dificultad == 'baja' %}selected{% endif %}>Baja</option>
+                                        <option value="media" {% if pregunta.dificultad == 'media' %}selected{% endif %}>Media</option>
+                                        <option value="alta" {% if pregunta.dificultad == 'alta' %}selected{% endif %}>Alta</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Puntos</label>
+                                    <input type="number" name="preguntas[{{ idx_pregunta }}][puntos]"
+                                           class="form-control form-control-sm"
+                                           value="{{ pregunta.puntos_maximos }}" min="1">
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label small text-muted">Explicación (Retroalimentación)</label>
+                                <textarea name="preguntas[{{ idx_pregunta }}][explicacion]" class="form-control" rows="2">{{ pregunta.explicacion or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex gap-3 justify-content-end mt-4 pt-3 border-top">
+                        <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg px-4">
+                            <i class="bi bi-save me-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            {% endif %}
+
         </div>
     </div>
 </div>

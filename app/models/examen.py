@@ -27,6 +27,9 @@ class Examen(db.Model):
 
     activo = db.Column(db.Boolean, default=True)
 
+    # ✅ CAMPO PARA BORRADO LÓGICO (UBICADO CORRECTAMENTE DENTRO DE LA CLASE)
+    eliminado = db.Column(db.Boolean, default=False)
+
     fecha_creacion = db.Column(
         db.DateTime,
         default=datetime.utcnow
@@ -73,3 +76,20 @@ class Examen(db.Model):
 
     def __repr__(self):
         return f"<Examen {self.titulo}>"
+
+
+class ProgramacionExamen(db.Model):
+    __tablename__ = 'programacion_examenes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    examen_id = db.Column(db.Integer, db.ForeignKey('examenes.id'), nullable=False)
+    grupo_id = db.Column(db.Integer, db.ForeignKey('grupos.id'), nullable=False)
+    fecha_apertura = db.Column(db.DateTime, nullable=False)
+    fecha_cierre = db.Column(db.DateTime, nullable=False)
+    activo = db.Column(db.Boolean, default=True)
+
+    # ✅ NOTA: Se eliminó 'eliminado' de aquí porque pertenece a Examen
+
+    # Relaciones
+    examen = db.relationship('Examen', backref='programaciones')
+    grupo = db.relationship('Grupo', backref='programaciones_examen')

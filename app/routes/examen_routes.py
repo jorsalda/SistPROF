@@ -1,10 +1,11 @@
+from app.routes.estudiantes_routes import estudiante_bp
 from app.models.tipo_examen import TipoExamen
 from app.services.document_service import extraer_texto_de_archivo
 from app.services.ia_service import generar_preguntas_json
 from app.models.materia import Materia
 from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
-from app.models.examen import Examen
+from app.models.examen import Examen, ProgramacionExamen
 from app.models.pregunta import Pregunta
 from app.models.resultado_examen import ResultadoExamen
 from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
@@ -12,282 +13,247 @@ from app.models.estudiante import Estudiante
 from app.extensions import db
 from datetime import datetime
 import random
-from app.models.examen_contenido import ExamenContenido  # Asegúrate de importar el modelo
+from app.models.examen_contenido import ExamenContenido
 import json
 
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 
 
 # ==========================================================
-# HUB CENTRAL DE CREACIÓN DE EXÁMENES (UNIFICADO)
+# CREAR EXAMEN CON ASISTENCIA DE IA (FORMULARIO INICIAL)
 # ==========================================================
-@examen_bp.route("/crear", methods=["GET", "POST"])
+@examen_bp.route("/crear-con-ia", methods=["GET", "POST"])
 @login_required
-def crear_examen():
-    # Solo roles autorizados
+def crear_examen_ia():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
 
-    # Contexto común para la plantilla
-    materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
-    preguntas_banco = Pregunta.query.filter_by(docente_id=current_user.id).all()
-
     if request.method == "POST":
+        materia_id = request.form.get("materia_id")
+        grado = request.form.get("grado")
+        cantidad = int(request.form.get("cantidad", 5))
+        archivo = request.files.get("archivo")
+
+        if not archivo or archivo.filename == '':
+            flash("Debes seleccionar un archivo para subir.", "danger")
+            return redirect(request.url)
+
+        ext = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
+        if ext not in ['pdf', 'docx']:
+            flash("Solo se permiten archivos en formato PDF o DOCX.", "danger")
+            return redirect(request.url)
+
         try:
-            # 1. Datos generales
-            titulo = request.form.get("titulo_examen", "").strip()
-            materia_id = request.form.get("materia_id")
-            grado = request.form.get("grado")
+            texto_extraido = extraer_texto_de_archivo(archivo, ext)
+            if not texto_extraido or len(texto_extraido.strip()) < 50:
+                flash("No se pudo extraer suficiente texto del documento.", "warning")
+                return redirect(request.url)
 
-            if not titulo or not materia_id:
-                flash("Título y materia son obligatorios.", "danger")
-                return redirect(url_for("examen.crear_examen"))
+            materia = Materia.query.get(materia_id)
+            nombre_materia = materia.nombre if materia else "la materia asignada"
 
-            # 2. Recolectar TODAS las preguntas (IA + Banco + Manual)
-            todas_las_preguntas = []
+            flash("🤖 La IA está analizando el documento...", "info")
+            resultado_ia = generar_preguntas_json(texto_extraido, nombre_materia, grado, cantidad)
 
-            # A. Preguntas del Banco (IDs seleccionados)
-            ids_banco_json = request.form.get("ids_preguntas_banco")
-            if ids_banco_json:
-                ids_banco = json.loads(ids_banco_json)
-                for pid in ids_banco:
-                    p = Pregunta.query.get(pid)
-                    if p:
-                        todas_las_preguntas.append({
-                            "numero": len(todas_las_preguntas) + 1,
-                            "texto": p.texto,
-                            "opciones": p.opciones,
-                            "respuesta_correcta": p.respuesta_correcta,
-                            "dificultad": p.dificultad,
-                            "puntos_maximos": 1,
-                            "explicacion": p.explicacion or "",
-                            "tipo": "banco"
-                        })
-
-            # B. Preguntas Manuales (si existen en el form)
-            idx_manual = 0
-            while True:
-                texto_m = request.form.get(f"preguntas_manual[{idx_manual}][texto]")
-                if not texto_m: break
-
-                todas_las_preguntas.append({
-                    "numero": len(todas_las_preguntas) + 1,
-                    "texto": texto_m,
-                    "opciones": {
-                        "A": request.form.get(f"preguntas_manual[{idx_manual}][opcion_a]"),
-                        "B": request.form.get(f"preguntas_manual[{idx_manual}][opcion_b]"),
-                        "C": request.form.get(f"preguntas_manual[{idx_manual}][opcion_c]"),
-                        "D": request.form.get(f"preguntas_manual[{idx_manual}][opcion_d]")
-                    },
-                    "respuesta_correcta": request.form.get(f"preguntas_manual[{idx_manual}][correcta]"),
-                    "dificultad": "media",
-                    "puntos_maximos": 1,
-                    "explicacion": "",
-                    "tipo": "manual"
-                })
-                idx_manual += 1
-
-            # C. Preguntas IA (Si se subió archivo en este formulario)
-            archivo_ia = request.files.get("archivo_ia")
-            if archivo_ia and archivo_ia.filename != '':
-                ext = archivo_ia.filename.rsplit('.', 1)[1].lower()
-                if ext in ['pdf', 'docx']:
-                    texto_extraido = extraer_texto_de_archivo(archivo_ia, ext)
-                    if texto_extraido:
-                        nombre_materia = next((m.nombre for m in materias if str(m.id) == str(materia_id)),
-                                              "la materia")
-                        cant_ia = int(request.form.get("cantidad_ia", 5))
-                        resultado_ia = generar_preguntas_json(texto_extraido, nombre_materia, grado, cant_ia)
-                        for p_ia in resultado_ia.get("preguntas", []):
-                            todas_las_preguntas.append({
-                                "numero": len(todas_las_preguntas) + 1,
-                                "texto": p_ia.get("texto", ""),
-                                "opciones": p_ia.get("opciones", {}),
-                                "respuesta_correcta": p_ia.get("respuesta_correcta", ""),
-                                "dificultad": p_ia.get("dificultad", "media"),
-                                "puntos_maximos": 1,
-                                "explicacion": p_ia.get("explicacion", ""),
-                                "tipo": "ia"
-                            })
-
-            if not todas_las_preguntas:
-                flash("Debes agregar al menos una pregunta (IA, Banco o Manual).", "warning")
-                return redirect(url_for("examen.crear_examen"))
-
-            # 3. Guardar Examen
-            nuevo_examen = Examen(
-                titulo=titulo,
-                nombre=titulo,
-                descripcion=f"Examen creado para {grado}",
+            return render_template(
+                "examenes/preview_ia.html",
+                preguntas=resultado_ia.get("preguntas", []),
                 materia_id=materia_id,
-                colegio_id=current_user.colegio_id,
-                contenido_json=todas_las_preguntas,  # Guardamos el array completo aquí también por compatibilidad
-                tiempo_limite_minutos=30,
-                fecha_creacion=datetime.now(),
-                activo=True
+                grado=grado,
+                cantidad=cantidad,
+                nombre_materia=nombre_materia
             )
-            db.session.add(nuevo_examen)
-            db.session.flush()
-
-            # 4. Alimentar Banco y Tabla Intermedia
-            # Primero guardamos las nuevas (IA/Manuales) en el banco
-            for p_data in todas_las_preguntas:
-                if p_data.get("tipo") != "banco":  # Las del banco ya existen
-                    nueva_p = Pregunta(
-                        texto=p_data["texto"],
-                        tipo="icfes",
-                        opciones=p_data["opciones"],
-                        respuesta_correcta=p_data["respuesta_correcta"],
-                        explicacion=p_data["explicacion"],
-                        dificultad=p_data["dificultad"],
-                        puntos_maximos=p_data["puntos_maximos"],
-                        materia_id=materia_id,
-                        docente_id=current_user.id,
-                        examen_id=None
-                    )
-                    db.session.add(nueva_p)
-
-            # Luego vinculamos TODO al examen en examen_contenido
-            estructura_para_contenido = [
-                {"pregunta_id": p.get("id") or 0, "orden": p["numero"]}
-                for p in todas_las_preguntas
-            ]
-            # Nota: Para las preguntas nuevas (IA/Manual) aún no tienen ID hasta commit.
-            # En un sistema real haríamos esto post-commit, pero para simplificar:
-            # Vamos a usar la función auxiliar que ya tienes.
-
-            db.session.commit()
-
-            # Re-construimos IDs reales para examen_contenido (porque las nuevas ya tienen ID tras commit)
-            # Esto es un paso avanzado, por ahora confiemos en que contenido_json tiene los datos.
-
-            flash(f"✅ Examen '{titulo}' creado con {len(todas_las_preguntas)} preguntas.", "success")
-            return redirect(url_for("examen.listar_examenes"))
 
         except Exception as e:
-            db.session.rollback()
-            flash(f"Error al crear examen: {str(e)}", "danger")
-            import traceback;
-            traceback.print_exc()  # Para ver error en consola
+            flash(f"Error al procesar el documento con IA: {str(e)}", "danger")
+            return redirect(request.url)
 
-    return render_template(
-        "examenes/crear_examen.html",
-        materias=materias,
-        preguntas_banco=preguntas_banco
-    )
+    materias = Materia.query.order_by(Materia.nombre).all()
+    return render_template("examenes/crear_examen_ia.html", materias=materias)
 
 
+# ==========================================================
+# GUARDAR EXAMEN GENERADO POR IA (DESDE PREVIEW)
+# ==========================================================
+@examen_bp.route("/guardar-examen-ia", methods=["POST"])
+@login_required
+def guardar_examen_ia():
+    if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
+        abort(403)
+
+    try:
+        titulo = request.form.get("titulo_examen", "").strip()
+        materia_id = request.form.get("materia_id")
+        grado = request.form.get("grado")
+
+        if not titulo or not materia_id:
+            flash("El título y la materia son obligatorios.", "danger")
+            return redirect(url_for("examen.crear_examen_ia"))
+
+        preguntas_data = []
+        idx = 0
+
+        while True:
+            texto = request.form.get(f"preguntas[{idx}][texto]")
+            if not texto:
+                break
+
+            # ✅ CAPTURA DE CONTEXTO EN PREVIEW IA (Si el docente lo editó/agregó)
+            tipo_ctx = request.form.get(f"preguntas[{idx}][tipo_contexto]", "")
+            url_ctx = request.form.get(f"preguntas[{idx}][url_contexto]", "")
+
+            pregunta = {
+                "numero": idx + 1,
+                "texto": texto,
+                "opciones": {
+                    "A": request.form.get(f"preguntas[{idx}][opcion_a]"),
+                    "B": request.form.get(f"preguntas[{idx}][opcion_b]"),
+                    "C": request.form.get(f"preguntas[{idx}][opcion_c]"),
+                    "D": request.form.get(f"preguntas[{idx}][opcion_d]")
+                },
+                "respuesta_correcta": request.form.get(f"preguntas[{idx}][respuesta_correcta]"),
+                "dificultad": request.form.get(f"preguntas[{idx}][dificultad]", "media"),
+                "puntos_maximos": int(request.form.get(f"preguntas[{idx}][puntos]", 1)),
+                "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", ""),
+                "url_contexto": url_ctx if url_ctx else None,
+                "tipo_contexto": tipo_ctx if tipo_ctx else None
+            }
+            preguntas_data.append(pregunta)
+            idx += 1
+
+        if not preguntas_data:
+            flash("No se encontraron preguntas válidas para guardar.", "danger")
+            return redirect(url_for("examen.crear_examen_ia"))
+
+        nuevo_examen = Examen(
+            titulo=titulo,
+            nombre=titulo,
+            descripcion=f"Evaluación generada con IA para {grado}",
+            materia_id=materia_id,
+            colegio_id=current_user.colegio_id,
+            contenido_json=preguntas_data,
+            tiempo_limite_minutos=30,
+            fecha_creacion=datetime.now(),
+            activo=True
+        )
+        db.session.add(nuevo_examen)
+        db.session.flush()
+
+        for p_data in preguntas_data:
+            nueva_pregunta = Pregunta(
+                texto=p_data["texto"],
+                tipo="icfes",
+                opciones=p_data["opciones"],
+                respuesta_correcta=p_data["respuesta_correcta"],
+                explicacion=p_data["explicacion"],
+                dificultad=p_data["dificultad"],
+                puntos_maximos=p_data["puntos_maximos"],
+                materia_id=materia_id,
+                fecha_creacion=datetime.now(),
+                activo=True,
+                docente_id=current_user.id,
+                examen_id=None,
+                # ✅ GUARDAR CONTEXTO EN EL BANCO
+                url_contexto=p_data.get("url_contexto"),
+                tipo_contexto=p_data.get("tipo_contexto")
+            )
+            db.session.add(nueva_pregunta)
+
+        db.session.commit()
+
+        flash(f"✅ Examen '{titulo}' guardado exitosamente con {len(preguntas_data)} preguntas.", "success")
+
+        try:
+            return redirect(url_for("examen.listar_examenes"))
+        except:
+            return redirect(url_for("docente.dashboard"))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al guardar el examen: {str(e)}", "danger")
+        return redirect(url_for("examen.crear_examen_ia"))
+
+
+# ==========================================================
+# OBTENER JSON DEL EXAMEN (PARA ESTUDIANTES)
+# ==========================================================
 @examen_bp.route('/<int:examen_id>/json', methods=['GET'])
 @login_required
 def obtener_json_examen(examen_id):
-    """
-    Devuelve las preguntas aleatorias desde el banco de preguntas en la BD.
-    Si no hay preguntas en la BD, hace fallback al JSON antiguo (IA).
-    """
     examen = Examen.query.get_or_404(examen_id)
 
-    # Verificar que el estudiante pertenece al mismo colegio
     if examen.colegio_id != current_user.colegio_id:
         return jsonify({'error': 'No tiene acceso a este examen'}), 403
 
-    # 1. Obtener la cantidad de preguntas que el estudiante quiere
     num_preguntas = request.args.get('cantidad', default=10, type=int)
 
-    # 2. Consultar el banco de preguntas en la BD
+    # Intentar cargar desde el Banco de Preguntas primero
     preguntas_db = Pregunta.query.filter_by(
         materia_id=examen.materia_id,
         tipo='icfes',
         activo=True
     ).all()
 
-    # 3. Si NO hay preguntas en la BD, usamos el JSON antiguo (Fallback IA)
-    if not preguntas_db:
-        if examen.contenido_json:
-            #  ADAPTAR formato de IA al que espera ClsEstudiante.js
-            preguntas_ia = examen.contenido_json if isinstance(examen.contenido_json,
-                                                               list) else examen.contenido_json.get('preguntas', [])
+    preguntas_formateadas = []
 
-            preguntas_formateadas = []
-            for p in preguntas_ia[:num_preguntas]:
+    if preguntas_db:
+        # --- CASO 1: Preguntas del Banco (BD) ---
+        random.shuffle(preguntas_db)
+        preguntas_seleccionadas = preguntas_db[:num_preguntas]
+
+        for p in preguntas_seleccionadas:
+            # Convertir opciones de Objeto {"A":"...", "B":"..."} a Lista ["...", "..."]
+            lista_opciones = []
+            if p.opciones and isinstance(p.opciones, dict):
+                # Ordenamos por clave para mantener A, B, C, D
+                for key in sorted(p.opciones.keys()):
+                    lista_opciones.append(p.opciones[key])
+
+            preguntas_formateadas.append({
+                "pregunta": p.texto,
+                "opciones": lista_opciones,  # <-- Aquí enviamos la lista
+                "respuesta": p.respuesta_correcta,
+                "explicacion": p.explicacion or "",
+                "tema": p.tema or "",
+                "dificultad": p.dificultad or "media",
+                "url_contexto": p.url_contexto,
+                "tipo_contexto": p.tipo_contexto
+            })
+
+    else:
+        # --- CASO 2: Fallback a JSON antiguo (IA) ---
+        if examen.contenido_json:
+            contenido = examen.contenido_json if isinstance(examen.contenido_json, list) else examen.contenido_json.get(
+                'preguntas', [])
+
+            for p in contenido[:num_preguntas]:
+                # También convertimos por si la IA guardó objeto
+                ops_raw = p.get("opciones", {})
+                lista_ops = list(ops_raw.values()) if isinstance(ops_raw, dict) else (
+                    ops_raw if isinstance(ops_raw, list) else [])
+
                 preguntas_formateadas.append({
-                    "pregunta": p.get("texto", ""),  # ← Cambiar "texto" a "pregunta"
-                    "opciones": p.get("opciones", {}),
-                    "respuesta": p.get("respuesta_correcta", ""),  # ← Cambiar "respuesta_correcta" a "respuesta"
+                    "pregunta": p.get("texto", ""),
+                    "opciones": lista_ops,
+                    "respuesta": p.get("respuesta_correcta", ""),
                     "explicacion": p.get("explicacion", ""),
                     "tema": p.get("tema", ""),
-                    "dificultad": p.get("dificultad", "media")
+                    "dificultad": p.get("dificultad", "media"),
+                    "url_contexto": p.get("url_contexto"),
+                    "tipo_contexto": p.get("tipo_contexto")
                 })
 
-            return jsonify({"preguntas": preguntas_formateadas})
-
+    if not preguntas_formateadas:
         return jsonify({'error': 'No hay preguntas disponibles'}), 404
-
-    # 4. Aleatorizar y limitar la cantidad
-
-    random.shuffle(preguntas_db)
-    preguntas_seleccionadas = preguntas_db[:num_preguntas]
-
-    # 5. Formatear para que ClsEstudiante.js lo entienda
-    preguntas_formateadas = []
-    for p in preguntas_seleccionadas:
-        preguntas_formateadas.append({
-            "pregunta": p.texto,
-            "opciones": p.opciones,
-            "respuesta": p.respuesta_correcta,
-            "explicacion": p.explicacion,
-            "tema": p.tema,
-            "dificultad": p.dificultad
-        })
 
     return jsonify({"preguntas": preguntas_formateadas})
 
-@examen_bp.route('/disponibles', methods=['GET'])
-@login_required
-def examenes_disponibles():
-    """
-    Devuelve la lista de exámenes disponibles para el estudiante.
-    Si se pasa materia_id, filtra por esa materia.
-    """
-    materia_id = request.args.get('materia_id', type=int)
-
-    if current_user.rol == 'estudiante':
-        query = Examen.query.join(TipoExamen).filter(
-            Examen.activo == True,
-            Examen.colegio_id == current_user.colegio_id,
-            TipoExamen.disponible_individual == True
-        )
-        if materia_id:
-            query = query.filter(Examen.materia_id == materia_id)
-        examenes = query.all()
-    else:
-        query = Examen.query.filter_by(
-            colegio_id=current_user.colegio_id,
-            activo=True
-        )
-        if materia_id:
-            query = query.filter(Examen.materia_id == materia_id)
-        examenes = query.all()
-
-    resultado = []
-    for e in examenes:
-        resultado.append({
-            'id': e.id,
-            'nombre': e.nombre,
-            'descripcion': e.descripcion,
-            'tipo_examen': e.tipo_examen.nombre if e.tipo_examen else None,
-            'tiempo_limite_minutos': e.tiempo_limite_minutos,
-            'materia_id': e.materia_id
-        })
-
-    return jsonify(resultado)
-
-
+# ==========================================================
+# RENDERIZAR VISTA DE EXAMEN PARA ESTUDIANTE
+# ==========================================================
 @examen_bp.route('/estudiante', methods=['GET'])
 @login_required
 def render_examen_estudiante():
-    """
-    Renderiza la plantilla del examen e inyecta los IDs necesarios.
-    """
     exam_id = request.args.get('id', type=int)
     examen_obj = Examen.query.get(exam_id) if exam_id else Examen.query.filter_by(activo=True).first()
 
@@ -299,15 +265,14 @@ def render_examen_estudiante():
     return render_template('estudiantes/examen_estudiante.html', examen=examen_data)
 
 
+# ==========================================================
+# GUARDAR RESULTADOS DEL EXAMEN
+# ==========================================================
 @examen_bp.route('/guardar', methods=['POST'])
 @login_required
 def guardar_resultado_examen():
-    """
-    Recibe los resultados del examen desde el frontend y los guarda en PostgreSQL.
-    """
     try:
         data = request.get_json()
-
         required_fields = ['examen_id', 'materia_id', 'respuestas']
         for field in required_fields:
             if field not in data:
@@ -323,7 +288,6 @@ def guardar_resultado_examen():
         incorrectas = total_preguntas - correctas
         porcentaje = (correctas / total_preguntas * 100) if total_preguntas > 0 else 0
 
-        # Escala literal
         if porcentaje >= 100:
             literal = 'S'
         elif porcentaje >= 80:
@@ -380,331 +344,182 @@ def guardar_resultado_examen():
         return jsonify({'error': str(e)}), 500
 
 
+# ==========================================================
+# LISTADO DE EXÁMENES (VISTA ESTUDIANTE)
+# ==========================================================
 @examen_bp.route('/listado')
 @login_required
 def listado_examenes():
-    """
-    Muestra la lista de exámenes disponibles para el estudiante.
-    """
     if current_user.rol != 'estudiante':
         flash('Acceso no autorizado', 'danger')
         return redirect(url_for('auth.login'))
-
     return render_template('estudiantes/listado_examenes.html')
 
 
-
-
-
 # ==========================================================
-# CREAR EXAMEN CON ASISTENCIA DE IA
+# LISTAR MIS EXÁMENES (VISTA DOCENTE)
 # ==========================================================
-
-@examen_bp.route("/crear-con-ia", methods=["GET", "POST"])
-@login_required
-def crear_examen_ia():
-    # Solo docentes, coordinadores o admins pueden crear exámenes
-    if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
-        abort(403)
-
-    if request.method == "POST":
-        # 1. Obtener datos del formulario
-        materia_id = request.form.get("materia_id")
-        grado = request.form.get("grado")
-        cantidad = int(request.form.get("cantidad", 5))
-        archivo = request.files.get("archivo")
-
-        # 2. Validaciones básicas
-        if not archivo or archivo.filename == '':
-            flash("Debes seleccionar un archivo para subir.", "danger")
-            return redirect(request.url)
-
-        ext = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
-        if ext not in ['pdf', 'docx']:
-            flash("Solo se permiten archivos en formato PDF o DOCX.", "danger")
-            return redirect(request.url)
-
-        try:
-            # 3. Extraer texto del documento
-            texto_extraido = extraer_texto_de_archivo(archivo, ext)
-
-            if not texto_extraido or len(texto_extraido.strip()) < 50:
-                flash(
-                    "No se pudo extraer suficiente texto del documento. Verifica que sea legible y no sea una imagen escaneada.",
-                    "warning")
-                return redirect(request.url)
-
-            # 4. Obtener nombre de la materia para el prompt de la IA
-            materia = Materia.query.get(materia_id)
-            nombre_materia = materia.nombre if materia else "la materia asignada"
-
-            # 5. Llamar al servicio de IA
-            flash("🤖 La IA está analizando el documento y generando las preguntas. Esto puede tomar unos segundos...",
-                  "info")
-            resultado_ia = generar_preguntas_json(texto_extraido, nombre_materia, grado, cantidad)
-
-            # 6. Mostrar vista de previsualización para que el docente revise
-            return render_template(
-                "examenes/preview_ia.html",
-                preguntas=resultado_ia.get("preguntas", []),
-                materia_id=materia_id,
-                grado=grado,
-                cantidad=cantidad,
-                nombre_materia=nombre_materia
-            )
-
-        except Exception as e:
-            # Manejo de errores de la IA o extracción
-            flash(f"Error al procesar el documento con IA: {str(e)}", "danger")
-            return redirect(request.url)
-
-    # GET: Mostrar el formulario inicial de subida
-    materias = Materia.query.order_by(Materia.nombre).all()
-    return render_template("examenes/crear_examen_ia.html", materias=materias)
-
-
-
-# ==========================================================
-# GUARDAR EXAMEN GENERADO POR IA
-# ==========================================================
-
-@examen_bp.route("/guardar-examen-ia", methods=["POST"])
-@login_required
-def guardar_examen_ia():
-    # Solo roles autorizados
-    if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
-        abort(403)
-
-    try:
-        # 1. Obtener datos generales del formulario
-        titulo = request.form.get("titulo_examen", "").strip()
-        materia_id = request.form.get("materia_id")
-        grado = request.form.get("grado")
-
-        if not titulo or not materia_id:
-            flash("El título y la materia son obligatorios.", "danger")
-            return redirect(url_for("examen.crear_examen_ia"))
-
-        # 2. Reconstruir el array de preguntas desde el formulario
-        preguntas_data = []
-        idx = 0
-
-        while True:
-            texto = request.form.get(f"preguntas[{idx}][texto]")
-            if not texto:
-                break
-
-            pregunta = {
-                "numero": idx + 1,
-                "texto": texto,
-                "opciones": {
-                    "A": request.form.get(f"preguntas[{idx}][opcion_a]"),
-                    "B": request.form.get(f"preguntas[{idx}][opcion_b]"),
-                    "C": request.form.get(f"preguntas[{idx}][opcion_c]"),
-                    "D": request.form.get(f"preguntas[{idx}][opcion_d]")
-                },
-                "respuesta_correcta": request.form.get(f"preguntas[{idx}][respuesta_correcta]"),
-                "dificultad": request.form.get(f"preguntas[{idx}][dificultad]", "media"),
-                "puntos_maximos": int(request.form.get(f"preguntas[{idx}][puntos]", 1)),
-                "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", "")
-            }
-            preguntas_data.append(pregunta)
-            idx += 1
-
-        if not preguntas_data:
-            flash("No se encontraron preguntas válidas para guardar.", "danger")
-            return redirect(url_for("examen.crear_examen_ia"))
-
-        # 3. Crear el registro del Examen
-        nuevo_examen = Examen(
-            titulo=titulo,
-            nombre=titulo,
-            descripcion=f"Evaluación generada con IA para {grado}",
-            materia_id=materia_id,
-            colegio_id=current_user.colegio_id,
-            contenido_json=preguntas_data,
-            tiempo_limite_minutos=30,
-            fecha_creacion=datetime.now(),
-            activo=True
-        )
-        db.session.add(nuevo_examen)
-        db.session.flush()
-
-        # 4. Alimentar el Banco de Preguntas (reutilizables)
-        for p_data in preguntas_data:
-            nueva_pregunta = Pregunta(
-                texto=p_data["texto"],
-                tipo="icfes",
-                opciones=p_data["opciones"],
-                respuesta_correcta=p_data["respuesta_correcta"],
-                explicacion=p_data["explicacion"],
-                dificultad=p_data["dificultad"],
-                puntos_maximos=p_data["puntos_maximos"],
-                materia_id=materia_id,
-                fecha_creacion=datetime.now(),
-                activo=True,
-
-                # ✅ CORRECCIÓN CLAVE: Asignar el docente actual como dueño
-                docente_id=current_user.id,
-                examen_id=None  # NULL para que viva independiente en el banco
-            )
-            db.session.add(nueva_pregunta)
-
-        # 5. Confirmar cambios
-        db.session.commit()
-
-        flash(
-            f"✅ Examen '{titulo}' guardado exitosamente con {len(preguntas_data)} preguntas.",
-            "success"
-        )
-
-        # Redirigir a la lista de exámenes o dashboard
-        try:
-            return redirect(url_for("examen.listar"))
-        except:
-            return redirect(url_for("docente.dashboard"))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error al guardar el examen: {str(e)}", "danger")
-        return redirect(url_for("examen.crear_examen_ia"))
-
-# ==========================================================
-# LISTAR EXÁMENES DEL DOCENTE
-# ==========================================================
-
 @examen_bp.route("/mis-examenes")
 @login_required
 def listar_examenes():
-    """Muestra los exámenes creados por el docente"""
-
-    # Obtener todos los exámenes del colegio del docente
     examenes = Examen.query.filter_by(
         colegio_id=current_user.colegio_id,
-        activo=True
+        activo=True,
+        eliminado=False  # ✅ AGREGAR ESTA LÍNEA
     ).order_by(Examen.fecha_creacion.desc()).all()
 
-    return render_template(
-        "examenes/listar_examenes.html",
-        examenes=examenes
-    )
+    examenes_con_contteo = []
+    for e in examenes:
+        total = 0
+        if e.contenido_json and isinstance(e.contenido_json, list):
+            total += len(e.contenido_json)
+
+        contenidos = ExamenContenido.query.filter_by(examen_id=e.id, activo=True).all()
+        for c in contenidos:
+            if c.contenido_json and isinstance(c.contenido_json, list):
+                total += len(c.contenido_json)
+
+        examenes_con_contteo.append({'examen': e, 'total_preguntas': total})
+
+    return render_template("examenes/listar_examenes.html", examenes=examenes_con_contteo)
 
 
 # ==========================================================
 # VER DETALLE DE EXAMEN
 # ==========================================================
-
 @examen_bp.route("/ver/<int:id>")
 @login_required
 def ver_examen(id):
-    """Ver detalle completo del examen"""
     examen = Examen.query.get_or_404(id)
-
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
+    return render_template("examenes/ver_examen.html", examen=examen)
 
-    return render_template(
-        "examenes/ver_examen.html",
-        examen=examen
-    )
 
 # ==========================================================
-# ELIMINAR  EXAMEN
+# ELIMINAR EXAMEN (BORRADO LÓGICO)
 # ==========================================================
-@examen_bp.route("/eliminar/<int:id>")
+@examen_bp.route("/eliminar/<int:id>", methods=["POST"])  # ✅ Cambiado a POST por seguridad
 @login_required
 def eliminar_examen(id):
-    """Eliminar examen (soft delete)"""
     examen = Examen.query.get_or_404(id)
 
+    # Validación de seguridad
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
 
-    examen.activo = False
-    db.session.commit()
+    try:
+        # ✅ BORRADO LÓGICO: Usamos el nuevo campo 'eliminado'
+        examen.eliminado = True
+        db.session.commit()
+        flash("Examen eliminado correctamente", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al eliminar: {str(e)}", "danger")
 
-    flash("Examen eliminado correctamente", "success")
-    return redirect(url_for('examen.listar_examenes'))
+    # ✅ Redirección segura usando URL directa
+    return redirect("/api/examen/mis-examenes")
+
 
 # ==========================================================
-# EDITAF EXAMEN
+# EDITAR EXAMEN (CON EDICIÓN DE PREGUNTAS)
 # ==========================================================
 @examen_bp.route("/editar/<int:id>", methods=["GET", "POST"])
 @login_required
 def editar_examen(id):
-    """Editar examen existente"""
     examen = Examen.query.get_or_404(id)
 
+    # 1. Validación de seguridad (Nivel Colegio)
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
 
-    if request.method == "POST":
-        # Actualizar datos básicos
-        examen.titulo = request.form.get("titulo")
-        examen.nombre = request.form.get("titulo")
-        examen.descripcion = request.form.get("descripcion")
-        examen.tiempo_limite_minutos = int(request.form.get("tiempo_limite", 30))
-
-        # Reconstruir JSON de preguntas desde el formulario
-        preguntas_data = []
-        idx = 0
-
-        while True:
-            texto = request.form.get(f"preguntas[{idx}][texto]")
-            if not texto:
-                break
-
-            pregunta = {
-                "numero": idx + 1,
-                "texto": texto,
-                "opciones": {
-                    "A": request.form.get(f"preguntas[{idx}][opcion_a]"),
-                    "B": request.form.get(f"preguntas[{idx}][opcion_b]"),
-                    "C": request.form.get(f"preguntas[{idx}][opcion_c]"),
-                    "D": request.form.get(f"preguntas[{idx}][opcion_d]")
-                },
-                "respuesta_correcta": request.form.get(f"preguntas[{idx}][respuesta_correcta]"),
-                "dificultad": request.form.get(f"preguntas[{idx}][dificultad]", "media"),
-                "puntos_maximos": int(request.form.get(f"preguntas[{idx}][puntos]", 1)),
-                "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", "")
-            }
-            preguntas_data.append(pregunta)
-            idx += 1
-
-        examen.contenido_json = preguntas_data
-        db.session.commit()
-
-        flash("Examen actualizado correctamente", "success")
+    # 2. ✅ VALIDACIÓN TEMPRANA DE CONTENIDO (FUERA DEL IF ANTERIOR)
+    # Si no hay preguntas, no tiene sentido mostrar el formulario de edición
+    if not examen.contenido_json or len(examen.contenido_json) == 0:
+        flash("No se puede editar un examen sin preguntas. Por favor, cree uno nuevo.", "warning")
         return redirect(url_for('examen.ver_examen', id=examen.id))
 
-    return render_template(
-        "examenes/editar_examen.html",
-        examen=examen
-    )
+    # 3. Procesamiento del Formulario (POST)
+    if request.method == "POST":
+        try:
+            # Actualizar metadatos básicos
+            examen.titulo = request.form.get("titulo", "").strip()
+            examen.nombre = examen.titulo
+            examen.descripcion = request.form.get("descripcion", "").strip()
 
+            tiempo = request.form.get("tiempo_limite_minutos")
+            if tiempo and tiempo.isdigit():
+                examen.tiempo_limite_minutos = int(tiempo)
+            else:
+                flash("El tiempo límite debe ser un número válido", "danger")
+                return redirect(url_for('examen.editar_examen', id=id))
 
+            # Procesar preguntas editadas
+            preguntas_data = []
+            idx = 0
+
+            while True:
+                texto = request.form.get(f"preguntas[{idx}][texto]")
+                if not texto:
+                    break
+
+                opcion_a = request.form.get(f"preguntas[{idx}][opcion_a]", "").strip()
+                opcion_b = request.form.get(f"preguntas[{idx}][opcion_b]", "").strip()
+                respuesta_correcta = request.form.get(f"preguntas[{idx}][respuesta_correcta]")
+
+                if not opcion_a or not opcion_b:
+                    flash(f"La pregunta {idx + 1} debe tener al menos las opciones A y B", "danger")
+                    return redirect(url_for('examen.editar_examen', id=id))
+
+                if not respuesta_correcta:
+                    flash(f"Debe seleccionar la respuesta correcta para la pregunta {idx + 1}", "danger")
+                    return redirect(url_for('examen.editar_examen', id=id))
+
+                pregunta = {
+                    "numero": idx + 1,
+                    "texto": texto.strip(),
+                    "opciones": {
+                        "A": opcion_a,
+                        "B": opcion_b,
+                        "C": request.form.get(f"preguntas[{idx}][opcion_c]", "").strip(),
+                        "D": request.form.get(f"preguntas[{idx}][opcion_d]", "").strip()
+                    },
+                    "respuesta_correcta": respuesta_correcta,
+                    "dificultad": request.form.get(f"preguntas[{idx}][dificultad]", "media"),
+                    "puntos_maximos": int(request.form.get(f"preguntas[{idx}][puntos]", 1)),
+                    "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", "").strip()
+                }
+                preguntas_data.append(pregunta)
+                idx += 1
+
+            if not preguntas_data:
+                flash("Un examen debe tener al menos una pregunta", "danger")
+                return redirect(url_for('examen.editar_examen', id=id))
+
+            # Guardar cambios en BD
+            examen.contenido_json = preguntas_data
+            db.session.commit()
+
+            flash("Examen actualizado correctamente", "success")
+            return redirect(url_for('examen.ver_examen', id=examen.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar: {str(e)}", "danger")
+            return redirect(url_for('examen.editar_examen', id=id))
+
+    # GET: Mostrar formulario (Solo llega aquí si pasó las validaciones anteriores)
+    return render_template("examenes/editar_examen.html", examen=examen)
+# ==========================================================
+# FUNCIÓN AUXILIAR: GUARDAR SELECCIÓN DE PREGUNTAS
+# ==========================================================
 def guardar_seleccion_preguntas(examen_id, preguntas_seleccionadas):
-    """
-    Guarda la selección de preguntas en examen_contenido usando JSONB.
-
-    Args:
-        examen_id: ID del examen al que se vinculan las preguntas.
-        preguntas_seleccionadas: Lista de diccionarios con la info de cada pregunta.
-                                 Ej: [{"pregunta_id": 67, "orden": 1}, ...]
-    """
     try:
-        # Verificar si ya existe contenido para este examen (versión 1)
-        contenido_existente = ExamenContenido.query.filter_by(
-            examen_id=examen_id,
-            version=1
-        ).first()
-
+        contenido_existente = ExamenContenido.query.filter_by(examen_id=examen_id, version=1).first()
         if contenido_existente:
-            # Actualizar el JSON existente
             contenido_existente.contenido_json = preguntas_seleccionadas
             flash("Selección de preguntas actualizada exitosamente", "success")
         else:
-            # Crear nuevo registro
             nuevo_contenido = ExamenContenido(
                 examen_id=examen_id,
                 contenido_json=preguntas_seleccionadas,
@@ -713,13 +528,103 @@ def guardar_seleccion_preguntas(examen_id, preguntas_seleccionadas):
             )
             db.session.add(nuevo_contenido)
             flash("Preguntas vinculadas al examen exitosamente", "success")
-
         db.session.commit()
         return True
-
     except Exception as e:
         db.session.rollback()
         flash(f"Error al guardar selección: {str(e)}", "danger")
         return False
 
 
+# ==========================================================
+# SEGUIMIENTO DE RESULTADOS Y ESTADÍSTICAS
+# ==========================================================
+@examen_bp.route("/resultados/<int:id>")
+@login_required
+def ver_resultados_examen(id):
+    from app.models.examen import ProgramacionExamen
+
+    examen = Examen.query.get_or_404(id)
+    if examen.colegio_id != current_user.colegio_id:
+        abort(403)
+
+    # Obtener la programación activa para saber a qué grupo pertenece
+    prog = ProgramacionExamen.query.filter_by(
+        examen_id=examen.id,
+        activo=True
+    ).first()
+
+    if not prog:
+        flash("Este examen no está asignado a ningún grupo.", "warning")
+        return redirect(url_for('examen.ver_examen', id=examen.id))
+
+    # Obtener todos los estudiantes activos de ese grupo
+    estudiantes = Estudiante.query.filter_by(
+        grupo_id=prog.grupo_id,
+        activo=True
+    ).order_by(Estudiante.apellido, Estudiante.nombre).all()
+
+    # Obtener resultados existentes para este examen
+    resultados_map = {}
+    for r in ResultadoExamen.query.filter_by(examen_id=examen.id).all():
+        resultados_map[r.estudiante_id] = r
+
+    # Calcular Estadísticas Básicas
+    total_estudiantes = len(estudiantes)
+    presentados = sum(1 for e in estudiantes if e.id in resultados_map)
+    pendientes = total_estudiantes - presentados
+
+    notas_validas = [r.nota_numerica for r in resultados_map.values() if r.nota_numerica is not None]
+    promedio_grupo = round(sum(notas_validas) / len(notas_validas), 2) if notas_validas else 0
+
+    # Pregunta con más errores (Estadística avanzada simple)
+    # Nota: Esto requiere iterar sobre RespuestaExamenDetalle si quieres precisión total
+    # Por ahora usaremos un placeholder o una consulta simple si tienes la tabla de detalles
+
+    stats = {
+        'total': total_estudiantes,
+        'presentados': presentados,
+        'pendientes': pendientes,
+        'promedio': promedio_grupo,
+        'aprobados': sum(1 for n in notas_validas if n >= 3.0),  # Asumiendo 3.0 como mínimo
+        'reprobados': sum(1 for n in notas_validas if n < 3.0)
+    }
+
+    return render_template(
+        "examenes/resultados_examen.html",
+        examen=examen,
+        grupo=prog.grupo,
+        estudiantes=estudiantes,
+        resultados_map=resultados_map,
+        stats=stats
+    )
+
+
+# =========================================================
+# API: OBTENER PREGUNTAS DE UN EXAMEN (PARA CLSESTUDIANTE)
+# =========================================================
+@examen_bp.route("/api/examen/<int:id>/json")
+@login_required
+def api_examen_json(id):
+    """Devuelve las preguntas de un examen en formato JSON para el JS"""
+    if current_user.rol != 'estudiante':
+        return jsonify({"error": "No autorizado"}), 403
+
+    examen = Examen.query.get_or_404(id)
+
+    # Verificar seguridad básica
+    if not examen.contenido_json or not isinstance(examen.contenido_json, list):
+        return jsonify({"error": "Examen sin preguntas"}), 404
+
+    preguntas = []
+    for p in examen.contenido_json:
+        # Adaptar el formato de la BD al formato que espera ClsEstudiante.js
+        preguntas.append({
+            "pregunta": p.get("texto", ""),  # JS espera 'pregunta', BD tiene 'texto'
+            "opciones": list(p.get("opciones", {}).values()),  # Solo los textos de opciones
+            "respuesta": p.get("respuesta_correcta", ""),  # JS espera 'respuesta'
+            "explicacion": p.get("explicacion", ""),
+            "contexto": None  # Si usas contextos, adáptalo aquí
+        })
+
+    return jsonify({"preguntas": preguntas})

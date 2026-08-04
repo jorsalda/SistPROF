@@ -38,32 +38,7 @@ def obtener_json_examen(examen_id):
     return jsonify(contenido)
 
 
-@api_examen_bp.route('/disponibles')
-@login_required
-def examenes_disponibles():
-    if current_user.rol == 'estudiante':
-        examenes = Examen.query.join(TipoExamen).filter(
-            Examen.activo == True,
-            Examen.colegio_id == current_user.colegio_id,
-            TipoExamen.disponible_individual == True
-        ).all()
-    else:
-        examenes = Examen.query.filter_by(
-            colegio_id=current_user.colegio_id,
-            activo=True
-        ).all()
 
-    resultado = []
-    for e in examenes:
-        resultado.append({
-            'id': e.id,
-            'nombre': e.nombre,
-            'descripcion': e.descripcion,
-            'tipo_examen': e.tipo_examen.nombre if e.tipo_examen else None,
-            'tiempo_limite_minutos': e.tiempo_limite_minutos
-        })
-
-    return jsonify(resultado)
 
 
 @api_examen_bp.route('/guardar-resultado', methods=['POST'])
