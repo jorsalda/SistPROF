@@ -1,3 +1,4 @@
+from app.models.periodo_academico import PeriodoAcademico
 from app.routes.estudiantes_routes import estudiante_bp
 from app.models.tipo_examen import TipoExamen
 from app.services.document_service import extraer_texto_de_archivo
@@ -15,9 +16,118 @@ from datetime import datetime
 import random
 from app.models.examen_contenido import ExamenContenido
 import json
+from app.models.evaluacion_estudiante import EvaluacionEstudiante
+from routes.docente_routes import docente_bp
 
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
+from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+from app.models.indicador_logro import IndicadorLogro
 
+
+# ==========================================================
+# CREAR EXAMEN UNIFICADO (MANUAL + BANCO + IA + COMPETENCIAS)
+# ==========================================================
+@examen_bp.route("/crear", methods=["GET", "POST"])
+@login_required
+def crear_examen():
+    if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
+        abort(403)
+
+    # 1. Cargar datos base
+    materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
+
+    # ✅ Construir estructura jerárquica para JS: Materia -> Competencias -> Indicadores
+    estructura_evaluacion = {}
+    for m in materias:
+        competencias = CompetenciaEstudiante.query.filter_by(materia_id=m.id).all()
+        comps_data = []
+        for c in competencias:
+            inds = IndicadorLogro.query.filter_by(competencia_id=c.id).all()
+            comps_data.append({
+                'id': c.id,
+                'codigo': c.codigo,
+                'nombre': c.nombre,
+                'indicadores': [{'id': i.id, 'codigo': i.codigo, 'desc': i.descripcion} for i in inds]
+            })
+        estructura_evaluacion[m.id] = comps_data
+
+    # 2. Procesar POST (Guardado)
+    if request.method == "POST":
+        try:
+            titulo = request.form.get("titulo_examen", "").strip()
+            materia_id = request.form.get("materia_id")
+            grado = request.form.get("grado")
+
+            if not titulo or not materia_id:
+                flash("Título y materia son obligatorios.", "danger")
+                return redirect(url_for("examen.crear_examen"))
+
+            # Recolectar preguntas manuales CON sus indicadores
+            preguntas_data = []
+            idx_manual = 0
+
+            while True:
+                texto_m = request.form.get(f"preguntas_manual[{idx_manual}][texto]")
+                if not texto_m: break
+
+                # ✅ Capturar vinculación curricular
+                indicador_id = request.form.get(f"preguntas_manual[{idx_manual}][indicador_logro_id]")
+
+                pregunta = {
+                    "numero": len(preguntas_data) + 1,
+                    "texto": texto_m,
+                    "opciones": {
+                        "A": request.form.get(f"preguntas_manual[{idx_manual}][opcion_a]"),
+                        "B": request.form.get(f"preguntas_manual[{idx_manual}][opcion_b]"),
+                        "C": request.form.get(f"preguntas_manual[{idx_manual}][opcion_c]"),
+                        "D": request.form.get(f"preguntas_manual[{idx_manual}][opcion_d]")
+                    },
+                    "respuesta_correcta": request.form.get(f"preguntas_manual[{idx_manual}][correcta]"),
+                    "dificultad": "media",
+                    "puntos_maximos": 1,
+                    "explicacion": "",
+                    # ✅ Guardar el ID del indicador en el JSON del examen
+                    "indicador_logro_id": int(indicador_id) if indicador_id else None,
+                    "url_contexto": request.form.get(f"preguntas_manual[{idx_manual}][url_contexto]"),
+                    "tipo_contexto": request.form.get(f"preguntas_manual[{idx_manual}][tipo_contexto]")
+                }
+                preguntas_data.append(pregunta)
+                idx_manual += 1
+
+            if not preguntas_data:
+                flash("Debes agregar al menos una pregunta.", "warning")
+                return redirect(url_for("examen.crear_examen"))
+
+            # Crear Examen
+            nuevo_examen = Examen(
+                titulo=titulo,
+                nombre=titulo,
+                descripcion=f"Examen creado para {grado}",
+                materia_id=materia_id,
+                colegio_id=current_user.colegio_id,
+                contenido_json=preguntas_data,
+                tiempo_limite_minutos=30,
+                fecha_creacion=datetime.now(),
+                activo=True
+            )
+            db.session.add(nuevo_examen)
+            db.session.commit()
+
+            flash(f"✅ Examen '{titulo}' creado con {len(preguntas_data)} preguntas vinculadas.", "success")
+            return redirect(url_for("examen.listar_examenes"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al crear examen: {str(e)}", "danger")
+            import traceback;
+            traceback.print_exc()
+
+    # 3. Renderizar GET
+    return render_template(
+        "examenes/crear_examen.html",
+        materias=materias,
+        estructura_evaluacion=json.dumps(estructura_evaluacion)
+    )
 
 # ==========================================================
 # CREAR EXAMEN CON ASISTENCIA DE IA (FORMULARIO INICIAL)
@@ -273,6 +383,8 @@ def render_examen_estudiante():
 def guardar_resultado_examen():
     try:
         data = request.get_json()
+
+        # Validaciones básicas
         required_fields = ['examen_id', 'materia_id', 'respuestas']
         for field in required_fields:
             if field not in data:
@@ -282,12 +394,23 @@ def guardar_resultado_examen():
         if not estudiante:
             return jsonify({'error': 'Usuario no es un estudiante válido'}), 400
 
+        # Obtener periodo actual (asumimos que hay uno activo o tomamos el último)
+        from app.models.periodo_academico import PeriodoAcademico
+        periodo_actual = PeriodoAcademico.query.filter_by(
+            colegio_id=estudiante.colegio_id,
+            activo=True
+        ).first()
+
+        if not periodo_actual:
+            return jsonify({'error': 'No hay periodo académico activo'}), 400
+
         respuestas = data['respuestas']
         total_preguntas = len(respuestas)
         correctas = sum(1 for r in respuestas if r.get('es_correcta', False))
         incorrectas = total_preguntas - correctas
         porcentaje = (correctas / total_preguntas * 100) if total_preguntas > 0 else 0
 
+        # Escala literal
         if porcentaje >= 100:
             literal = 'S'
         elif porcentaje >= 80:
@@ -301,6 +424,7 @@ def guardar_resultado_examen():
 
         nota_decimal = round(porcentaje / 20, 2)
 
+        # 1. Guardar Resultado Global del Examen
         resultado = ResultadoExamen(
             estudiante_id=estudiante.id,
             examen_id=data['examen_id'],
@@ -313,10 +437,51 @@ def guardar_resultado_examen():
             nota_numerica=nota_decimal,
             fecha_finalizacion=datetime.utcnow()
         )
-
         db.session.add(resultado)
-        db.session.flush()
+        db.session.flush()  # Para obtener el ID del resultado
 
+        # 2. ✅ NUEVO: Desglose por Indicadores de Logro
+        # Agrupamos respuestas por indicador_id
+        acumulado_indicadores = {}
+
+        for resp in respuestas:
+            ind_id = resp.get('indicador_logro_id')
+            if ind_id:
+                if ind_id not in acumulado_indicadores:
+                    acumulado_indicadores[ind_id] = {'correctas': 0, 'total': 0}
+
+                acumulado_indicadores[ind_id]['total'] += 1
+                if resp.get('es_correcta', False):
+                    acumulado_indicadores[ind_id]['correctas'] += 1
+
+        # Insertar/Actualizar en evaluaciones_estudiante
+        for ind_id, stats in acumulado_indicadores.items():
+            # Calcular nota del indicador (escala 0-5)
+            nota_ind = round((stats['correctas'] / stats['total']) * 5, 2) if stats['total'] > 0 else 0
+
+            # Verificar si ya existe evaluación para este estudiante+indicador+periodo
+            eval_existente = EvaluacionEstudiante.query.filter_by(
+                estudiante_id=estudiante.id,
+                indicador_id=ind_id,
+                periodo_id=periodo_actual.id
+            ).first()
+
+            if eval_existente:
+                # Promediar con calificación anterior (opcional, depende de tu lógica de negocio)
+                nueva_nota = round((eval_existente.calificacion + nota_ind) / 2, 2)
+                eval_existente.calificacion = nueva_nota
+                eval_existente.observacion = f"Actualizado por examen {data['examen_id']}"
+            else:
+                nueva_eval = EvaluacionEstudiante(
+                    estudiante_id=estudiante.id,
+                    indicador_id=ind_id,
+                    periodo_id=periodo_actual.id,
+                    calificacion=nota_ind,
+                    observacion=f"Evaluado en examen {data['examen_id']}"
+                )
+                db.session.add(nueva_eval)
+
+        # 3. Guardar detalles de respuestas (para revisión posterior)
         for idx, resp in enumerate(respuestas):
             detalle = RespuestaExamenDetalle(
                 resultado_examen_id=resultado.id,
@@ -325,7 +490,9 @@ def guardar_resultado_examen():
                 respuesta_seleccionada=resp.get('respuesta_seleccionada', ''),
                 respuesta_correcta=resp.get('respuesta_correcta', ''),
                 es_correcta=resp.get('es_correcta', False),
-                tiempo_respuesta_seg=resp.get('tiempo_respuesta_seg')
+                tiempo_respuesta_seg=resp.get('tiempo_respuesta_seg'),
+                # ✅ Guardar también el indicador en el detalle para auditoría
+                indicador_logro_id=resp.get('indicador_logro_id')
             )
             db.session.add(detalle)
 
@@ -341,8 +508,9 @@ def guardar_resultado_examen():
 
     except Exception as e:
         db.session.rollback()
+        import traceback;
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
 
 # ==========================================================
 # LISTADO DE EXÁMENES (VISTA ESTUDIANTE)
@@ -628,3 +796,76 @@ def api_examen_json(id):
         })
 
     return jsonify({"preguntas": preguntas})
+
+
+from app.models.grupo import Grupo
+from app.models.grupo_materia import GrupoMateria
+from sqlalchemy.orm import aliased
+
+
+@docente_bp.route("/planilla/<int:grupo_id>/<int:materia_id>")
+@login_required
+def ver_planilla(grupo_id, materia_id):
+    # Validar permisos
+    if current_user.rol not in ['docente', 'coordinador']:
+        abort(403)
+
+    # Obtener información del grupo y materia
+    grupo = Grupo.query.get_or_404(grupo_id)
+    materia = Materia.query.get_or_404(materia_id)
+
+    # Verificar que el docente enseñe esa materia en ese grupo
+    asignacion = GrupoMateria.query.filter_by(
+        grupo_id=grupo_id,
+        materia_id=materia_id,
+        docente_id=current_user.docente.id if hasattr(current_user, 'docente') else current_user.id
+    ).first()
+
+    if not asignacion and current_user.rol != 'coordinador':
+        flash("No tienes permiso para ver esta planilla", "danger")
+        return redirect(url_for('docente.dashboard'))
+
+    # Obtener estudiantes activos del grupo
+    estudiantes = Estudiante.query.filter_by(
+        grupo_id=grupo_id,
+        activo=True
+    ).order_by(Estudiante.apellido, Estudiante.nombre).all()
+
+    # Obtener competencias e indicadores de esta materia
+    competencias = CompetenciaEstudiante.query.filter_by(materia_id=materia_id).all()
+
+    # Construir estructura jerárquica para la plantilla
+    estructura = []
+    for comp in competencias:
+        inds = IndicadorLogro.query.filter_by(competencia_id=comp.id).all()
+        estructura.append({
+            'codigo': comp.codigo,
+            'nombre': comp.nombre,
+            'indicadores': inds
+        })
+
+    # Obtener evaluaciones existentes (para llenar la tabla)
+    # Usamos un diccionario anidado: {estudiante_id: {indicador_id: nota}}
+    eval_map = {}
+    periodos = PeriodoAcademico.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
+    periodo_ids = [p.id for p in periodos]
+
+    evaluaciones = EvaluacionEstudiante.query.filter(
+        EvaluacionEstudiante.estudiante_id.in_([e.id for e in estudiantes]),
+        EvaluacionEstudiante.indicador_id.in_([i.id for c in estructura for i in c['indicadores']]),
+        EvaluacionEstudiante.periodo_id.in_(periodo_ids)
+    ).all()
+
+    for ev in evaluaciones:
+        if ev.estudiante_id not in eval_map:
+            eval_map[ev.estudiante_id] = {}
+        eval_map[ev.estudiante_id][ev.indicador_id] = ev.calificacion
+
+    return render_template(
+        "docentes/planilla.html",
+        grupo=grupo,
+        materia=materia,
+        estudiantes=estudiantes,
+        estructura=estructura,
+        eval_map=eval_map
+    )

@@ -1,0 +1,238 @@
+    {% extends "docentes/docente_base.html" %}
+
+    {% block title %}Calificaciones: {{ grupo.nombre }} - {{ materia.nombre }}{% endblock %}
+
+    {% block docente_page_title %}
+        Planilla de Calificaciones: {{ grupo.nombre }} - {{ materia.nombre }}
+        <small class="text-muted d-block fs-6 mt-1">Periodo: {{ periodo.nombre }}</small>
+    {% endblock %}
+
+    {% block docente_content %}
+    <div class="container-fluid py-4">
+
+        <!-- C1: Panel Superior Configuración 75% -->
+        <div class="card shadow-sm border-0 mb-4 bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-sliders me-2"></i>Distribución del 75% Docente</h6>
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-0 text-muted small">
+                            Aquí podrás definir tus actividades (Talleres, Parciales, etc.) y sus porcentajes.
+                            <span class="badge bg-warning text-dark ms-2">Pendiente de integración con Contribuciones</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-success fs-6 p-2">Disponible: {{ "%.1f"|format(config_75.disponible) }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Calificaciones A1 + Columnas Fijas -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+                    <table class="table table-bordered table-hover mb-0 text-center align-middle" id="tablaCalificaciones">
+                        <thead class="bg-primary text-white sticky-top" style="z-index: 10;">
+                            <!-- Fila 1: Agrupadores de Competencia + Fijos -->
+                            <tr>
+                                <th rowspan="2" class="align-middle sticky-left bg-white text-dark" style="min-width: 250px; z-index: 20;">Estudiante</th>
+
+                                {% for comp in estructura %}
+                                <th colspan="{{ comp.indicadores|length }}" class="bg-info bg-opacity-25 text-dark">
+                                    {{ comp.nombre }} <br><small class="font-monospace">[{{ comp.codigo_comp }}]</small>
+                                </th>
+                                {% endfor %}
+
+                                <!-- Columnas Fijas Institucionales -->
+                                <th rowspan="2" class="align-middle bg-warning bg-opacity-25 text-dark" style="min-width: 100px;">
+                                    Examen Final<br><small>[20%]</small>
+                                </th>
+                                <th rowspan="2" class="align-middle bg-success bg-opacity-25 text-dark" style="min-width: 100px;">
+                                    Autoevaluación<br><small>[5%]</small>
+                                </th>
+
+                                <!-- Botón IA B1 -->
+                                <th rowspan="2" class="align-middle bg-dark text-white" style="width: 60px;">
+                                    <i class="bi bi-robot"></i> IA
+                                </th>
+                            </tr>
+
+                            <!-- Fila 2: Códigos de Indicadores Simplificados -->
+                            <tr>
+                                {% for comp in estructura %}
+                                    {% for ind in comp.indicadores %}
+                                    <th style="min-width: 80px; font-size: 0.8rem;" class="bg-info bg-opacity-10">
+                                        {{ ind.codigo }}
+                                    </th>
+                                    {% endfor %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for est in estudiantes %}
+                            <tr>
+                                <!-- Nombre Estudiante (Sticky Left) -->
+                                <td class="text-start fw-bold sticky-left bg-white" style="z-index: 5;">
+                                    {{ est.apellido }}, {{ est.nombre }}
+                                </td>
+
+                                <!-- Celdas de Indicadores Editables -->
+                                {% for comp in estructura %}
+                                    {% for ind in comp.indicadores %}
+                                    <td>
+                                        {% set nota = eval_map.get(est.id, {}).get(ind.id) %}
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center input-nota"
+                                               data-est="{{ est.id }}"
+                                               data-ind="{{ ind.id }}"
+                                               min="0" max="5" step="0.1"
+                                               onchange="this.value = Math.min(5, Math.max(0, parseFloat(this.value) || 0))"
+                                               value="{{ nota if nota is not none else '' }}"
+                                               placeholder="-">
+                                    </td>
+                                    {% endfor %}
+                                {% endfor %}
+
+                                <!-- Celdas Fijas (Placeholder por ahora) -->
+                                <td><input type="number" class="form-control form-control-sm text-center" placeholder="20%" disabled></td>
+                                <td><input type="number" class="form-control form-control-sm text-center" placeholder="5%" disabled></td>
+
+                                <!-- Botón IA B1 -->
+                                <td>
+                                    <button class="btn btn-sm btn-outline-dark btn-ia-analisis"
+                                            data-est-id="{{ est.id }}"
+                                            data-est-nombre="{{ est.apellido }}, {{ est.nombre }}"
+                                            title="Analizar desempeño con IA">
+                                        <i class="bi bi-stars"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lateral IA (B1) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasIA" style="width: 500px;">
+        <div class="offcanvas-header bg-primary text-white">
+            <h5 class="offcanvas-title"><i class="bi bi-robot me-2"></i>Análisis IA: <span id="iaNombreEstudiante"></span></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div id="iaLoading" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Analizando desempeño pedagógico...</p>
+            </div>
+            <div id="iaContent" class="d-none">
+                <div class="alert alert-info border-0 bg-info bg-opacity-10">
+                    <strong>Fortalezas:</strong>
+                    <ul id="iaFortalezas" class="mb-0 mt-1"></ul>
+                </div>
+                <div class="alert alert-warning border-0 bg-warning bg-opacity-10">
+                    <strong>Debilidades:</strong>
+                    <ul id="iaDebilidades" class="mb-0 mt-1"></ul>
+                </div>
+                <div class="card mt-3 border-success">
+                    <div class="card-header bg-success text-white fw-bold">Plan de Apoyo Sugerido</div>
+                    <div class="card-body">
+                        <textarea id="iaPlanApoyo" class="form-control" rows="6"></textarea>
+                    </div>
+                </div>
+                <button id="btnGuardarPlanIA" class="btn btn-success w-100 mt-3"><i class="bi bi-save me-2"></i>Guardar Ajustes Docentes</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasIA'));
+
+        // 1. Evento Botón IA (B1) - Abrir análisis
+        document.querySelectorAll('.btn-ia-analisis').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const estId = this.dataset.estId;
+                const estNombre = this.dataset.estNombre;
+
+                document.getElementById('iaNombreEstudiante').textContent = estNombre;
+                document.getElementById('iaLoading').classList.remove('d-none');
+                document.getElementById('iaContent').classList.add('d-none');
+                offcanvas.show();
+
+                try {
+                    const response = await fetch(`/docentes/api/ia/analizar-estudiante`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            estudiante_id: parseInt(estId),
+                            materia_id: {{ materia.id }},
+                            periodo_id: {{ periodo.id }}
+                        })
+                    });
+
+                    const contentType = response.headers.get("content-type");
+                    if (!contentType || !contentType.includes("application/json")) {
+                        throw new Error("Error de conexión con el servidor.");
+                    }
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || data.detalle || "Error en análisis IA");
+                    }
+
+                    // Poblar Modal
+                    const ulF = document.getElementById('iaFortalezas');
+                    const ulD = document.getElementById('iaDebilidades');
+
+                    ulF.innerHTML = (data.fortalezas?.length > 0)
+                        ? data.fortalezas.map(f => `<li>${f}</li>`).join('')
+                        : '<li class="text-muted fst-italic">Sin fortalezas identificadas aún.</li>';
+
+                    ulD.innerHTML = (data.debilidades?.length > 0)
+                        ? data.debilidades.map(d => `<li>${d}</li>`).join('')
+                        : '<li class="text-muted fst-italic">Sin debilidades críticas detectadas.</li>';
+
+                    document.getElementById('iaPlanApoyo').value = data.plan_apoyo || '';
+
+                    document.getElementById('iaLoading').classList.add('d-none');
+                    document.getElementById('iaContent').classList.remove('d-none');
+
+                } catch (error) {
+                    console.error(error);
+                    alert(`⚠️ ${error.message}`);
+                    offcanvas.hide();
+                }
+            });
+        });
+
+        // ✅ 2. NUEVO: Evento Botón Guardar Plan de Apoyo
+        document.getElementById('btnGuardarPlanIA')?.addEventListener('click', function() {
+            const planTexto = document.getElementById('iaPlanApoyo').value;
+            const nombreEst = document.getElementById('iaNombreEstudiante').textContent;
+
+            if (!planTexto.trim()) {
+                alert("El plan de apoyo está vacío. Edítalo antes de guardar.");
+                return;
+            }
+
+            // TODO: Aquí irá la llamada AJAX para guardar en BD cuando definamos el endpoint
+            // Por ahora, feedback visual inmediato para el docente
+            const btnOriginal = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>¡Guardado!';
+            this.classList.replace('btn-success', 'btn-dark');
+            this.disabled = true;
+
+            setTimeout(() => {
+                this.innerHTML = btnOriginal;
+                this.classList.replace('btn-dark', 'btn-success');
+                this.disabled = false;
+                alert(`✅ Plan de apoyo ajustado para ${nombreEst} registrado exitosamente.`);
+            }, 1500);
+        });
+    });
+    </script>
+    {% endblock %}

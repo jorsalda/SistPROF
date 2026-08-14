@@ -1,10 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, session
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, session, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 from sqlalchemy import func
 
-from app import Coordinador
+from app.models.coordinador import Coordinador
 from app.extensions import db
 from app.models.colegio import Colegio
 from app.models.docente import Docente
@@ -1925,3 +1925,158 @@ def guardar_carga_academica():
         db.session.rollback()
         flash(f' Error al guardar: {str(e)}', 'danger')
         return redirect(url_for('colegio.gestion_carga_academica'))
+
+
+# ==========================================================
+# CONFIGURACIÓN DE PERIODOS ACADÉMICOS (ESTRUCTURA INSTITUCIONAL)
+# Permite al Rector definir cuántos periodos tiene el colegio
+# ==========================================================
+
+@colegio_bp.route("/configurar-periodos", methods=["GET", "POST"])
+@login_required
+def configurar_periodos():
+    """Vista CRUD para gestionar la estructura de periodos del colegio."""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    from app.models.periodo_academico import PeriodoAcademico
+
+    # GET: Listar periodos existentes
+    periodos = PeriodoAcademico.query.filter_by(
+        colegio_id=current_user.colegio_id
+    ).order_by(PeriodoAcademico.anio.desc(), PeriodoAcademico.orden).all()
+
+    # POST: Crear nuevo periodo
+    if request.method == "POST":
+        nombre = request.form.get('nombre', '').strip()
+        anio = request.form.get('anio', type=int)
+        fecha_inicio = request.form.get('fecha_inicio')
+        fecha_fin = request.form.get('fecha_fin')
+        orden = request.form.get('orden', type=int)
+
+        if all([nombre, anio, fecha_inicio, fecha_fin, orden]):
+            # Validar que no exista otro periodo con mismo nombre/año/orden
+            existe = PeriodoAcademico.query.filter_by(
+                colegio_id=current_user.colegio_id,
+                anio=anio,
+                orden=orden
+            ).first()
+
+            if existe:
+                flash(f"Ya existe un periodo #{orden} para el año {anio}", "danger")
+            else:
+                nuevo = PeriodoAcademico(
+                    colegio_id=current_user.colegio_id,
+                    nombre=nombre, anio=anio, orden=orden,
+                    fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
+                    activo=True
+                )
+                db.session.add(nuevo)
+                db.session.commit()
+                flash(f"Periodo '{nombre}' configurado exitosamente", "success")
+        else:
+            flash("Complete todos los campos obligatorios", "danger")
+
+        return redirect(url_for('colegio.configurar_periodos'))
+
+    return render_template("colegio/configurar_periodos.html", periodos=periodos)
+
+
+@colegio_bp.route("/eliminar-periodo/<int:id>", methods=["POST"])
+@login_required
+def eliminar_periodo(id):
+    """Elimina un periodo solo si no tiene datos asociados."""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    from app.models.periodo_academico import PeriodoAcademico
+    from app.models.evaluacion_estudiante import EvaluacionEstudiante
+
+    p = PeriodoAcademico.query.filter_by(
+        id=id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    # 🔒 SEGURIDAD: Bloquear eliminación si hay calificaciones
+    tiene_notas = EvaluacionEstudiante.query.filter_by(periodo_id=p.id).first()
+
+    if tiene_notas:
+        flash("⚠️ No se puede eliminar: existen calificaciones registradas en este periodo.", "danger")
+    else:
+        db.session.delete(p)
+        db.session.commit()
+        flash("Periodo eliminado correctamente", "success")
+
+    return redirect(url_for('colegio.configurar_periodos'))
+
+
+
+# ==========================================================
+# GESTIÓN DE PERIODOS ACADÉMICOS (EXCLUSIVO: HABILITACIÓN DE EDICIÓN)
+# El Rector SOLO abre/cierra ventanas de edición. NO crea periodos.
+# ==========================================================
+
+@colegio_bp.route("/administrar-periodos")
+@login_required
+def administrar_periodos():
+    """Vista exclusiva del Rector/Admin Colegio para habilitar edición."""
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    from app.models.periodo_academico import PeriodoAcademico
+    from app.models.configuracion_periodo import ConfiguracionPeriodo
+
+    periodos = PeriodoAcademico.query.filter_by(
+        colegio_id=current_user.colegio_id
+    ).order_by(PeriodoAcademico.anio.desc(), PeriodoAcademico.orden).all()
+
+    # Sincronizar configuraciones (crear si no existen)
+    configs = {}
+    for p in periodos:
+        config = ConfiguracionPeriodo.query.filter_by(periodo_id=p.id).first()
+        if not config:
+            config = ConfiguracionPeriodo(
+                colegio_id=current_user.colegio_id,
+                periodo_id=p.id,
+                estado='CERRADO',
+                permite_editar_competencias=False,
+                permite_editar_notas=False
+            )
+            db.session.add(config)
+        configs[p.id] = config
+    db.session.commit()
+
+    return render_template("colegio/administrar_periodos.html", periodos=periodos, configs=configs)
+
+
+
+@colegio_bp.route("/api/periodo/toggle-edicion", methods=["POST"])
+@login_required
+def toggle_edicion_periodo():
+    """Endpoint AJAX para habilitar/deshabilitar edición en un periodo."""
+    if not current_user.es_admin_colegio:
+        return jsonify({"error": "No autorizado"}), 403
+
+    from app.models.configuracion_periodo import ConfiguracionPeriodo
+    from datetime import datetime
+
+    data = request.get_json()
+    config = ConfiguracionPeriodo.query.filter_by(
+        periodo_id=data['periodo_id'],
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    try:
+        if data['tipo'] == 'competencias':
+            config.permite_editar_competencias = data['activo']
+            config.estado = 'ABIERTO' if data['activo'] else 'CERRADO'
+            if data['activo']:
+                config.fecha_apertura = datetime.now()
+        elif data['tipo'] == 'notas':
+            config.permite_editar_notas = data['activo']
+
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

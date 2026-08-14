@@ -33,6 +33,7 @@
         </div>
 
         <!-- Menú -->
+                <!-- Menú -->
         <ul class="sidebar-menu">
 
             <!-- Dashboard -->
@@ -52,15 +53,43 @@
                     Mis Permisos
                 </a>
             </li>
-            <a href="{{ url_for('docente.banco_preguntas') }}" class="nav-link">
-                <i class="bi bi-database"></i> Mi Banco de Preguntas
-            </a>
+
             <!-- Solicitar Permiso -->
             <li class="menu-item">
                 <a href="{{ url_for('docente.nuevo_permiso_docente') }}"
                    class="menu-link {% if request.endpoint == 'docente.nuevo_permiso_docente' %}active{% endif %}">
                     <i class="bi bi-plus-circle"></i>
                     Solicitar Permiso
+                </a>
+            </li>
+
+            <!-- SEPARADOR VISUAL (Opcional, para organizar mejor) -->
+            <li class="menu-divider"></li>
+
+            <!-- Mi Banco de Preguntas (CORREGIDO) -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.banco_preguntas') }}"
+                   class="menu-link {% if request.endpoint == 'docente.banco_preguntas' %}active{% endif %}">
+                    <i class="bi bi-database"></i>
+                    Mi Banco de Preguntas
+                </a>
+            </li>
+
+            <!-- Gestión de Competencias (CORREGIDO Y ALINEADO) -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.gestionar_competencias') }}"
+                   class="menu-link {% if request.endpoint == 'docente.gestionar_competencias' %}active{% endif %}">
+                    <i class="bi bi-bookmark-star"></i>
+                    Gestión de Competencias
+                </a>
+            </li>
+
+            <!-- Después de "Gestión de Competencias" -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.ver_planilla_selector') }}"
+                   class="menu-link {% if request.endpoint == 'docente.ver_planilla_selector' %}active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                    Planilla de Calificaciones
                 </a>
             </li>
 
@@ -90,6 +119,7 @@
                     Citaciones
                 </a>
             </li>
+
             <!-- Crear examenes desde el banco -->
             <li class="menu-item">
                 <a href="{{ url_for('docente.crear_desde_banco') }}"
@@ -98,6 +128,7 @@
                     Crear Examen (Banco)
                 </a>
             </li>
+
             <!-- Crear Examen con IA -->
             <li class="menu-item">
                 <a href="{{ url_for('examen.crear_examen_ia') }}"

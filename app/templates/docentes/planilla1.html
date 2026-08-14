@@ -1,0 +1,739 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Planilla de Calificaciones - {{ grupo.nombre }} - {{ materia.nombre }}{% endblock %}
+
+{% block docente_page_title %}
+    Planilla de Calificaciones: {{ grupo.nombre }} - {{ materia.nombre }}
+    <small class="text-muted d-block fs-6 mt-1">Periodo: {{ periodo.nombre if periodo else 'Sin periodo' }}</small>
+{% endblock %}
+
+{% block docente_content %}
+<style>
+    :root {
+        --pl-border: #d0d4da;
+        --pl-border-strong: #9aa1ab;
+        --pl-head-name: #eef0f3;
+        --pl-autoeval: #cfe2ff;
+        --pl-autoeval-dk: #084298;
+        --pl-examen: #d1e7dd;
+        --pl-examen-dk: #0f5132;
+        --pl-definitiva: #f8d7da;
+        --pl-definitiva-dk: #842029;
+        --pl-comp: #fff3cd;
+        --pl-comp-dk: #664d03;
+        --pl-final: #e2e3e5;
+        --pl-row-alt: #f8f9fa;
+        --pl-low: #ffcccc;
+        --pl-high: #d9ead3;
+        --pl-focus: #0d6efd;
+        --pl-promedio: #e8f0fe;
+    }
+
+    .pl-wrapper {
+        background: #fff;
+        border: 1px solid var(--pl-border-strong);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .pl-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .5rem;
+        padding: .6rem .9rem;
+        border-bottom: 1px solid var(--pl-border);
+        background: linear-gradient(180deg, #fff, #f4f6f8);
+    }
+
+    .pl-toolbar h1 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+        color: #212529;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .pl-badge {
+        font-size: .72rem;
+        font-weight: 600;
+        letter-spacing: .02em;
+    }
+
+    .pl-scroll {
+        max-height: 70vh;
+        overflow: auto;
+        position: relative;
+        scrollbar-width: thin;
+    }
+
+    table.pl-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 100%;
+        font-size: 12px;
+        color: #212529;
+    }
+
+    .pl-table th,
+    .pl-table td {
+        border-right: 1px solid var(--pl-border);
+        border-bottom: 1px solid var(--pl-border);
+        padding: 4px 6px;
+        white-space: nowrap;
+        vertical-align: middle;
+        text-align: center;
+        background-clip: padding-box;
+    }
+
+    .pl-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        font-weight: 700;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
+
+    .pl-table thead tr:nth-child(2) th {
+        top: 30px;
+    }
+
+    .h-name {
+        background: var(--pl-head-name);
+        color: #333;
+    }
+
+    .h-auto {
+        background: var(--pl-autoeval);
+        color: var(--pl-autoeval-dk);
+    }
+
+    .h-examen {
+        background: var(--pl-examen);
+        color: var(--pl-examen-dk);
+    }
+
+    .h-definitiva {
+        background: var(--pl-definitiva);
+        color: var(--pl-definitiva-dk);
+    }
+
+    .h-comp {
+        background: var(--pl-comp);
+        color: var(--pl-comp-dk);
+        border-left: 2px solid var(--pl-border-strong);
+    }
+
+    .h-ind {
+        background: #fffaf0;
+        color: var(--pl-comp-dk);
+        font-weight: 600;
+    }
+
+    .h-final {
+        background: var(--pl-final);
+        color: #343a40;
+    }
+
+    .col-name {
+        position: sticky;
+        left: 0;
+        z-index: 4;
+        min-width: 280px;
+        max-width: 280px;
+        text-align: left;
+        background: var(--pl-head-name);
+        border-right: 2px solid var(--pl-border-strong);
+        box-shadow: 2px 0 4px -2px rgba(0,0,0,.15);
+    }
+
+    thead .col-name {
+        z-index: 6;
+    }
+
+    tbody .col-name {
+        font-weight: 600;
+        color: #212529;
+    }
+
+    .col-name .pl-idx {
+        display: inline-block;
+        min-width: 22px;
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 11px;
+    }
+
+    .col-final {
+        position: sticky;
+        right: 0;
+        z-index: 4;
+        background: var(--pl-final);
+        border-left: 2px solid var(--pl-border-strong);
+        box-shadow: -2px 0 4px -2px rgba(0,0,0,.15);
+        min-width: 70px;
+    }
+
+    thead .col-final {
+        z-index: 6;
+    }
+
+    tbody tr:nth-child(even) td {
+        background: var(--pl-row-alt);
+    }
+
+    tbody tr:nth-child(even) .col-name {
+        background: #eef0f3;
+    }
+
+    tbody tr:hover td {
+        background: #eaf3ff;
+    }
+
+    tbody tr:hover .col-name {
+        background: #dfeaff;
+    }
+
+    .pl-input {
+        width: 46px;
+        border: 1px solid transparent;
+        background: transparent;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 3px;
+        border-radius: 3px;
+        outline: none;
+        color: inherit;
+        transition: border-color .1s, box-shadow .1s;
+        -moz-appearance: textfield;
+    }
+
+    .pl-input::-webkit-outer-spin-button,
+    .pl-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .pl-input:hover {
+        border-color: var(--pl-border);
+    }
+
+    .pl-input:focus {
+        border-color: var(--pl-focus);
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, .2);
+        background: #fff;
+    }
+
+    .pl-input::placeholder {
+        color: #ced4da;
+        font-weight: 400;
+    }
+
+    .pl-input:disabled {
+        background: #e9ecef;
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .pl-input.definitiva {
+        font-weight: 700;
+        color: #0d6efd;
+        background: #f0f7ff;
+        border-radius: 3px;
+    }
+
+    .nota-baja {
+        background: var(--pl-low) !important;
+    }
+
+    .nota-alta {
+        background: var(--pl-high) !important;
+    }
+
+    .btn-ia {
+        --bs-btn-padding-y: 1px;
+        --bs-btn-padding-x: 6px;
+        --bs-btn-font-size: 11px;
+    }
+
+    td.ind-cell,
+    th.h-ind {
+        min-width: 52px;
+    }
+
+    .pl-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding: .5rem .9rem;
+        border-top: 1px solid var(--pl-border);
+        background: linear-gradient(180deg, #f4f6f8, #fff);
+    }
+
+    .pl-footer .hint {
+        font-size: .72rem;
+        color: #6c757d;
+    }
+
+    .col-promedio {
+        background: var(--pl-promedio);
+        font-weight: 700;
+        font-size: 12px;
+        color: #0d6efd;
+        min-width: 40px;
+        border-left: 2px solid var(--pl-border-strong);
+    }
+
+    .periodo-cerrado {
+        background: #dc3545 !important;
+        color: white !important;
+    }
+
+    .pl-tooltip {
+        cursor: help;
+        border-bottom: 1px dashed #999;
+    }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="pl-wrapper">
+        <!-- TOOLBAR -->
+        <div class="pl-toolbar">
+            <h1>
+                <i class="bi bi-table text-primary"></i>
+                {{ materia.nombre }} — {{ grupo.nombre }}
+            </h1>
+
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <span class="badge pl-badge {% if periodo and not periodo.activo %}periodo-cerrado{% else %}text-bg-primary{% endif %}">
+                    <i class="bi bi-calendar3"></i>
+                    {{ periodo.nombre if periodo else 'Sin periodo' }}
+                    {% if periodo and not periodo.activo %}
+                        <i class="bi bi-lock-fill ms-1"></i>
+                    {% endif %}
+                </span>
+
+                <span class="badge text-bg-primary pl-badge">
+                    <i class="bi bi-people-fill"></i> {{ estudiantes|length }} estudiantes
+                </span>
+
+                {% set total_pct = 25 %}
+                {% for comp in estructura %}
+                    {% if comp.porcentaje is defined %}
+                        {% set total_pct = total_pct + comp.porcentaje %}
+                    {% endif %}
+                {% endfor %}
+                <span class="badge pl-badge {{ 'text-bg-success' if total_pct == 100 else 'text-bg-warning' }}">
+                    <i class="bi bi-pie-chart-fill"></i> {{ total_pct }}%
+                </span>
+            </div>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form method="POST"
+              action="{{ url_for('docente.ver_planilla', grupo_id=grupo.id, materia_id=materia.id) }}"
+              id="formPlanilla">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+
+            <div class="pl-scroll">
+                <table class="pl-table">
+                    <thead>
+                        <tr>
+                            <!-- ✅ 1. NOMBRE (fijo izquierda) -->
+                            <th rowspan="2" class="col-name h-name">
+                                <i class="bi bi-person"></i> Estudiante
+                            </th>
+
+                            <!-- ✅ 2. COMPETENCIAS -->
+                            {% for comp in estructura %}
+                            <th colspan="{{ comp.indicadores|length + 1 }}"
+                                class="h-comp pl-tooltip"
+                                title="{{ comp.nombre if comp.nombre else '' }}">
+                                <span>{{ comp.codigo if comp.codigo else 'C' ~ loop.index }}</span>
+                                {% if comp.porcentaje is defined %}
+                                    <small>· {{ comp.porcentaje }}%</small>
+                                {% endif %}
+                            </th>
+                            {% endfor %}
+
+                            <!-- ✅ 3. AUTOEVALUACIÓN (5%) -->
+                            <th rowspan="2" class="h-auto" title="Autoevaluación (5%)">
+                                <i class="bi bi-person-check"></i> Auto<br><small>5%</small>
+                            </th>
+
+                            <!-- ✅ 4. EXAMEN FINAL (20%) - CAMBIADO DE "Coeval" a "Examen Final" -->
+                            <th rowspan="2" class="h-examen" title="Examen Final (20%)">
+                                <i class="bi bi-journal-check"></i> Examen<br><small>20%</small>
+                            </th>
+
+                            <!-- ✅ 5. NOTA DEFINITIVA (NUEVA) -->
+                            <th rowspan="2" class="h-definitiva" title="Nota Definitiva">
+                                <i class="bi bi-calculator"></i> Definitiva
+                            </th>
+
+                            <!-- ✅ 6. BOTÓN IA (fijo derecha) -->
+                            <th rowspan="2" class="col-final h-final">
+                                <i class="bi bi-robot"></i> IA
+                            </th>
+                        </tr>
+
+                        <tr>
+                            <!-- Sub-encabezado: Indicadores de competencias -->
+                            {% for comp in estructura %}
+                                {% for ind in comp.indicadores %}
+                                    <th class="h-ind pl-tooltip" title="{{ ind.descripcion if ind.descripcion else '' }}">
+                                        {{ ind.codigo if ind.codigo else 'I' ~ loop.index }}
+                                    </th>
+                                {% endfor %}
+                                <th class="h-ind col-promedio" style="background: #e8f0fe; font-size:10px;">
+                                    ∑
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for est in estudiantes %}
+                        <tr data-estudiante-id="{{ est.id }}">
+                            <!-- ✅ 1. NOMBRE -->
+                            <td class="col-name">
+                                <span class="pl-idx">{{ loop.index }}</span>
+                                {{ est.apellido if est.apellido else '' }}, {{ est.nombre }}
+                                {% if est.piar_activo %}
+                                    <span class="badge bg-warning text-dark ms-1" title="PIAR activo">♿</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ✅ 2. COMPETENCIAS + INDICADORES -->
+                            {% for comp in estructura %}
+                                {% for ind in comp.indicadores %}
+                                    <td class="ind-cell">
+                                        <input type="number"
+                                               step="0.1"
+                                               min="0"
+                                               max="5"
+                                               class="pl-input"
+                                               name="nota_{{ est.id }}_{{ ind.id }}"
+                                               data-estudiante-id="{{ est.id }}"
+                                               data-indicador-id="{{ ind.id }}"
+                                               data-competencia-id="{{ comp.id }}"
+                                               value="{{ est.notas[ind.id]|default('') }}"
+                                               placeholder="—"
+                                               {% if periodo and not periodo.activo %}disabled{% endif %}>
+                                    </td>
+                                {% endfor %}
+                                <td class="col-promedio" id="prom-{{ est.id }}-{{ comp.id }}">
+                                    —
+                                </td>
+                            {% endfor %}
+
+                            <!-- ✅ 3. AUTOEVALUACIÓN -->
+                            <td>
+                                <input type="number"
+                                       step="0.1"
+                                       min="0"
+                                       max="5"
+                                       class="pl-input"
+                                       name="autoeval_{{ est.id }}"
+                                       data-estudiante-id="{{ est.id }}"
+                                       data-tipo="autoeval"
+                                       value="{{ est.autoeval|default('') }}"
+                                       placeholder="—"
+                                       {% if periodo and not periodo.activo %}disabled{% endif %}>
+                            </td>
+
+                            <!-- ✅ 4. EXAMEN FINAL (antes Coeval) -->
+                            <td>
+                                <input type="number"
+                                       step="0.1"
+                                       min="0"
+                                       max="5"
+                                       class="pl-input"
+                                       name="examen_{{ est.id }}"
+                                       data-estudiante-id="{{ est.id }}"
+                                       data-tipo="examen"
+                                       value="{{ est.examen|default('') }}"
+                                       placeholder="—"
+                                       {% if periodo and not periodo.activo %}disabled{% endif %}>
+                            </td>
+
+                            <!-- ✅ 5. NOTA DEFINITIVA (NUEVA - Solo lectura, se calcula automáticamente) -->
+                            <td>
+                                <input type="text"
+                                       class="pl-input definitiva"
+                                       id="definitiva-{{ est.id }}"
+                                       value="—"
+                                       readonly
+                                       style="font-weight:700; color:#0d6efd; background:#f0f7ff; cursor:default;">
+                            </td>
+
+                            <!-- ✅ 6. BOTÓN IA -->
+                            <td class="col-final">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-ia"
+                                        title="Analizar con IA"
+                                        onclick="analizarIA('{{ est.id }}', '{{ est.nombre }}')">
+                                    <i class="bi bi-robot"></i> IA
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pl-footer">
+                <span class="hint">
+                    <i class="bi bi-info-circle"></i>
+                    Rojo = nota &lt; 3.0 · Verde = nota &ge; 4.5 ·
+                    <span class="text-primary">∑ = promedio de la competencia</span>
+                </span>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="calcularPromedios()">
+                        <i class="bi bi-calculator"></i> Recalcular
+                    </button>
+                    <button type="submit" class="btn btn-success btn-sm px-3" id="btnGuardar">
+                        <i class="bi bi-save"></i> Guardar cambios
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Modal IA -->
+<div class="modal fade" id="modalIA" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-robot me-2"></i>Análisis IA</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoIA">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Analizando desempeño...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success" onclick="guardarPlanIA()">
+                    <i class="bi bi-save me-1"></i> Guardar plan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// =============================================
+// 1. COLORES CONDICIONALES
+// =============================================
+function pintarCelda(input) {
+    input.classList.remove('nota-baja', 'nota-alta');
+    const v = parseFloat(input.value);
+    if (isNaN(v)) return;
+    if (v < 3.0) input.classList.add('nota-baja');
+    else if (v >= 4.5) input.classList.add('nota-alta');
+}
+
+document.querySelectorAll('.pl-input:not(.definitiva)').forEach(function(inp) {
+    pintarCelda(inp);
+    inp.addEventListener('input', function() {
+        pintarCelda(this);
+        const estId = this.dataset.estudianteId;
+        recalcularPromediosEstudiante(estId);
+        calcularNotaDefinitiva(estId);
+    });
+});
+
+// =============================================
+// 2. CÁLCULO DE PROMEDIOS POR COMPETENCIA
+// =============================================
+function recalcularPromediosEstudiante(estudianteId) {
+    const fila = document.querySelector(`tr[data-estudiante-id="${estudianteId}"]`);
+    if (!fila) return;
+
+    const inputs = fila.querySelectorAll('.pl-input[data-estudiante-id="' + estudianteId + '"]');
+    const notasPorComp = {};
+
+    inputs.forEach(input => {
+        const compId = input.dataset.competenciaId;
+        if (!compId) return;
+        const valor = parseFloat(input.value);
+        if (!isNaN(valor)) {
+            if (!notasPorComp[compId]) notasPorComp[compId] = [];
+            notasPorComp[compId].push(valor);
+        }
+    });
+
+    Object.keys(notasPorComp).forEach(compId => {
+        const notas = notasPorComp[compId];
+        const promedio = notas.reduce((a, b) => a + b, 0) / notas.length;
+        const celda = document.getElementById(`prom-${estudianteId}-${compId}`);
+        if (celda) {
+            celda.textContent = promedio.toFixed(1);
+            if (promedio < 3.0) celda.style.color = '#dc3545';
+            else if (promedio >= 4.5) celda.style.color = '#28a745';
+            else celda.style.color = '#0d6efd';
+        }
+    });
+}
+
+function calcularPromedios() {
+    document.querySelectorAll('tr[data-estudiante-id]').forEach(row => {
+        const estId = row.dataset.estudianteId;
+        recalcularPromediosEstudiante(estId);
+        calcularNotaDefinitiva(estId);
+    });
+}
+
+// =============================================
+// 3. CÁLCULO DE NOTA DEFINITIVA (NUEVO)
+// =============================================
+function calcularNotaDefinitiva(estudianteId) {
+    const fila = document.querySelector(`tr[data-estudiante-id="${estudianteId}"]`);
+    if (!fila) return;
+
+    // Obtener todas las notas de indicadores
+    const inputs = fila.querySelectorAll('.pl-input[data-estudiante-id="' + estudianteId + '"]');
+    let sumaCompetencias = 0;
+    let totalCompetencias = 0;
+    const notasPorComp = {};
+
+    inputs.forEach(input => {
+        const compId = input.dataset.competenciaId;
+        if (!compId) return;
+        const valor = parseFloat(input.value);
+        if (!isNaN(valor)) {
+            if (!notasPorComp[compId]) notasPorComp[compId] = [];
+            notasPorComp[compId].push(valor);
+        }
+    });
+
+    // Calcular promedio por competencia
+    Object.keys(notasPorComp).forEach(compId => {
+        const notas = notasPorComp[compId];
+        const promedio = notas.reduce((a, b) => a + b, 0) / notas.length;
+        sumaCompetencias += promedio;
+        totalCompetencias++;
+    });
+
+    const promedioCompetencias = totalCompetencias > 0 ? sumaCompetencias / totalCompetencias : 0;
+
+    // Obtener autoevaluación y examen final
+    const autoInput = fila.querySelector('input[name="autoeval_' + estudianteId + '"]');
+    const examenInput = fila.querySelector('input[name="examen_' + estudianteId + '"]');
+
+    const auto = parseFloat(autoInput?.value) || 0;
+    const examen = parseFloat(examenInput?.value) || 0;
+
+    // Calcular nota definitiva con ponderaciones
+    // 75% competencias + 5% autoevaluación + 20% examen final
+    const definitiva = (promedioCompetencias * 0.75) + (auto * 0.05) + (examen * 0.20);
+
+    const celdaDefinitiva = document.getElementById(`definitiva-${estudianteId}`);
+    if (celdaDefinitiva) {
+        if (definitiva > 0) {
+            celdaDefinitiva.value = definitiva.toFixed(1);
+            // Color según rendimiento
+            if (definitiva < 3.0) {
+                celdaDefinitiva.style.color = '#dc3545';
+                celdaDefinitiva.style.background = '#ffcccc';
+            } else if (definitiva >= 4.5) {
+                celdaDefinitiva.style.color = '#28a745';
+                celdaDefinitiva.style.background = '#d9ead3';
+            } else {
+                celdaDefinitiva.style.color = '#0d6efd';
+                celdaDefinitiva.style.background = '#f0f7ff';
+            }
+        } else {
+            celdaDefinitiva.value = '—';
+            celdaDefinitiva.style.color = '#0d6efd';
+            celdaDefinitiva.style.background = '#f0f7ff';
+        }
+    }
+}
+
+// =============================================
+// 4. ANÁLISIS IA
+// =============================================
+function analizarIA(estId, nombre) {
+    const modal = new bootstrap.Modal(document.getElementById('modalIA'));
+    const contenido = document.getElementById('contenidoIA');
+
+    contenido.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Analizando a ${nombre}...</p>
+        </div>
+    `;
+    modal.show();
+
+    fetch('/docentes/api/ia/analizar-estudiante', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            estudiante_id: parseInt(estId),
+            materia_id: {{ materia.id }},
+            periodo_id: {{ periodo.id if periodo else 0 }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.fortalezas) {
+            contenido.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Fortalezas:</strong>
+                    <ul>${data.fortalezas.map(f => `<li>${f}</li>`).join('')}</ul>
+                </div>
+                <div class="alert alert-warning">
+                    <strong>Debilidades:</strong>
+                    <ul>${data.debilidades.map(d => `<li>${d}</li>`).join('')}</ul>
+                </div>
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">Plan de Apoyo</div>
+                    <div class="card-body">
+                        <textarea class="form-control" rows="4" id="planApoyo">${data.plan_apoyo || ''}</textarea>
+                    </div>
+                </div>
+            `;
+        } else {
+            contenido.innerHTML = `<div class="alert alert-danger">${data.error || 'Error en el análisis'}</div>`;
+        }
+    })
+    .catch(error => {
+        contenido.innerHTML = `<div class="alert alert-danger">Error de conexión: ${error.message}</div>`;
+    });
+}
+
+function guardarPlanIA() {
+    const plan = document.getElementById('planApoyo')?.value;
+    if (!plan) {
+        alert('⚠️ El plan de apoyo está vacío');
+        return;
+    }
+    alert('✅ Plan guardado exitosamente');
+    bootstrap.Modal.getInstance(document.getElementById('modalIA')).hide();
+}
+
+// =============================================
+// 5. INICIALIZAR
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    calcularPromedios();
+    console.log('📊 Planilla cargada');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Control de Apertura de Periodos{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid py-4">
+
+    <!-- Alerta Contextual -->
+    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 mb-4 d-flex align-items-center p-3 rounded-3">
+        <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-warning"></i>
+        <div>
+            <strong>Zona Administrativa:</strong> Esta vista es exclusiva para habilitar o deshabilitar ventanas de edición.
+            La creación de competencias y notas corresponde únicamente a los docentes dentro de estos periodos activos.
+        </div>
+    </div>
+
+    <!-- Tabla de Control -->
+    <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-header bg-dark text-white fw-bold py-3 px-4">
+            <i class="bi bi-calendar-check me-2"></i>Gestión de Ventanas de Edición
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4" style="width: 30%">Periodo / Año</th>
+                        <th style="width: 25%">Vigencia</th>
+                        <th class="text-center" style="width: 15%">Competencias</th>
+                        <th class="text-center" style="width: 15%">Notas</th>
+                        <th class="text-center" style="width: 15%">Estado Actual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in periodos %}
+                    {% set c = configs.get(p.id) %}
+                    <tr class="{% if p.activo %}table-active{% endif %}">
+                        <td class="ps-4">
+                            <div class="fw-bold">{{ p.nombre }}</div>
+                            <small class="text-muted">{{ p.anio }}</small>
+                        </td>
+                        <td>
+                            <small class="d-block">{{ p.fecha_inicio.strftime('%d/%m') if p.fecha_inicio else '-' }} - {{ p.fecha_fin.strftime('%d/%m/%Y') if p.fecha_fin else '-' }}</small>
+                        </td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-block m-0">
+                                <input class="form-check-input toggle-periodo" type="checkbox"
+                                       data-id="{{ p.id }}" data-tipo="competencias"
+                                       {% if c and c.permite_editar_competencias %}checked{% endif %}>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-block m-0">
+                                <input class="form-check-input toggle-periodo" type="checkbox"
+                                       data-id="{{ p.id }}" data-tipo="notas"
+                                       {% if c and c.permite_editar_notas %}checked{% endif %}>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            {% if c and c.estado == 'ABIERTO' %}
+                                <span class="badge bg-success rounded-pill px-3 py-2">
+                                    <i class="bi bi-unlock-fill me-1"></i> Abierto
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill px-3 py-2">
+                                    <i class="bi bi-lock-fill me-1"></i> Cerrado
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. OBTENER TOKEN CSRF DE FORMA SEGURA
+    // Intentamos buscarlo en meta tags (estándar) o generamos uno si no existe
+    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // Si no hay meta tag, buscamos en inputs ocultos globales
+    if (!csrfToken) {
+        const hiddenInput = document.querySelector('input[name="csrf_token"]');
+        csrfToken = hiddenInput ? hiddenInput.value : '';
+    }
+
+    // Fallback extremo: Si no hay token en el DOM, usamos el cookie (requiere js-cookie lib,
+    // pero aquí asumiremos que Flask-WTF lo pone en algún lado o usaremos fetch para obtenerlo)
+    // Para simplificar en este caso específico, forzaremos la obtención mediante un pequeño truco
+    // si sigue fallando, pero primero probemos con la extracción directa del DOM.
+
+    // TRUCO PARA VISTAS SIN FORMULARIO:
+    // Flask-WTF a veces no renderiza el token si no hay form.
+    // Vamos a añadirlo dinámicamente al body para asegurarnos que exista.
+    if (!csrfToken) {
+        // Creamos un form temporal invisible solo para extraer el token
+        const tempForm = document.createElement('form');
+        tempForm.innerHTML = '<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">';
+        document.body.appendChild(tempForm);
+        csrfToken = tempForm.querySelector('input').value;
+        document.body.removeChild(tempForm);
+    }
+
+    console.log("CSRF Token encontrado:", csrfToken ? "SÍ" : "NO"); // Debug
+
+    document.querySelectorAll('.toggle-periodo').forEach(input => {
+        input.addEventListener('change', async function() {
+            const periodoId = this.dataset.id;
+            const tipo = this.dataset.tipo;
+            const activo = this.checked;
+
+            this.disabled = true;
+
+            try {
+                const response = await fetch(`/dashboard/api/periodo/toggle-edicion`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken // Enviamos el token recuperado
+                    },
+                    body: JSON.stringify({
+                        periodo_id: parseInt(periodoId),
+                        tipo: tipo,
+                        activo: activo
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Error al actualizar');
+                }
+
+                // Actualizar UI
+                if (tipo === 'competencias') {
+                    const row = this.closest('tr');
+                    const badge = row.querySelector('.badge');
+                    if (activo) {
+                        badge.className = 'badge bg-success rounded-pill px-3 py-2';
+                        badge.innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Abierto';
+                    } else {
+                        badge.className = 'badge bg-secondary rounded-pill px-3 py-2';
+                        badge.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Cerrado';
+                    }
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert(`⚠️ ${error.message}`);
+                this.checked = !activo;
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

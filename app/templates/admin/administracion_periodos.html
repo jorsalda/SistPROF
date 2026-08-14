@@ -1,0 +1,138 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Administración de Periodos{% endblock %}
+
+{% block admin_page_title %}Control de Periodos Académicos{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid py-4">
+    
+    <div class="alert alert-info border-0 bg-info bg-opacity-10 mb-4">
+        <i class="bi bi-shield-lock me-2"></i>
+        <strong>Zona Restringida:</strong> Solo Rectoría y Coordinación pueden modificar estos ajustes.
+        Los cambios afectan inmediatamente la disponibilidad para los docentes.
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-calendar-range me-2"></i>Gestión de Apertura/Cierre</span>
+            <small class="fw-normal opacity-75">Colegio: {{ current_user.colegio.nombre }}</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th style="width: 25%">Periodo</th>
+                            <th style="width: 20%">Fechas</th>
+                            <th style="width: 25%">Edición Competencias</th>
+                            <th style="width: 25%">Edición Notas</th>
+                            <th style="width: 5%">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for periodo in periodos %}
+                        {% set config = configs.get(periodo.id) %}
+                        <tr class="{% if periodo.activo %}table-active{% endif %}">
+                            <td>
+                                <strong>{{ periodo.nombre }}</strong>
+                                {% if periodo.activo %}
+                                    <span class="badge bg-success ms-2">ACTIVO</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">
+                                {{ periodo.fecha_inicio.strftime('%d/%m/%Y') if periodo.fecha_inicio else 'N/A' }}<br>
+                                {{ periodo.fecha_fin.strftime('%d/%m/%Y') if periodo.fecha_fin else 'N/A' }}
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-edicion" type="checkbox" 
+                                           id="comp-{{ periodo.id }}"
+                                           data-periodo="{{ periodo.id }}" 
+                                           data-tipo="competencias"
+                                           {% if config and config.permite_editar_competencias %}checked{% endif %}>
+                                    <label class="form-check-label" for="comp-{{ periodo.id }}">
+                                        {{ 'Habilitado' if (config and config.permite_editar_competencias) else 'Deshabilitado' }}
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-edicion" type="checkbox" 
+                                           id="notas-{{ periodo.id }}"
+                                           data-periodo="{{ periodo.id }}" 
+                                           data-tipo="notas"
+                                           {% if config and config.permite_editar_notas %}checked{% endif %}>
+                                    <label class="form-check-label" for="notas-{{ periodo.id }}">
+                                        {{ 'Habilitado' if (config and config.permite_editar_notas) else 'Deshabilitado' }}
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                {% if config and config.estado == 'ABIERTO' %}
+                                    <i class="bi bi-unlock-fill text-success fs-5" title="Abierto"></i>
+                                {% else %}
+                                    <i class="bi bi-lock-fill text-secondary fs-5" title="Cerrado"></i>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.toggle-edicion').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const periodoId = this.dataset.periodo;
+            const tipo = this.dataset.tipo;
+            const activo = this.checked;
+            const label = this.nextElementSibling;
+            
+            // Feedback visual inmediato
+            label.textContent = 'Guardando...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch(`/api/periodo/toggle-estado`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ periodo_id: periodoId, tipo: tipo, activo: activo })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    label.textContent = activo ? 'Habilitado' : 'Deshabilitado';
+                    
+                    // Actualizar icono de estado general si es competencias
+                    if (tipo === 'competencias') {
+                        const row = this.closest('tr');
+                        const iconCell = row.querySelector('td:last-child i');
+                        if (activo) {
+                            iconCell.className = 'bi bi-unlock-fill text-success fs-5';
+                            iconCell.title = 'Abierto';
+                        } else {
+                            iconCell.className = 'bi bi-lock-fill text-secondary fs-5';
+                            iconCell.title = 'Cerrado';
+                        }
+                    }
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                alert(`⚠️ Error: ${error.message}`);
+                this.checked = !activo; // Revertir cambio
+                label.textContent = activo ? 'Deshabilitado' : 'Habilitado';
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

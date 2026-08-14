@@ -1,0 +1,92 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Configuración de Periodos Académicos{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid py-4">
+    
+    <!-- Formulario de Creación Rápida -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white fw-bold py-3">
+            <i class="bi bi-plus-circle me-2"></i>Agregar Nuevo Periodo
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('colegio.configurar_periodos') }}" class="row g-3 align-items-end">
+                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nombre</label>
+                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Primer Periodo" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Año</label>
+                    <input type="number" name="anio" class="form-control" value="2026" min="2020" max="2035" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Orden #</label>
+                    <input type="number" name="orden" class="form-control" placeholder="1, 2, 3..." min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Inicio</label>
+                    <input type="date" name="fecha_inicio" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Fin</label>
+                    <input type="date" name="fecha_fin" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Periodos Configurados -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <i class="bi bi-list-check me-2"></i>Periodos Registrados
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Nombre</th>
+                        <th>Año</th>
+                        <th>Orden</th>
+                        <th>Vigencia</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in periodos %}
+                    <tr class="{% if p.activo %}table-active{% endif %}">
+                        <td class="ps-4 fw-bold">{{ p.nombre }}</td>
+                        <td>{{ p.anio }}</td>
+                        <td><span class="badge bg-secondary">#{{ p.orden }}</span></td>
+                        <td>
+                            <small>{{ p.fecha_inicio.strftime('%d/%m') if p.fecha_inicio else '-' }} - {{ p.fecha_fin.strftime('%d/%m/%Y') if p.fecha_fin else '-' }}</small>
+                        </td>
+                        <td class="text-center">
+                            <form method="POST" action="{{ url_for('colegio.eliminar_periodo', id=p.id) }}" 
+                                  onsubmit="return confirm('¿Eliminar este periodo? Esta acción no se puede deshacer.')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-50"></i>
+                            No hay periodos configurados aún. Use el formulario superior.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

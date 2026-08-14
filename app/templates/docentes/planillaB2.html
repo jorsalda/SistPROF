@@ -1,0 +1,253 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Planilla de Calificaciones - {{ grupo.nombre }} - {{ materia.nombre }}{% endblock %}
+
+{% block docente_page_title %}
+    Planilla de Calificaciones: {{ grupo.nombre }} - {{ materia.nombre }}
+    <small class="text-muted d-block fs-6 mt-1">Periodo: {{ periodo.nombre if periodo else 'Sin periodo' }}</small>
+{% endblock %}
+
+{% block docente_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/planilla.css') }}">
+
+<div class="container-fluid py-3">
+    <div class="pl-wrapper">
+        <!-- TOOLBAR -->
+        <div class="pl-toolbar">
+            <h1>
+                <i class="bi bi-table text-primary"></i>
+                {{ materia.nombre }} — {{ grupo.nombre }}
+            </h1>
+
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <span class="badge pl-badge {% if periodo and not periodo.activo %}periodo-cerrado{% else %}text-bg-primary{% endif %}">
+                    <i class="bi bi-calendar3"></i>
+                    {{ periodo.nombre if periodo else 'Sin periodo' }}
+                    {% if periodo and not periodo.activo %}
+                        <i class="bi bi-lock-fill ms-1"></i>
+                    {% endif %}
+                </span>
+
+                <span class="badge text-bg-primary pl-badge">
+                    <i class="bi bi-people-fill"></i> {{ estudiantes|length }} estudiantes
+                </span>
+
+                {% set total_pct = 25 %}
+                {% for comp in estructura %}
+                    {% if comp.porcentaje is defined %}
+                        {% set total_pct = total_pct + comp.porcentaje %}
+                    {% endif %}
+                {% endfor %}
+                <span class="badge pl-badge {{ 'text-bg-success' if total_pct == 100 else 'text-bg-warning' }}">
+                    <i class="bi bi-pie-chart-fill"></i> {{ total_pct }}%
+                </span>
+            </div>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form method="POST"
+              action="{{ url_for('docente.ver_planilla', grupo_id=grupo.id, materia_id=materia.id) }}"
+              id="formPlanilla">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+
+            <div class="pl-scroll">
+                <table class="pl-table">
+                    <thead>
+                        <tr>
+                            <!-- ✅ 1. NOMBRE (fijo izquierda) -->
+                            <th rowspan="2" class="col-name h-name">
+                                <i class="bi bi-person"></i> Estudiante
+                            </th>
+
+                            <!-- ✅ 2. COMPETENCIAS -->
+                            {% for comp in estructura %}
+                            <th colspan="{{ comp.indicadores|length + 1 }}"
+                                class="h-comp pl-tooltip"
+                                title="{{ comp.nombre if comp.nombre else '' }}">
+                                <span>{{ comp.codigo if comp.codigo else 'C' ~ loop.index }}</span>
+                                {% if comp.porcentaje is defined %}
+                                    <small>· {{ comp.porcentaje }}%</small>
+                                {% endif %}
+                            </th>
+                            {% endfor %}
+
+                            <!-- ✅ 3. AUTOEVALUACIÓN (5%) -->
+                            <th rowspan="2" class="h-auto" title="Autoevaluación (5%)">
+                                <i class="bi bi-person-check"></i> Auto<br><small>5%</small>
+                            </th>
+
+                            <!-- ✅ 4. EXAMEN FINAL (20%) -->
+                            <th rowspan="2" class="h-examen" title="Examen Final (20%)">
+                                <i class="bi bi-journal-check"></i> Examen<br><small>20%</small>
+                            </th>
+
+                            <!-- ✅ 5. NOTA DEFINITIVA -->
+                            <th rowspan="2" class="h-definitiva" title="Nota Definitiva">
+                                <i class="bi bi-calculator"></i> Definitiva
+                            </th>
+
+                            <!-- ✅ 6. BOTÓN IA (fijo derecha) -->
+                            <th rowspan="2" class="col-final h-final">
+                                <i class="bi bi-robot"></i> IA
+                            </th>
+                        </tr>
+
+                        <tr>
+                            <!-- Sub-encabezado: Indicadores de competencias -->
+                            {% for comp in estructura %}
+                                {% for ind in comp.indicadores %}
+                                    <th class="h-ind pl-tooltip" title="{{ ind.descripcion if ind.descripcion else '' }}">
+                                        {{ ind.codigo if ind.codigo else 'I' ~ loop.index }}
+                                    </th>
+                                {% endfor %}
+                                <th class="h-ind col-promedio" style="background: #e8f0fe; font-size:10px;">
+                                    ∑
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for est in estudiantes %}
+                        <tr data-estudiante-id="{{ est.id }}">
+                            <!-- ✅ 1. NOMBRE -->
+                            <td class="col-name">
+                                <span class="pl-idx">{{ loop.index }}</span>
+                                {{ est.apellido if est.apellido else '' }}, {{ est.nombre }}
+                                {% if est.piar_activo %}
+                                    <span class="badge bg-warning text-dark ms-1" title="PIAR activo">♿</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ✅ 2. COMPETENCIAS + INDICADORES -->
+                            {% for comp in estructura %}
+                                {% for ind in comp.indicadores %}
+                                    <td class="ind-cell">
+                                        <input type="number"
+                                               step="0.1"
+                                               min="0"
+                                               max="5"
+                                               class="pl-input"
+                                               name="nota_{{ est.id }}_{{ ind.id }}"
+                                               data-estudiante-id="{{ est.id }}"
+                                               data-indicador-id="{{ ind.id }}"
+                                               data-competencia-id="{{ comp.id }}"
+                                               value="{{ est.notas[ind.id]|default('') }}"
+                                               placeholder="—"
+                                               {% if periodo and not periodo.activo %}disabled{% endif %}>
+                                    </td>
+                                {% endfor %}
+                                <td class="col-promedio" id="prom-{{ est.id }}-{{ comp.id }}">
+                                    —
+                                </td>
+                            {% endfor %}
+
+                            <!-- ✅ 3. AUTOEVALUACIÓN -->
+                            <td>
+                                <input type="number"
+                                       step="0.1"
+                                       min="0"
+                                       max="5"
+                                       class="pl-input"
+                                       name="autoeval_{{ est.id }}"
+                                       data-estudiante-id="{{ est.id }}"
+                                       data-tipo="autoeval"
+                                       value="{{ est.autoeval|default('') }}"
+                                       placeholder="—"
+                                       {% if periodo and not periodo.activo %}disabled{% endif %}>
+                            </td>
+
+                            <!-- ✅ 4. EXAMEN FINAL -->
+                            <td>
+                                <input type="number"
+                                       step="0.1"
+                                       min="0"
+                                       max="5"
+                                       class="pl-input"
+                                       name="examen_{{ est.id }}"
+                                       data-estudiante-id="{{ est.id }}"
+                                       data-tipo="examen"
+                                       value="{{ est.examen|default('') }}"
+                                       placeholder="—"
+                                       {% if periodo and not periodo.activo %}disabled{% endif %}>
+                            </td>
+
+                            <!-- ✅ 5. NOTA DEFINITIVA -->
+                            <td>
+                                <input type="text"
+                                       class="pl-input definitiva"
+                                       id="definitiva-{{ est.id }}"
+                                       value="—"
+                                       readonly
+                                       style="font-weight:700; color:#0d6efd; background:#f0f7ff; cursor:default;">
+                            </td>
+
+                            <!-- ✅ 6. BOTÓN IA -->
+                            <td class="col-final">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-ia"
+                                        title="Analizar con IA"
+                                        onclick="analizarIA('{{ est.id }}', '{{ est.nombre }}')">
+                                    <i class="bi bi-robot"></i> IA
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pl-footer">
+                <span class="hint">
+                    <i class="bi bi-info-circle"></i>
+                    Rojo = nota &lt; 3.0 · Verde = nota &ge; 4.5 ·
+                    <span class="text-primary">∑ = promedio de la competencia</span>
+                </span>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="calcularPromedios()">
+                        <i class="bi bi-calculator"></i> Recalcular
+                    </button>
+                    <button type="submit" class="btn btn-success btn-sm px-3" id="btnGuardar">
+                        <i class="bi bi-save"></i> Guardar cambios
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Modal IA -->
+<div class="modal fade" id="modalIA" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-robot me-2"></i>Análisis IA</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoIA">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Analizando desempeño...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success" onclick="guardarPlanIA()">
+                    <i class="bi bi-save me-1"></i> Guardar plan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.PLANILLA_CONFIG = {
+        materiaId: {{ materia.id }},
+        periodoId: {{ periodo.id if periodo else 0 }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/planilla.js') }}"></script>
+{% endblock %}

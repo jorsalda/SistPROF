@@ -1,3 +1,4 @@
+# app/models/CompetenciaEstudiante.py
 from app.extensions import db
 
 
@@ -6,32 +7,21 @@ class CompetenciaEstudiante(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    nombre = db.Column(
-        db.String(150),
-        nullable=False
-    )
+    # ✅ NUEVA COLUMNA: Código único para planillas
+    codigo = db.Column(db.String(30), unique=True, nullable=False)
 
-    descripcion = db.Column(
-        db.Text,
-        nullable=True
-    )
-
-    porcentaje = db.Column(
-        db.Float,
-        default=0
-    )
-
+    nombre = db.Column(db.String(150), nullable=False)
+    descripcion = db.Column(db.Text, nullable=True)
+    porcentaje = db.Column(db.Float, default=0)
+    nivel_educativo = db.Column(db.String(50))
     materia_id = db.Column(
         db.Integer,
         db.ForeignKey("materias.id", ondelete="CASCADE"),
         nullable=False
     )
 
-    materia = db.relationship(
-        "Materia",
-        back_populates="competencias"
-    )
-
+    # Relación bidireccional
+    materia = db.relationship("Materia", back_populates="competencias")
     indicadores = db.relationship(
         "IndicadorLogro",
         back_populates="competencia",
@@ -40,4 +30,4 @@ class CompetenciaEstudiante(db.Model):
     )
 
     def __repr__(self):
-        return f"<CompetenciaEstudiante {self.nombre}>"
+        return f"<CompetenciaEstudiante {self.codigo} - {self.nombre}>"

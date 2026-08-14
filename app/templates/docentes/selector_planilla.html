@@ -1,0 +1,49 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Seleccionar Planilla{% endblock %}
+
+{% block docente_page_title %}
+    Seleccionar Grupo y Materia para Calificar
+{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            {% if materias %}
+                <div class="row g-4">
+                    {% for mat_nombre, datos in materias.items() %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-primary">
+                            <div class="card-header bg-primary text-white fw-bold">
+                                {{ mat_nombre }}
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text small text-muted mb-3">Seleccione un grupo:</p>
+                                <div class="d-grid gap-2">
+                                    {% for grp in datos.grupos %}
+                                    <a href="{{ url_for('docente.ver_planilla', grupo_id=grp.id, materia_id=datos.id) }}" 
+                                       class="btn btn-outline-primary text-start">
+                                        <i class="bi bi-people me-2"></i> {{ grp.nombre }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-exclamation-circle fs-1 text-warning d-block mb-3"></i>
+                    <h4>No tienes grupos o materias asignadas</h4>
+                    <p class="text-muted">Contacta al coordinador para que te asignen carga académica.</p>
+                    <a href="{{ url_for('docente.dashboard') }}" class="btn btn-primary mt-3">
+                        Volver al Dashboard
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

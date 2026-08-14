@@ -1,0 +1,118 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block docente_page_title %}Gestión de Competencias | Periodo: {{ periodo_actual.nombre }}{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+
+    <!-- Alerta de Estado del Periodo -->
+    {% if not periodo_abierto %}
+    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 mb-4 d-flex align-items-center">
+        <i class="bi bi-lock-fill fs-4 me-3"></i>
+        <div>
+            <strong>Periodo Cerrado:</strong> El Rector aún no ha habilitado la edición para este periodo.
+            Contacta a coordinación para solicitar apertura.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- FORMULARIO INLINE DIRECTO (Solo visible si el periodo está abierto) -->
+    {% if periodo_abierto %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white fw-bold py-3">
+            <i class="bi bi-plus-circle me-2"></i>Agregar Nueva Competencia
+        </div>
+        <div class="card-body">
+
+                <form method="POST" action="{{ url_for('docente.gestionar_competencias') }}" class="row g-3 align-items-end">
+                <!-- Token CSRF -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- 1. Materia (Pre-seleccionada o Dropdown) -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Materia *</label>
+                    <select name="materia_id" class="form-select" required>
+                        <option value="">Seleccione...</option>
+                        {% for m in materias_para_select %}
+                        <option value="{{ m.id }}">{{ m.label }}</option>
+                        {% endfor %}
+                    </select>
+
+                </div>
+
+                <!-- 2. Nivel Educativo -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nivel Educativo *</label>
+                    <select name="nivel_educativo" class="form-select" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Superior">Superior (Generará código S5xx)</option>
+                        <option value="Alto">Alto (Generará código A4xx)</option>
+                        <option value="Básico">Básico (Generará código B3xx)</option>
+                        <option value="Bajo">Bajo (Generará código B2xx)</option>
+                    </select>
+                </div>
+
+                <!-- 3. Texto de la Competencia (Textarea) -->
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold">Descripción de la Competencia *</label>
+                    <textarea name="descripcion" class="form-control" rows="1"
+                              placeholder="Ej: Resuelve problemas matemáticos utilizando operaciones básicas..."
+                              required style="resize: none;"></textarea>
+                </div>
+
+                <!-- Botón de Acción -->
+                <div class="col-12 text-end mt-2">
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-check-lg me-1"></i> Guardar Competencia
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- LISTADO DE COMPETENCIAS EXISTENTES -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-list-check me-2"></i>Competencias Registradas</span>
+            <small class="fw-normal opacity-75">{{ materias_filter|length }} Materias activas</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Código</th>
+                    <th>Materia</th>
+                    <th>Nivel</th>
+                    <th>Descripción</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for c in competencias %}
+                <tr>
+                    <td class="ps-4"><span class="badge bg-secondary font-monospace">{{ c.codigo }}</span></td>
+                    <td class="fw-bold">{{ c.materia.nombre }}</td>
+                    <td>{{ c.nivel_educativo }}</td>
+                    <td>{{ c.descripcion }}</td>
+                    <td class="text-center">
+                        <a href="#" class="btn btn-sm btn-outline-primary" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                        No hay competencias registradas aún. Use el formulario superior.
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

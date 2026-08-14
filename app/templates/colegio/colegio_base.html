@@ -185,6 +185,8 @@
                 </a>
             </li>
 
+
+            <!-- Configuración del Sistema -->
             <!-- Configuración del Sistema -->
             <li class="menu-item">
                 <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
@@ -193,13 +195,30 @@
                 </a>
                 <ul class="collapse sub-menu" id="configSubmenu">
                     <li class="menu-item">
-                        <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
-                            Llegadas Tarde
+                        <a href="{{ url_for('colegio.configurar_periodos') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.configurar_periodos' %}active{% endif %}">
+                            <i class="bi bi-calendar-plus me-1"></i> Configurar Periodos
                         </a>
                     </li>
+                    <!-- ✅ BOTÓN PARA HABILITAR TIEMPOS DE INGRESO DE COMPETENCIAS -->
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.administrar_periodos') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.administrar_periodos' %}active{% endif %}">
+                            <i class="bi bi-calendar-check me-1"></i> Habilitar Edición Competencias
+                        </a>
+                    </li>
+
+                    <!-- Disciplina -->
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
+                            <i class="bi bi-shield-exclamation me-1"></i> Disciplina
+                        </a>
+                    </li>
+
+                    <!-- Escalamiento -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.configuracion_escalamiento') }}" class="menu-link">
-                            Escalamiento
+                            <i class="bi bi-arrow-up-right-square me-1"></i> Escalamiento
                         </a>
                     </li>
                 </ul>

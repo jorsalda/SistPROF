@@ -1,0 +1,322 @@
+:root {
+    --pl-border: #d0d4da;
+    --pl-border-strong: #9aa1ab;
+    --pl-head-name: #eef0f3;
+    --pl-autoeval: #cfe2ff;
+    --pl-autoeval-dk: #084298;
+    --pl-examen: #d1e7dd;
+    --pl-examen-dk: #0f5132;
+    --pl-definitiva: #f8d7da;
+    --pl-definitiva-dk: #842029;
+    --pl-comp: #fff3cd;
+    --pl-comp-dk: #664d03;
+    --pl-final: #e2e3e5;
+    --pl-row-alt: #f8f9fa;
+    --pl-low: #ffcccc;
+    --pl-high: #d9ead3;
+    --pl-focus: #0d6efd;
+    --pl-promedio: #e8f0fe;
+}
+
+.pl-wrapper {
+    background: #fff;
+    border: 1px solid var(--pl-border-strong);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    overflow: hidden;
+}
+
+.pl-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem .9rem;
+    border-bottom: 1px solid var(--pl-border);
+    background: linear-gradient(180deg, #fff, #f4f6f8);
+}
+
+.pl-toolbar h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: #212529;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.pl-badge {
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.pl-scroll {
+    max-height: 70vh;
+    overflow: auto;
+    position: relative;
+    scrollbar-width: thin;
+}
+
+table.pl-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content;
+    min-width: 100%;
+    font-size: 12px;
+    color: #212529;
+}
+
+.pl-table th,
+.pl-table td {
+    border-right: 1px solid var(--pl-border);
+    border-bottom: 1px solid var(--pl-border);
+    padding: 4px 6px;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    background-clip: padding-box;
+}
+
+.pl-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+
+.pl-table thead tr:nth-child(2) th {
+    top: 36px;
+}
+
+.h-name {
+    background: var(--pl-head-name);
+    color: #333;
+}
+
+.h-auto {
+    background: var(--pl-autoeval);
+    color: var(--pl-autoeval-dk);
+}
+
+.h-examen {
+    background: var(--pl-examen);
+    color: var(--pl-examen-dk);
+}
+
+.h-definitiva {
+    background: var(--pl-definitiva);
+    color: var(--pl-definitiva-dk);
+}
+
+.h-comp {
+    background: var(--pl-comp);
+    color: var(--pl-comp-dk);
+    border-left: 2px solid var(--pl-border-strong);
+    min-width: 70px;
+}
+
+.h-ind {
+    background: #fffaf0;
+    color: var(--pl-comp-dk);
+    font-weight: 600;
+}
+
+.h-final {
+    background: var(--pl-final);
+    color: #343a40;
+}
+
+.col-name {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    min-width: 280px;
+    max-width: 280px;
+    text-align: left;
+    background: var(--pl-head-name);
+    border-right: 2px solid var(--pl-border-strong);
+    box-shadow: 2px 0 4px -2px rgba(0,0,0,.15);
+}
+
+thead .col-name {
+    z-index: 6;
+}
+
+tbody .col-name {
+    font-weight: 600;
+    color: #212529;
+}
+
+.col-name .pl-idx {
+    display: inline-block;
+    min-width: 22px;
+    color: #6c757d;
+    font-weight: 500;
+    font-size: 11px;
+}
+
+.col-final {
+    position: sticky;
+    right: 0;
+    z-index: 4;
+    background: var(--pl-final);
+    border-left: 2px solid var(--pl-border-strong);
+    box-shadow: -2px 0 4px -2px rgba(0,0,0,.15);
+    min-width: 70px;
+}
+
+thead .col-final {
+    z-index: 6;
+}
+
+tbody tr:nth-child(even) td {
+    background: var(--pl-row-alt);
+}
+
+tbody tr:nth-child(even) .col-name {
+    background: #eef0f3;
+}
+
+tbody tr:hover td {
+    background: #eaf3ff;
+}
+
+tbody tr:hover .col-name {
+    background: #dfeaff;
+}
+
+.pl-input {
+    width: 46px;
+    border: 1px solid transparent;
+    background: transparent;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 3px;
+    border-radius: 3px;
+    outline: none;
+    color: inherit;
+    transition: border-color .1s, box-shadow .1s;
+    -moz-appearance: textfield;
+}
+
+.pl-input::-webkit-outer-spin-button,
+.pl-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pl-input:hover {
+    border-color: var(--pl-border);
+}
+
+.pl-input:focus {
+    border-color: var(--pl-focus);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, .2);
+    background: #fff;
+}
+
+.pl-input::placeholder {
+    color: #ced4da;
+    font-weight: 400;
+}
+
+.pl-input:disabled {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.pl-input.definitiva {
+    font-weight: 700;
+    color: #0d6efd;
+    background: #f0f7ff;
+    border-radius: 3px;
+}
+
+.nota-baja {
+    background: var(--pl-low) !important;
+}
+
+.nota-alta {
+    background: var(--pl-high) !important;
+}
+
+.btn-ia {
+    --bs-btn-padding-y: 1px;
+    --bs-btn-padding-x: 6px;
+    --bs-btn-font-size: 11px;
+}
+
+td.ind-cell,
+th.h-ind {
+    min-width: 48px;
+}
+
+.pl-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    padding: .5rem .9rem;
+    border-top: 1px solid var(--pl-border);
+    background: linear-gradient(180deg, #f4f6f8, #fff);
+}
+
+.pl-footer .hint {
+    font-size: .72rem;
+    color: #6c757d;
+}
+
+.col-promedio {
+    background: var(--pl-promedio);
+    font-weight: 700;
+    font-size: 12px;
+    color: #0d6efd;
+    min-width: 40px;
+    border-left: 2px solid var(--pl-border-strong);
+}
+
+.periodo-cerrado {
+    background: #dc3545 !important;
+    color: white !important;
+}
+
+.pl-tooltip {
+    cursor: help;
+    border-bottom: 1px dashed #999;
+}
+
+.pct-label {
+    font-size: 10px;
+    opacity: 0.85;
+    font-weight: 600;
+}
+
+/* Inputs de edición inline en headers */
+.pct-input {
+    width: 38px;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    padding: 1px 2px;
+    border: 1px solid #0d6efd;
+    border-radius: 3px;
+    background: #fff;
+    color: #212529;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.pct-input::-webkit-outer-spin-button,
+.pct-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pct-input:focus {
+    box-shadow: 0 0 0 2px rgba(13,110,253,.25);
+}

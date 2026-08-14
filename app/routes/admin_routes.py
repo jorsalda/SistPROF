@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 
@@ -9,6 +9,10 @@ from app.models.docente import Docente
 from app.models.permiso import Permiso
 from app.middleware.superuser_middleware import superuser_required
 from datetime import datetime, timedelta
+
+from app.models.periodo_academico import PeriodoAcademico
+
+from app.models.configuracion_periodo import ConfiguracionPeriodo
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -112,9 +116,17 @@ def aprobar_colegio(colegio_id):
     colegio.activo = True
     colegio.fecha_expiracion = None  # Ya no tiene fecha de vencimiento
 
+    # 🔧 CORRECCIÓN: Limpiar fecha_expiracion de TODOS los usuarios del colegio
+    usuarios_del_colegio = Usuario.query.filter_by(colegio_id=colegio.id).all()
+    for usuario in usuarios_del_colegio:
+        usuario.fecha_expiracion = None
+        usuario.is_approved = True
+        usuario.dias_prueba = 0
+
     db.session.commit()
 
-    flash(f"Colegio '{colegio.nombre}' ha sido APROBADO exitosamente", "success")
+    flash(f"Colegio '{colegio.nombre}' ha sido APROBADO exitosamente. "
+          f"Se actualizaron {len(usuarios_del_colegio)} usuario(s).", "success")
     return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
 
 
@@ -157,16 +169,23 @@ def modificar_dias_prueba(colegio_id):
 
     dias = int(request.form.get('dias_prueba', 15))
 
-    # Calcular nueva fecha de expiración desde hoy
     from datetime import datetime, timedelta
     nueva_fecha = datetime.utcnow() + timedelta(days=dias)
 
     colegio.fecha_expiracion = nueva_fecha
-    colegio.en_prueba = True  # Asegurar que siga en prueba
+    colegio.en_prueba = True
+
+    # 🔧 CORRECCIÓN: Actualizar también la fecha de TODOS los usuarios
+    Usuario.query.filter_by(colegio_id=colegio.id).update({
+        'fecha_expiracion': nueva_fecha,
+        'is_approved': False,
+        'dias_prueba': dias
+    })
 
     db.session.commit()
 
-    flash(f"Período de prueba modificado a {dias} días. Nueva fecha: {nueva_fecha.strftime('%d/%m/%Y')}", "info")
+    flash(f"Período de prueba modificado a {dias} días. "
+          f"Nueva fecha: {nueva_fecha.strftime('%d/%m/%Y')}", "info")
     return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
 # ════════════════════════════════════════════════════════════════
 # HELPER INTERNO
@@ -222,3 +241,4 @@ def crear_admin_independientes():
     db.session.commit()
 
     return
+
