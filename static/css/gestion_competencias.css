@@ -1,0 +1,68 @@
+/* ============================================
+   GESTIÓN DE COMPETENCIAS - Anti-desbordamiento TOTAL
+   ============================================ */
+
+/* Forzar que TODO dentro del contenido respete el ancho */
+.container-fluid,
+.card,
+.card-body,
+#formCompetenciaMadre,
+.row,
+.col-md-4,
+.col-md-6,
+.col-md-8,
+.col-12 {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Textareas y selects nunca se salen */
+#formCompetenciaMadre textarea,
+#formCompetenciaMadre select,
+#formCompetenciaMadre input,
+#formCompetenciaMadre .form-control,
+#formCompetenciaMadre .form-select {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    resize: vertical !important;
+    overflow-x: hidden !important;
+}
+
+/* En pantallas medianas: una sola columna para evitar corte */
+@media (max-width: 1400px) {
+    #formCompetenciaMadre .col-md-4,
+    #formCompetenciaMadre .col-md-6,
+    #formCompetenciaMadre .col-md-8 {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+}
+
+/* El card del formulario: scroll de emergencia si algo se sale */
+#formCompetenciaMadre {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* Botón guardar siempre visible */
+#btnGuardarComp {
+    white-space: nowrap !important;
+    display: inline-block !important;
+}
+
+/* Acordeón: descripción truncada */
+.accordion-header .text-truncate {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Tabla de indicadores: que no se salga */
+.accordion-body {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}

@@ -11,7 +11,7 @@
     --pl-comp: #fff3cd;
     --pl-comp-dk: #664d03;
     --pl-final: #e2e3e5;
-    --pl-row-alt: #f8f9fa;
+    --pl-row-alt: #e3f2fd;        /* ✅ AZUL CELESTE (antes #f8f9fa gris) */
     --pl-low: #ffcccc;
     --pl-high: #d9ead3;
     --pl-focus: #0d6efd;
@@ -131,16 +131,22 @@ table.pl-table {
     color: #343a40;
 }
 
+/* ============================================================
+   COLUMNA NOMBRE: fuente más grande, alineado izquierda
+   ============================================================ */
 .col-name {
     position: sticky;
     left: 0;
     z-index: 4;
     min-width: 280px;
     max-width: 280px;
-    text-align: left;
+    text-align: left !important;
     background: var(--pl-head-name);
     border-right: 2px solid var(--pl-border-strong);
     box-shadow: 2px 0 4px -2px rgba(0,0,0,.15);
+    font-size: 14px;           /* ✅ MÁS GRANDE */
+    font-weight: 600;
+    padding-left: 12px;
 }
 
 thead .col-name {
@@ -150,6 +156,9 @@ thead .col-name {
 tbody .col-name {
     font-weight: 600;
     color: #212529;
+    font-size: 14px;           /* ✅ MÁS GRANDE en filas */
+    text-align: left !important;
+    padding-left: 12px;
 }
 
 .col-name .pl-idx {
@@ -174,20 +183,32 @@ thead .col-final {
     z-index: 6;
 }
 
+/* ============================================================
+   FILAS ALTERNADAS: azul celeste / blanco
+   ============================================================ */
 tbody tr:nth-child(even) td {
-    background: var(--pl-row-alt);
+    background: var(--pl-row-alt);     /* ✅ AZUL CELESTE #e3f2fd */
 }
 
 tbody tr:nth-child(even) .col-name {
-    background: #eef0f3;
+    background: #e3f2fd;               /* ✅ AZUL CELESTE (antes #eef0f3 gris) */
 }
 
+tbody tr:nth-child(odd) td {
+    background: #ffffff;               /* ✅ BLANCO puro */
+}
+
+tbody tr:nth-child(odd) .col-name {
+    background: #ffffff;               /* ✅ BLANCO puro */
+}
+
+/* Hover */
 tbody tr:hover td {
-    background: #eaf3ff;
+    background: #bbdefb;               /* ✅ azul más oscuro al pasar mouse */
 }
 
 tbody tr:hover .col-name {
-    background: #dfeaff;
+    background: #bbdefb;               /* ✅ azul más oscuro */
 }
 
 .pl-input {
@@ -296,4 +317,27 @@ th.h-ind {
     font-size: 10px;
     opacity: 0.85;
     font-weight: 600;
+}
+
+/* Inputs de edición inline en headers */
+.pct-input {
+    width: 38px;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    padding: 1px 2px;
+    border: 1px solid #0d6efd;
+    border-radius: 3px;
+    background: #fff;
+    color: #212529;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.pct-input::-webkit-outer-spin-button,
+.pct-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pct-input:focus {
+    box-shadow: 0 0 0 2px rgba(13,110,253,.25);
 }

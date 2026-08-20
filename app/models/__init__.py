@@ -24,8 +24,11 @@ from .plan_estudios import PlanEstudios
 from .periodo import Periodo
 from .periodo_academico import PeriodoAcademico
 
+# ✅ NUEVO: Configuración de periodo (ya existía pero no estaba importada)
+from .configuracion_periodo import ConfiguracionPeriodo
+
 # Áreas y competencias
-from .areas_gestion import AreaGestion  # ✅ Corregido (singular)
+from .areas_gestion import AreaGestion
 
 from .competencia_contribucion import competencia_contribucion
 from .CompetenciaDocente import CompetenciaDocente
@@ -46,6 +49,10 @@ from .criterio_evaluacion import CriterioEvaluacion
 from .escala_evaluacion import EscalaEvaluacion
 from .acuerdo_evaluacion import AcuerdoEvaluacion
 from .evidencia import Evidencia
+
+# ✅ NUEVO: Modelos para planilla de calificaciones
+from .nota_componente import NotaComponenteEstudiante
+from .plan_apoyo_ia import PlanApoyoIA
 
 # Asistencia
 from .asistencia import Asistencia
@@ -86,13 +93,15 @@ __all__ = [
     'Colegio', 'Sede', 'Jornada', 'JornadaBloque', 'Suscripcion',
     'Materia', 'NivelMateria', 'Grupo', 'GrupoMateria',
     'PlanEstudios', 'Periodo', 'PeriodoAcademico',
-    'AreaGestion',  # ✅ Corregido (singular)
+    'ConfiguracionPeriodo',  # ✅ NUEVO
+    'AreaGestion',
     'competencia_contribucion', 'CompetenciaDocente',
     'CompetenciaEstudiante', 'Contribucion', 'IndicadorLogro',
     'Examen', 'Pregunta', 'TipoExamen', 'ResultadoExamen',
     'RespuestaExamenDetalle', 'EvaluacionFinal', 'EvaluacionCriterio',
     'EvaluacionEstudiante', 'CriterioEvaluacion', 'EscalaEvaluacion',
     'AcuerdoEvaluacion', 'Evidencia',
+    'NotaComponenteEstudiante', 'PlanApoyoIA',  # ✅ NUEVO
     'Asistencia', 'Clase', 'ClaseEstudiante', 'IngresoColegio',
     'Novedad', 'RespuestaNovedad', 'DescargoEstudiante',
     'CitacionAcudiente', 'JustificacionAcudiente', 'AcuerdoCorrectivo',

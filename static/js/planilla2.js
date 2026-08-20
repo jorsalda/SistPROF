@@ -26,7 +26,7 @@ function recalcularPromediosEstudiante(estudianteId) {
     const fila = document.querySelector(`tr[data-estudiante-id="${estudianteId}"]`);
     if (!fila) return;
 
-    const inputs = fila.querySelectorAll(`.pl-input[data-estudiante-id="${estudianteId}"]`);
+    const inputs = fila.querySelectorAll(`.input-nota[data-estudiante-id="${estudianteId}"]`);
     const notasPorComp = {};
 
     inputs.forEach(input => {
@@ -39,17 +39,8 @@ function recalcularPromediosEstudiante(estudianteId) {
         }
     });
 
-    Object.keys(notasPorComp).forEach(compId => {
-        const notas = notasPorComp[compId];
-        const promedio = notas.reduce((a, b) => a + b, 0) / notas.length;
-        const celda = document.getElementById(`prom-${estudianteId}-${compId}`);
-        if (celda) {
-            celda.textContent = promedio.toFixed(1);
-            if (promedio < 3.0) celda.style.color = '#dc3545';
-            else if (promedio >= 4.5) celda.style.color = '#28a745';
-            else celda.style.color = '#0d6efd';
-        }
-    });
+    // Nota: En esta versión, no mostramos celdas Σ separadas,
+    // pero la lógica de cálculo permanece para la definitiva.
 }
 
 function calcularPromedios() {
@@ -72,7 +63,7 @@ function calcularNotaDefinitiva(estudianteId) {
 
     // Competencias con su ponderación real
     config.competencias.forEach(comp => {
-        const inputs = fila.querySelectorAll(`.pl-input[data-competencia-id="${comp.id}"]`);
+        const inputs = fila.querySelectorAll(`.input-nota[data-competencia-id="${comp.id}"]`);
         let suma = 0, count = 0;
         inputs.forEach(inp => {
             const v = parseFloat(inp.value);
@@ -346,10 +337,9 @@ function analizarIA(estId, nombre) {
 function guardarPlanIA() {
     const plan = document.getElementById('planApoyo')?.value;
     if (!plan || plan.trim() === '') {
-        alert('️ El plan de apoyo está vacío');
+        alert('⚠️ El plan de apoyo está vacío');
         return;
     }
-    // TODO: Aquí iría la llamada AJAX para guardar el plan en BD
     alert('✅ Plan guardado exitosamente (Simulación)');
     const modalEl = document.getElementById('modalIA');
     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -357,7 +347,116 @@ function guardarPlanIA() {
 }
 
 // =============================================
-// 6. GUARDADO MASIVO DE NOTAS (AJAX)
+// 6. SINCRONIZACIÓN AUTOMÁTICA DE NIVELES (Tu propuesta pedagógica)
+// =============================================
+// =============================================
+// FUNCIÓN CORREGIDA: SINCRONIZACIÓN AUTOMÁTICA DE NIVELES
+// =============================================
+function sincronizarNivelAutomatico(inputNota) {
+    console.log(' sincronizarNivelAutomatico llamada', {
+        valor: inputNota.value,
+        estId: inputNota.dataset.estudianteId,
+        compId: inputNota.dataset.competenciaId
+    });
+
+    const valor = parseFloat(inputNota.value);
+    if (isNaN(valor)) {
+        console.warn('⚠️ Valor no es numérico:', inputNota.value);
+        return;
+    }
+
+    const estId = inputNota.dataset.estudianteId;
+    const compId = inputNota.dataset.competenciaId;
+
+    // Buscar la fila del estudiante
+    const fila = inputNota.closest('tr');
+    if (!fila) {
+        console.error('❌ No se encontró la fila del estudiante');
+        return;
+    }
+
+    // Buscar la celda de nivel específica usando data-comp-id
+    const celdaNivel = fila.querySelector(`.td-nivel[data-comp-id="${compId}"]`);
+    if (!celdaNivel) {
+        console.error(`❌ No se encontró celda de nivel para competencia ${compId}`);
+        console.log('Celdas disponibles:', fila.querySelectorAll('.td-nivel'));
+        return;
+    }
+
+    const containerNivel = celdaNivel.querySelector('.nivel-container');
+    const inputNivelOculto = celdaNivel.querySelector(`input[name^="nivel_"]`);
+
+    if (!containerNivel) {
+        console.error('❌ No se encontró .nivel-container dentro de la celda');
+        return;
+    }
+
+    let nivelTexto = '';
+    let codigoGenerado = '';
+
+    // Lógica de rangos estándar (ajustable según normativa)
+    if (valor >= 4.7) {
+        nivelTexto = 'Superior';
+        codigoGenerado = `S500`;
+    } else if (valor >= 4.0) {
+        nivelTexto = 'Alto';
+        codigoGenerado = `A400`;
+    } else if (valor >= 3.0) {
+        nivelTexto = 'Basico';
+        codigoGenerado = `B300`;
+    } else {
+        nivelTexto = 'Bajo';
+        codigoGenerado = `b200`; // Para valores < 3.0 (incluye 1.0)
+    }
+
+    // Construir código completo: C1-b200, C2-A400, etc.
+    const compIndex = Array.from(fila.querySelectorAll('.td-nota')).findIndex(td =>
+        td.dataset.compId === compId
+    ) + 1;
+    const codigoCompleto = `C${compIndex}-${codigoGenerado}`;
+
+    console.log('✅ Generando nivel:', { codigoCompleto, nivelTexto, valor });
+
+    // Actualizar visualización INMEDIATA
+    containerNivel.innerHTML = `<span class="badge-nivel" style="font-weight:bold; color:#2c3e50;">${codigoCompleto}</span>`;
+
+    // Actualizar input oculto para persistencia
+    if (inputNivelOculto) {
+        inputNivelOculto.value = nivelTexto;
+        console.log(' Input oculto actualizado:', inputNivelOculto.name, '=', nivelTexto);
+    }
+
+    // Recalcular definitivas
+    recalcularPromediosEstudiante(estId);
+    calcularNotaDefinitiva(estId);
+}
+
+// =============================================
+// INICIALIZACIÓN: Disparar sincronización al cargar página
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📊 Inicializando planilla...');
+
+    // Disparar sincronización para todos los inputs que ya tienen valor
+    document.querySelectorAll('.input-nota').forEach(input => {
+        if (input.value && input.value !== '') {
+            console.log('🔄 Disparando sincronización inicial para input:', input.name, 'valor:', input.value);
+            sincronizarNivelAutomatico(input);
+        }
+    });
+
+    // Calcular promedios iniciales
+    calcularPromedios();
+
+    // Vincular botón de guardar
+    const btnGuardar = document.getElementById('btn-guardar-notas');
+    if (btnGuardar) {
+        btnGuardar.addEventListener('click', guardarNotas);
+    }
+});
+
+// =============================================
+// 7. GUARDADO MASIVO DE NOTAS (AJAX) - CORREGIDO PARA NIVELES
 // =============================================
 async function guardarNotas() {
     const btn = document.getElementById('btn-guardar-notas');
@@ -370,16 +469,29 @@ async function guardarNotas() {
     const payload = {
         notas: {},
         componentes: {},
-        ponderaciones: {}
+        ponderaciones: {},
+        niveles: {}
     };
 
-    // Recolectar notas de indicadores
-    document.querySelectorAll('.pl-input[data-competencia-id]').forEach(input => {
+    // Recolectar notas por competencia
+    document.querySelectorAll('.input-nota[data-competencia-id]').forEach(input => {
         if (input.value !== '' && input.value !== null) {
             const estId = input.dataset.estudianteId;
-            const indId = input.dataset.indicadorId;
+            const compId = input.dataset.competenciaId;
             if (!payload.notas[estId]) payload.notas[estId] = {};
-            payload.notas[estId][indId] = input.value;
+            payload.notas[estId][compId] = input.value;
+        }
+    });
+
+    // ✅ NUEVO: Recolectar niveles de las columnas restauradas
+    document.querySelectorAll('.td-nivel').forEach(td => {
+        const compId = td.dataset.compId;
+        const inputOculto = td.querySelector('input[name^="nivel_"]');
+        const estId = inputOculto?.name.split('_')[1]; // Extraer ID del nombre del input
+
+        if (estId && compId && inputOculto && inputOculto.value) {
+            if (!payload.niveles[estId]) payload.niveles[estId] = {};
+            payload.niveles[estId][compId] = inputOculto.value;
         }
     });
 
@@ -423,7 +535,7 @@ async function guardarNotas() {
 }
 
 // =============================================
-// 7. INICIALIZACIÓN Y EVENT LISTENERS
+// 8. INICIALIZACIÓN Y EVENT LISTENERS
 // =============================================
 document.addEventListener('DOMContentLoaded', function() {
     // Calcular promedios iniciales al cargar

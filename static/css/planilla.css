@@ -11,7 +11,7 @@
     --pl-comp: #fff3cd;
     --pl-comp-dk: #664d03;
     --pl-final: #e2e3e5;
-    --pl-row-alt: #f8f9fa;
+    --pl-row-alt: #e3f2fd;
     --pl-low: #ffcccc;
     --pl-high: #d9ead3;
     --pl-focus: #0d6efd;
@@ -23,7 +23,7 @@
     border: 1px solid var(--pl-border-strong);
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .pl-toolbar {
@@ -52,9 +52,11 @@
     letter-spacing: .02em;
 }
 
+/* Scroll horizontal forzado */
 .pl-scroll {
     max-height: 70vh;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     position: relative;
     scrollbar-width: thin;
 }
@@ -89,58 +91,20 @@ table.pl-table {
     letter-spacing: .02em;
 }
 
-.pl-table thead tr:nth-child(2) th {
-    top: 36px;
-}
-
-.h-name {
-    background: var(--pl-head-name);
-    color: #333;
-}
-
-.h-auto {
-    background: var(--pl-autoeval);
-    color: var(--pl-autoeval-dk);
-}
-
-.h-examen {
-    background: var(--pl-examen);
-    color: var(--pl-examen-dk);
-}
-
-.h-definitiva {
-    background: var(--pl-definitiva);
-    color: var(--pl-definitiva-dk);
-}
-
-.h-comp {
-    background: var(--pl-comp);
-    color: var(--pl-comp-dk);
-    border-left: 2px solid var(--pl-border-strong);
-    min-width: 70px;
-}
-
-.h-ind {
-    background: #fffaf0;
-    color: var(--pl-comp-dk);
-    font-weight: 600;
-}
-
-.h-final {
-    background: var(--pl-final);
-    color: #343a40;
-}
-
+/* NOMBRES: grande y alineado a la IZQUIERDA */
 .col-name {
     position: sticky;
     left: 0;
     z-index: 4;
-    min-width: 280px;
-    max-width: 280px;
-    text-align: left;
+    min-width: 220px;
+    max-width: 220px;
+    text-align: left !important;
     background: var(--pl-head-name);
     border-right: 2px solid var(--pl-border-strong);
     box-shadow: 2px 0 4px -2px rgba(0,0,0,.15);
+    font-size: 14px;
+    font-weight: 600;
+    padding-left: 12px !important;
 }
 
 thead .col-name {
@@ -158,38 +122,36 @@ tbody .col-name {
     color: #6c757d;
     font-weight: 500;
     font-size: 11px;
+    margin-right: 8px;
 }
 
-.col-final {
-    position: sticky;
-    right: 0;
-    z-index: 4;
-    background: var(--pl-final);
-    border-left: 2px solid var(--pl-border-strong);
-    box-shadow: -2px 0 4px -2px rgba(0,0,0,.15);
-    min-width: 70px;
-}
-
-thead .col-final {
-    z-index: 6;
-}
-
+/* FILAS ALTERNADAS: azul celeste / blanco */
 tbody tr:nth-child(even) td {
     background: var(--pl-row-alt);
 }
 
-tbody tr:nth-child(even) .col-name {
-    background: #eef0f3;
+tbody tr:nth-child(odd) td {
+    background: #ffffff;
 }
 
+tbody tr:nth-child(even) .col-name {
+    background: #e3f2fd;
+}
+
+tbody tr:nth-child(odd) .col-name {
+    background: #ffffff;
+}
+
+/* Hover */
 tbody tr:hover td {
-    background: #eaf3ff;
+    background: #bbdefb;
 }
 
 tbody tr:hover .col-name {
-    background: #dfeaff;
+    background: #bbdefb;
 }
 
+/* Inputs transparentes para heredar fondo */
 .pl-input {
     width: 46px;
     border: 1px solid transparent;
@@ -239,6 +201,88 @@ tbody tr:hover .col-name {
     border-radius: 3px;
 }
 
+/* Headers de sección */
+.h-name {
+    background: var(--pl-head-name);
+    color: #333;
+}
+
+.h-auto {
+    background: var(--pl-autoeval);
+    color: var(--pl-autoeval-dk);
+}
+
+.h-examen {
+    background: var(--pl-examen);
+    color: var(--pl-examen-dk);
+}
+
+.h-definitiva {
+    background: var(--pl-definitiva);
+    color: var(--pl-definitiva-dk);
+}
+
+.h-comp {
+    background: var(--pl-comp);
+    color: var(--pl-comp-dk);
+    border-left: 2px solid var(--pl-border-strong);
+    min-width: 70px;
+}
+
+.h-final {
+    background: var(--pl-final);
+    color: #343a40;
+}
+
+.col-final {
+    position: sticky;
+    right: 0;
+    z-index: 4;
+    background: var(--pl-final);
+    border-left: 2px solid var(--pl-border-strong);
+    box-shadow: -2px 0 4px -2px rgba(0,0,0,.15);
+    min-width: 70px;
+}
+
+thead .col-final {
+    z-index: 6;
+}
+
+/* COLUMNAS DE NIVEL: ultra compactas */
+.h-nivel,
+.col-nivel-header {
+    background: #e8f5e9 !important;
+    color: #2e7d32 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    min-width: 55px !important;
+    max-width: 60px !important;
+    padding: 2px 1px !important;
+    border-left: 1px solid #81c784 !important;
+    text-align: center !important;
+}
+
+.td-nivel,
+.col-nivel-cell {
+    background: #f1f8e9 !important;
+    padding: 1px 2px !important;
+    min-width: 55px !important;
+    max-width: 60px !important;
+    text-align: center !important;
+}
+
+.badge-nivel {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 4px;
+    border-radius: 3px;
+    background: #fff;
+    color: #2e7d32;
+    border: 1px solid #81c784;
+}
+
+/* Colores de nota */
 .nota-baja {
     background: var(--pl-low) !important;
 }
@@ -247,17 +291,14 @@ tbody tr:hover .col-name {
     background: var(--pl-high) !important;
 }
 
+/* Botón IA */
 .btn-ia {
     --bs-btn-padding-y: 1px;
     --bs-btn-padding-x: 6px;
     --bs-btn-font-size: 11px;
 }
 
-td.ind-cell,
-th.h-ind {
-    min-width: 48px;
-}
-
+/* Footer */
 .pl-footer {
     display: flex;
     justify-content: space-between;
@@ -273,50 +314,13 @@ th.h-ind {
     color: #6c757d;
 }
 
-.col-promedio {
-    background: var(--pl-promedio);
-    font-weight: 700;
-    font-size: 12px;
-    color: #0d6efd;
-    min-width: 40px;
-    border-left: 2px solid var(--pl-border-strong);
-}
-
 .periodo-cerrado {
     background: #dc3545 !important;
     color: white !important;
-}
-
-.pl-tooltip {
-    cursor: help;
-    border-bottom: 1px dashed #999;
 }
 
 .pct-label {
     font-size: 10px;
     opacity: 0.85;
     font-weight: 600;
-}
-
-/* Inputs de edición inline en headers */
-.pct-input {
-    width: 38px;
-    font-size: 10px;
-    font-weight: 700;
-    text-align: center;
-    padding: 1px 2px;
-    border: 1px solid #0d6efd;
-    border-radius: 3px;
-    background: #fff;
-    color: #212529;
-    outline: none;
-    -moz-appearance: textfield;
-}
-.pct-input::-webkit-outer-spin-button,
-.pct-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-.pct-input:focus {
-    box-shadow: 0 0 0 2px rgba(13,110,253,.25);
 }

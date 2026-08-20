@@ -139,6 +139,7 @@ body {
     margin-left: 280px;
     padding: 1.5rem;
     background: #f5f7fa;
+    max-width: calc(100vw - 280px);
 }
 
 /* Header superior */

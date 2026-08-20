@@ -3,6 +3,8 @@
 {% block docente_page_title %}Gestión de Competencias | Periodo: {{ periodo_actual.nombre }}{% endblock %}
 
 {% block docente_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gestion_competencias.css') }}">
+
 <div class="container-fluid py-4">
 
     <!-- Alerta de Estado del Periodo -->
@@ -10,60 +12,67 @@
     <div class="alert alert-warning border-0 bg-warning bg-opacity-10 mb-4 d-flex align-items-center">
         <i class="bi bi-lock-fill fs-4 me-3"></i>
         <div>
-            <strong>Periodo Cerrado:</strong> El Rector aún no ha habilitado la edición para este periodo.
-            Contacta a coordinación para solicitar apertura.
+            <strong>Periodo Cerrado:</strong> El Rector aún no ha habilitado la edición.
         </div>
     </div>
     {% endif %}
 
-    <!-- FORMULARIO INLINE DIRECTO (Solo visible si el periodo está abierto) -->
+    <!-- FORMULARIO DE INGRESO -->
     {% if periodo_abierto %}
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white fw-bold py-3">
-            <i class="bi bi-plus-circle me-2"></i>Agregar Nueva Competencia
+            <i class="bi bi-plus-circle me-2"></i>Agregar Nueva Competencia Madre + 4 Indicadores
         </div>
         <div class="card-body">
-
-                <form method="POST" action="{{ url_for('docente.gestionar_competencias') }}" class="row g-3 align-items-end">
-                <!-- Token CSRF -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <!-- 1. Materia (Pre-seleccionada o Dropdown) -->
+            <form id="formCompetenciaMadre" class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold">Materia *</label>
-                    <select name="materia_id" class="form-select" required>
-                        <option value="">Seleccione...</option>
-                        {% for m in materias_para_select %}
-                        <option value="{{ m.id }}">{{ m.label }}</option>
-                        {% endfor %}
-                    </select>
+    <label class="form-label small fw-bold">Materia *</label>
+    <!-- Cambiamos el name a 'seleccion' para manejar el valor compuesto -->
+    <select name="seleccion" id="materia_select" class="form-select" required onchange="this.form.submit()">
+        <option value="">Seleccione...</option>
+        {% for op in opciones_materias %}
+        <!-- El value ahora es "ID_MATERIA-ID_GRUPO" -->
+        <option value="{{ op.id }}-{{ op.grupo_id }}"
+                data-materia="{{ op.id }}"
+                data-grupo="{{ op.grupo_id }}"
+                {% if op.id == materia_seleccionada_id and op.grupo_id == grupo_seleccionado_id %}selected{% endif %}>
+            {{ op.label }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
 
+                <div class="col-md-8">
+                    <label class="form-label small fw-bold">Descripción General de la Competencia *</label>
+                    <textarea name="descripcion_madre" id="descripcion_madre" class="form-control" rows="2"
+                              placeholder="Ej: Comprende la teoría de conjuntos..." required></textarea>
                 </div>
 
-                <!-- 2. Nivel Educativo -->
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold">Nivel Educativo *</label>
-                    <select name="nivel_educativo" class="form-select" required>
-                        <option value="">Seleccione...</option>
-                        <option value="Superior">Superior (Generará código S5xx)</option>
-                        <option value="Alto">Alto (Generará código A4xx)</option>
-                        <option value="Básico">Básico (Generará código B3xx)</option>
-                        <option value="Bajo">Bajo (Generará código B2xx)</option>
-                    </select>
+                <div class="col-12"><hr class="my-2"></div>
+                <div class="col-12 mb-2">
+                    <h6 class="text-muted"><i class="bi bi-layers me-2"></i>Descripciones Específicas por Nivel</h6>
                 </div>
 
-                <!-- 3. Texto de la Competencia (Textarea) -->
-                <div class="col-md-5">
-                    <label class="form-label small fw-bold">Descripción de la Competencia *</label>
-                    <textarea name="descripcion" class="form-control" rows="1"
-                              placeholder="Ej: Resuelve problemas matemáticos utilizando operaciones básicas..."
-                              required style="resize: none;"></textarea>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-danger">1. Nivel Bajo (b200) *</label>
+                    <textarea id="desc_bajo" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-warning">2. Nivel Básico (B300) *</label>
+                    <textarea id="desc_basico" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-info">3. Nivel Alto (A400) *</label>
+                    <textarea id="desc_alto" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-success">4. Nivel Superior (S500) *</label>
+                    <textarea id="desc_superior" class="form-control" rows="2" required></textarea>
                 </div>
 
-                <!-- Botón de Acción -->
-                <div class="col-12 text-end mt-2">
-                    <button type="submit" class="btn btn-success px-4">
-                        <i class="bi bi-check-lg me-1"></i> Guardar Competencia
+                <div class="col-12 text-end mt-3">
+                    <button type="submit" class="btn btn-success px-4" id="btnGuardarComp">
+                        <i class="bi bi-check-lg me-1"></i> Guardar
                     </button>
                 </div>
             </form>
@@ -71,48 +80,230 @@
     </div>
     {% endif %}
 
-    <!-- LISTADO DE COMPETENCIAS EXISTENTES -->
+    <!-- LISTADO DE COMPETENCIAS -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
             <span><i class="bi bi-list-check me-2"></i>Competencias Registradas</span>
-            <small class="fw-normal opacity-75">{{ materias_filter|length }} Materias activas</small>
+            <small class="fw-normal opacity-75">{{ competencias|length }} Competencias activas</small>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
-                <tr>
-                    <th class="ps-4">Código</th>
-                    <th>Materia</th>
-                    <th>Nivel</th>
-                    <th>Descripción</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for c in competencias %}
-                <tr>
-                    <td class="ps-4"><span class="badge bg-secondary font-monospace">{{ c.codigo }}</span></td>
-                    <td class="fw-bold">{{ c.materia.nombre }}</td>
-                    <td>{{ c.nivel_educativo }}</td>
-                    <td>{{ c.descripcion }}</td>
-                    <td class="text-center">
-                        <a href="#" class="btn btn-sm btn-outline-primary" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
-                        No hay competencias registradas aún. Use el formulario superior.
-                    </td>
-                </tr>
+        <div class="card-body p-0">
+
+            {% if competencias %}
+            <div class="accordion accordion-flush" id="accordionCompetencias">
+
+                {% for grupo in competencias %}
+                <div class="accordion-item border-bottom">
+
+                    <!-- CABECERA: Fila completa con info + botón editar SEPARADO -->
+                    <div class="accordion-header p-0" id="heading{{ grupo.madre.id }}">
+                        <div class="d-flex align-items-center w-100 py-2 px-3 bg-light hover-bg transition"
+                             style="cursor: pointer; min-width: 0;"
+                             data-bs-toggle="collapse"
+                             data-bs-target="#collapse{{ grupo.madre.id }}"
+                             aria-expanded="false"
+                             aria-controls="collapse{{ grupo.madre.id }}">
+
+                            <!-- Icono expandir -->
+                            <i class="bi bi-chevron-right me-2 text-muted small toggle-icon flex-shrink-0"></i>
+
+                            <!-- Código -->
+                            <span class="badge bg-primary fs-6 me-3 flex-shrink-0" style="min-width: 45px;">{{ grupo.madre.codigo }}</span>
+
+                            <!-- Materia -->
+                            <span class="text-muted small me-3 d-none d-md-block flex-shrink-0" style="width: 120px;">
+                                {{ grupo.madre.materia.nombre if grupo.madre.materia else '' }}
+                            </span>
+
+                            <!-- Descripción -->
+                            <span class="flex-grow-1 text-secondary small text-truncate me-3" style="min-width: 0;">
+                                {{ grupo.madre.descripcion }}
+                            </span>
+
+                            <!-- Botón editar FUERA del área clickeable del acordeón -->
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary ms-auto me-2 flex-shrink-0"
+                                    onclick="event.stopPropagation(); editarCompetencia({{ grupo.madre.id }});"
+                                    title="Editar Competencia Madre">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CUERPO: Indicadores -->
+                    <div id="collapse{{ grupo.madre.id }}"
+                         class="accordion-collapse collapse"
+                         aria-labelledby="heading{{ grupo.madre.id }}"
+                         data-bs-parent="#accordionCompetencias">
+                        <div class="accordion-body bg-white p-0">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light small text-muted">
+                                    <tr>
+                                        <th style="width: 120px;">Código</th>
+                                        <th style="width: 100px;">Nivel</th>
+                                        <th>Descripción Específica</th>
+                                        <th class="text-end" style="width: 100px;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hijo in grupo.hijos %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary font-monospace">{{ hijo.codigo }}</span></td>
+                                        <td><span class="fw-bold text-dark">{{ hijo.nivel }}</span></td>
+                                        <td class="small">{{ hijo.descripcion }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-link text-decoration-none"
+                                                    onclick="editarIndicador({{ hijo.id }})">
+                                                <i class="bi bi-pencil-square"></i> Editar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">
+                                            <i class="bi bi-exclamation-circle me-1"></i> Sin indicadores registrados.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 {% endfor %}
-                </tbody>
-            </table>
+
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                No hay competencias registradas para esta materia/grado.
+            </div>
+            {% endif %}
+
         </div>
     </div>
 
 </div>
+
+<style>
+/* Animación suave para el icono del acordeón */
+.toggle-icon {
+    transition: transform 0.2s ease;
+}
+.accordion-item .collapsed .toggle-icon,
+.accordion-item [aria-expanded="false"] .toggle-icon {
+    transform: rotate(0deg);
+}
+.accordion-item [aria-expanded="true"] .toggle-icon {
+    transform: rotate(90deg);
+}
+/* Hover suave en la fila del acordeón */
+.hover-bg:hover {
+    background-color: #e9ecef !important;
+}
+.transition {
+    transition: background-color 0.15s ease;
+}
+
+/* ============================================
+   FIX ANTI-DESBORDAMIENTO - Gestión de Competencias
+   ============================================ */
+
+/* El formulario nunca excede el ancho */
+#formCompetenciaMadre {
+    width: 100%;
+    max-width: 100%;
+}
+#formCompetenciaMadre .form-control,
+#formCompetenciaMadre .form-select {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+/* Acordeón: forzar que el flex respete el ancho y el truncate funcione */
+.accordion-header .d-flex {
+    min-width: 0 !important;
+}
+.accordion-header .text-truncate {
+    display: block;
+    min-width: 0 !important;
+}
+
+/* Tabla de indicadores: scroll horizontal si es necesario, nunca desborda la página */
+.accordion-body {
+    overflow-x: auto;
+    max-width: 100%;
+}
+.accordion-body table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+}
+.accordion-body td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('formCompetenciaMadre');
+    const btn = document.getElementById('btnGuardarComp');
+
+    if (!form || !btn) return;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+
+        const payload = {
+            materia_id: parseInt(document.getElementById('materia_id').value),
+            descripcion_madre: document.getElementById('descripcion_madre').value.trim(),
+            indicadores: {
+                bajo: document.getElementById('desc_bajo').value.trim(),
+                basico: document.getElementById('desc_basico').value.trim(),
+                alto: document.getElementById('desc_alto').value.trim(),
+                superior: document.getElementById('desc_superior').value.trim()
+            }
+        };
+
+        try {
+            const response = await fetch('/docentes/api/competencias-madre', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            let result;
+            try { result = await response.json(); } catch (jsonErr) { throw new Error(`Respuesta inválida (${response.status})`); }
+
+            if (!response.ok) throw new Error(result.error || `Error (${response.status})`);
+
+            if (result.success) {
+                alert('✅ ' + result.message);
+                window.location.reload();
+            } else {
+                throw new Error(result.error || 'Error desconocido');
+            }
+
+        } catch (err) {
+            console.error("Error:", err);
+            alert('❌ Error al guardar: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+});
+
+function editarCompetencia(id) { alert('Editar madre ID: ' + id); }
+function editarIndicador(id) { alert('Editar hijo ID: ' + id); }
+</script>
 {% endblock %}

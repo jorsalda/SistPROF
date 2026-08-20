@@ -1,34 +1,34 @@
-# app/models/indicador_logro.py
 from app.extensions import db
+from sqlalchemy.dialects.postgresql import ENUM
+
+# Define el tipo ENUM (debe coincidir exactamente con tu DDL)
+NivelDesempenoEnum = ENUM('Bajo', 'Basico', 'Alto', 'Superior',
+                          name='nivel_desempeno', create_type=False)
 
 
 class IndicadorLogro(db.Model):
     __tablename__ = "indicadores_logro"
 
     id = db.Column(db.Integer, primary_key=True)
-
-    # Código único para planillas
-    codigo = db.Column(db.String(40), unique=True, nullable=False)
-
     descripcion = db.Column(db.Text, nullable=False)
+    codigo = db.Column(db.String(40), nullable=True)
 
-    # ✅ CORRECCIÓN DEFINITIVA:
-    # En Python sigue llamándose 'competencia_id' (para que tus relaciones funcionen)
-    # Pero en la BD mapeamos explícitamente a 'competencia_materia_id'
-    competencia_id = db.Column(
-        "competencia_materia_id",  # <--- NOMBRE REAL EN LA BASE DE DATOS
+    # ✅ USAR EL TIPO ENUM NATIVO DE POSTGRESQL
+    nivel = db.Column(NivelDesempenoEnum, nullable=True)
+
+    orden = db.Column(db.Integer, default=1, nullable=False)
+
+    competencia_materia_id = db.Column(
         db.Integer,
         db.ForeignKey("competencias_materia.id", ondelete="CASCADE"),
         nullable=False
     )
 
-    # Relación bidireccional con CompetenciaEstudiante (NO CAMBIAR ESTO)
     competencia = db.relationship(
         "CompetenciaEstudiante",
         back_populates="indicadores"
     )
 
-    # Relación con Evaluaciones (NO CAMBIAR ESTO)
     evaluaciones = db.relationship(
         "EvaluacionEstudiante",
         back_populates="indicador",
@@ -37,4 +37,4 @@ class IndicadorLogro(db.Model):
     )
 
     def __repr__(self):
-        return f"<IndicadorLogro {self.codigo} - {self.descripcion[:30]}>"
+        return f"<IndicadorLogro {self.codigo}: {self.nivel}>"

@@ -195,116 +195,7 @@ def seguimiento():
         return redirect(url_for('docente.dashboard'))
 
 
-# ==========================================================
-# PLANILLA DE CALIFICACIONES POR COMPETENCIAS
-# ==========================================================
-@docente_bp.route("/planilla/<int:grupo_id>/<int:materia_id>")
-@login_required
-def ver_planilla(grupo_id, materia_id):
-    if current_user.rol not in ['docente', 'coordinador']:
-        abort(403)
 
-    try:
-        # 1. Datos Básicos
-        grupo = Grupo.query.get_or_404(grupo_id)
-        materia = Materia.query.get_or_404(materia_id)
-
-        estudiantes = Estudiante.query.filter_by(
-            grupo_id=grupo_id, activo=True
-        ).order_by(Estudiante.apellido, Estudiante.nombre).all()
-
-        periodo_actual = PeriodoAcademico.query.filter_by(
-            colegio_id=current_user.colegio_id, activo=True
-        ).first()
-        periodo_id = periodo_actual.id if periodo_actual else None
-
-        # 2. ✅ CONSTRUCCIÓN CORRECTA DE ESTRUCTURA (Competencias + Indicadores)
-        competencias = CompetenciaEstudiante.query.filter_by(
-            materia_id=materia_id
-        ).order_by(CompetenciaEstudiante.codigo).all()
-
-        estructura = []
-        for comp in competencias:
-            # Buscar indicadores hijos para ESTA competencia específica
-            inds = IndicadorLogro.query.filter_by(competencia_id=comp.id).all()
-            estructura.append({
-                'id': comp.id,
-                'codigo': comp.codigo,
-                'nombre': comp.nombre,
-                'indicadores': inds  # Lista de objetos IndicadorLogro
-            })
-
-        # 3. Configuración de Columnas (Porcentajes)
-        columnas_evaluacion = [
-            {'tipo': 'fija', 'nombre': 'Autoeval', 'porcentaje': 5.0, 'clave': 'autoeval', 'es_fija': True},
-            {'tipo': 'fija', 'nombre': 'Coeval', 'porcentaje': 20.0, 'clave': 'coeval', 'es_fija': True}
-        ]
-
-        num_competencias = len(competencias)
-        porc_restante = 75.0
-        porc_por_comp = round(porc_restante / num_competencias, 2) if num_competencias > 0 else 0
-
-        for comp in competencias:
-            columnas_evaluacion.append({
-                'tipo': 'competencia',
-                'nombre': comp.nombre[:20],
-                'codigo': comp.codigo,
-                'porcentaje': porc_por_comp,
-                'id': comp.id,
-                'clave': f'comp_{comp.id}',
-                'es_fija': False
-            })
-
-        suma_total = sum(c['porcentaje'] for c in columnas_evaluacion)
-        alerta_porcentaje = None
-        if suma_total > 100:
-            alerta_porcentaje = f"⚠️ Suma excede 100% ({suma_total}%)"
-        elif suma_total < 100:
-            alerta_porcentaje = f"ℹ️ Falta distribuir {round(100 - suma_total, 2)}%"
-
-        # 4. Cargar Notas Existentes (EVAL_MAP)
-        eval_map = {}
-        if estudiantes and periodo_id:
-            all_ind_ids = []
-            for s in estructura:
-                all_ind_ids.extend([i.id for i in s['indicadores']])
-
-            if all_ind_ids:
-                evaluaciones = EvaluacionEstudiante.query.filter(
-                    EvaluacionEstudiante.estudiante_id.in_([e.id for e in estudiantes]),
-                    EvaluacionEstudiante.indicador_id.in_(all_ind_ids),
-                    EvaluacionEstudiante.periodo_id == periodo_id
-                ).all()
-
-                for ev in evaluaciones:
-                    if ev.estudiante_id not in eval_map:
-                        eval_map[ev.estudiante_id] = {}
-                    val = getattr(ev, 'calificacion', None)
-                    try:
-                        eval_map[ev.estudiante_id][ev.indicador_id] = float(val) if val else 0
-                    except:
-                        pass
-
-        # 5. Renderizar
-        return render_template(
-            "docentes/planilla.html",
-            grupo=grupo,
-            materia=materia,
-            estudiantes=estudiantes,
-            estructura=estructura,  # ✅ VARIABLE CLAVE
-            columnas_evaluacion=columnas_evaluacion,
-            eval_map=eval_map,
-            periodo=periodo_actual,
-            suma_porcentajes=round(suma_total, 2),
-            alerta_porcentaje=alerta_porcentaje
-        )
-
-    except Exception as e:
-        print(f"Error en ver_planilla: {e}")
-        import traceback;
-        traceback.print_exc()
-        flash(f"Error al cargar la planilla: {str(e)}", "danger")
-        return redirect(url_for('docente.dashboard'))
 # ==========================================================
 # RESTO DE RUTAS EXISTENTES (Permisos, Perfil, CRUD Docentes, etc.)
 # ==========================================================
@@ -741,173 +632,218 @@ def generar_codigo_competencia(materia_id, nivel_educativo):
 
     return f"{prefijo}{nuevo_num}"
 
+# ============================================================
+# GENERAR COMPETENCIAS MADRE
+# ============================================================
+@docente_bp.route("/api/competencias-madre", methods=["POST"])
+@login_required
+def crear_competencia_madre():
+    print("🔥 [DEBUG] Entrando a crear_competencia_madre")  # LOG 1
+
+    if current_user.rol != 'docente':
+        abort(403)
+
+    try:
+        data = request.get_json()
+        print(f"🔥 [DEBUG] Datos recibidos: {data}")  # LOG 2
+
+        materia_id = data.get('materia_id')
+        descripcion_madre = data.get('descripcion_madre', '').strip()
+        indicadores = data.get('indicadores', {})
+
+        if not all([materia_id, descripcion_madre]):
+            return jsonify({"error": "Materia y descripción son obligatorios"}), 400
+
+        # Validar niveles
+        niveles_requeridos = ['bajo', 'basico', 'alto', 'superior']
+        for nivel in niveles_requeridos:
+            if nivel not in indicadores or not indicadores[nivel].strip():
+                return jsonify({"error": f"Falta descripción para nivel: {nivel}"}), 400
+
+        # ✅ NUEVO: Obtener el GRUPO_ID correspondiente a esta materia y docente
+        # Esto evita que las nuevas competencias queden sin grupo (NULL)
+        grupo_materia = GrupoMateria.query.filter_by(
+            docente_id=current_user.id,
+            materia_id=materia_id,
+            activo=True
+        ).first()
+
+        grupo_id_para_guardar = grupo_materia.grupo_id if grupo_materia else None
+        print(f" [DEBUG] Grupo detectado para guardar: {grupo_id_para_guardar}")
+
+        # 1. GENERAR CÓDIGO SECUENCIAL (C1, C2...)
+        # Filtramos también por grupo para que la secuencia sea correcta por grado
+        ultima_comp = CompetenciaEstudiante.query.filter_by(
+            materia_id=materia_id,
+            grupo_id=grupo_id_para_guardar
+        ).order_by(CompetenciaEstudiante.id.desc()).first()
+
+        nuevo_numero = 1
+        if ultima_comp and ultima_comp.codigo:
+            try:
+                num_actual = int(''.join(filter(str.isdigit, ultima_comp.codigo)))
+                nuevo_numero = num_actual + 1
+            except (ValueError, TypeError):
+                pass
+
+        codigo_madre = f"C{nuevo_numero}"
+        print(f"🔥 [DEBUG] Código generado: {codigo_madre}")  # LOG 3
+
+        # 2. Crear Competencia Madre CON GRUPO_ID
+        nueva_competencia = CompetenciaEstudiante(
+            materia_id=materia_id,
+            nombre=descripcion_madre[:150],
+            descripcion=descripcion_madre,
+            nivel_educativo='Integral',
+            codigo=codigo_madre,
+            porcentaje=20,
+            grupo_id=grupo_id_para_guardar  # ✅ ASIGNAR EL GRUPO AQUÍ
+        )
+        db.session.add(nueva_competencia)
+        db.session.flush()
+
+        # 3. Crear Indicadores
+        config_indicadores = {
+            'bajo': {'codigo': 'b200', 'nombre': 'Bajo', 'orden': 1},
+            'basico': {'codigo': 'B300', 'nombre': 'Basico', 'orden': 2},
+            'alto': {'codigo': 'A400', 'nombre': 'Alto', 'orden': 3},
+            'superior': {'codigo': 'S500', 'nombre': 'Superior', 'orden': 4}
+        }
+
+        for key, config in config_indicadores.items():
+            ind = IndicadorLogro(
+                competencia_materia_id=nueva_competencia.id,
+                descripcion=indicadores[key].strip(),
+                codigo=config['codigo'],
+                nivel=config['nombre'],
+                orden=config['orden']
+            )
+            db.session.add(ind)
+
+        db.session.commit()
+        print(f"✅ [DEBUG] Guardado exitoso ID: {nueva_competencia.id}")  # LOG 4
+
+        return jsonify({
+            "success": True,
+            "message": f"Competencia {codigo_madre} creada exitosamente"
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ [DEBUG] ERROR CRÍTICO: {e}")  # LOG 5
+        import traceback;
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 
 # ============================================================
 # GESTIÓN DE COMPETENCIAS (VISTA INLINE)
 # ============================================================
-@docente_bp.route("/competencias", methods=["GET", "POST"])
+@docente_bp.route("/competencias")
 @login_required
 def gestionar_competencias():
-    """Vista principal del docente para ver y crear competencias (Formulario Inline)."""
+    # 1. OBTENER DATOS BÁSICOS DEL DOCENTE Y PERIODO
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
 
-    # 1. Importaciones necesarias
-    from app.models.periodo_academico import PeriodoAcademico
-    from app.models.configuracion_periodo import ConfiguracionPeriodo
-    from app.models.grupo_materia import GrupoMateria
-    from app.models.materia import Materia
-    from app.models.docente import Docente
-    from app.models.grupo import Grupo
-    from app.models.CompetenciaEstudiante import CompetenciaEstudiante
-    from datetime import datetime
-
-    # 2. Obtener Periodo Activo y Validar Estado
-    periodo_actual = PeriodoAcademico.query.filter_by(
-        colegio_id=current_user.colegio_id, activo=True
-    ).first()
-
-    if not periodo_actual:
-        flash("No hay un periodo académico activo configurado.", "warning")
-        return redirect(url_for('docente.dashboard'))
-
-    config_periodo = ConfiguracionPeriodo.query.filter_by(
-        colegio_id=current_user.colegio_id, periodo_id=periodo_actual.id
-    ).first()
-
-    # Verificar si está abierto para competencias
-    periodo_abierto = (
-        config_periodo and
-        config_periodo.estado == 'ABIERTO' and
-        config_periodo.permite_editar_competencias
-    )
-
-    # Validar fechas de cierre (Doble seguridad)
-    if periodo_abierto and config_periodo.fecha_cierre:
-        if datetime.now() > config_periodo.fecha_cierre:
+    periodo_actual = PeriodoAcademico.query.filter_by(colegio_id=docente.colegio_id, activo=True).first()
+    periodo_abierto = True
+    if periodo_actual:
+        config_periodo = ConfiguracionPeriodo.query.filter_by(periodo_id=periodo_actual.id).first()
+        if config_periodo and not config_periodo.permite_editar_competencias:
             periodo_abierto = False
-            flash("La fecha límite para editar competencias ha vencido.", "danger")
 
-    # 3. Obtener Docente y Materias Asignadas
-    docente_actual = Docente.query.filter_by(usuario_id=current_user.id).first()
-    if not docente_actual:
-        flash("No se encontró perfil de docente asociado.", "danger")
-        return redirect(url_for('docente.dashboard'))
+    # 2. CONSULTA DE MATERIAS (JOIN CON GRUPOS)
+    materias_raw = db.session.query(GrupoMateria, Materia, Grupo).join(
+        Materia, GrupoMateria.materia_id == Materia.id
+    ).join(
+        Grupo, GrupoMateria.grupo_id == Grupo.id
+    ).filter(
+        GrupoMateria.docente_id == docente.id,
+        GrupoMateria.activo == True
+    ).order_by(Grupo.grado, Grupo.nombre, Materia.nombre).all()
 
-    asignaciones = db.session.query(
-        GrupoMateria.materia_id, Grupo.grado, Materia.nombre.label('materia_nombre')
-    ).join(Grupo, GrupoMateria.grupo_id == Grupo.id) \
-        .join(Materia, GrupoMateria.materia_id == Materia.id) \
-        .filter(GrupoMateria.docente_id == docente_actual.id, GrupoMateria.activo == True) \
-        .distinct().order_by(Grupo.grado, Materia.nombre).all()
+    opciones_materias = []
+    for gm, mat, grp in materias_raw:
+        grado_info = f"{grp.grado}° {grp.nombre}" if grp else "Sin Grado"
+        label = f"{mat.nombre} ({grado_info})"
 
-    materias_para_select = []
-    seen = set()
-    for row in asignaciones:
-        key = (row.materia_id, row.grado)
-        if key not in seen:
-            seen.add(key)
-            materias_para_select.append({
-                'id': row.materia_id,
-                'label': f"{row.materia_nombre} ({row.grado})"
-            })
+        opciones_materias.append({
+            'id': gm.materia_id,
+            'grupo_id': grp.id,
+            'label': label
+        })
 
-    materias_ids = [m['id'] for m in materias_para_select]
+    # 3. PARSEAR SELECCIÓN COMPUESTA (VALOR: "MATERIA_ID-GRUPO_ID")
+    seleccion_raw = request.args.get('seleccion', '')
+    materia_id_seleccionada = None
+    grupo_id_seleccionado = None
 
-    # 4. Manejo del POST (Creación Inline)
-    if request.method == "POST":
-        if not periodo_abierto:
-            flash("El periodo está cerrado para edición de competencias.", "warning")
-            return redirect(url_for('docente.gestionar_competencias'))
-
-        materia_id = request.form.get("materia_id", type=int)
-        descripcion_completa = request.form.get("descripcion", "").strip()
-        nivel_educativo = request.form.get("nivel_educativo", "").strip()
-
-        # ✅ CORRECCIÓN: Truncar nombre a 145 chars + "..." si excede 150
-        nombre_corto = descripcion_completa[:145] + "..." if len(descripcion_completa) > 150 else descripcion_completa
-
-        # Validación exacta
-        if not all([materia_id, nombre_corto, nivel_educativo]):
-            flash("Materia, nombre y nivel educativo son obligatorios.", "danger")
-            return redirect(url_for('docente.gestionar_competencias'))
-
+    if '-' in str(seleccion_raw):
+        parts = str(seleccion_raw).split('-')
         try:
-            # Generar Código usando tu función existente
-            nuevo_codigo = generar_codigo_competencia(materia_id, nivel_educativo)
+            materia_id_seleccionada = int(parts[0])
+            grupo_id_seleccionado = int(parts[1])
+        except ValueError:
+            pass
 
-            # ✅ CREAR COMPETENCIA SIN periodo_id Y CON NOMBRE TRUNCADO
-            nueva_competencia = CompetenciaEstudiante(
-                materia_id=materia_id,
-                nombre=nombre_corto,              # Texto seguro (<150 chars)
-                codigo=nuevo_codigo,
-                nivel_educativo=nivel_educativo,
-                descripcion=descripcion_completa, # Texto completo en campo TEXT
-                porcentaje=0.0
-            )
-            db.session.add(nueva_competencia)
-            db.session.commit()
-            flash(f"✅ Competencia creada exitosamente con código: {nuevo_codigo}", "success")
+    # Fallback: Si no hay selección válida, usar la primera opción disponible
+    if not materia_id_seleccionada and opciones_materias:
+        primera_op = opciones_materias[0]
+        materia_id_seleccionada = primera_op['id']
+        grupo_id_seleccionado = primera_op['grupo_id']
 
-        except ValueError as e:
-            flash(str(e), "danger")
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Error al guardar: {str(e)}", "danger")
-            print(f"ERROR DB: {e}")
+    print(f" [DEBUG] Selección Cruda: {seleccion_raw}")
+    print(f" [DEBUG] Filtrando por Materia={materia_id_seleccionada}, Grupo={grupo_id_seleccionado}")
 
-        return redirect(url_for('docente.gestionar_competencias'))
+    # 4. OBTENER COMPETENCIAS (FILTRO ESTRICTO POR MATERIA + GRUPO)
+    competencias_madres = []
+    indicadores_hijos = []
 
-    # 5. GET: Listar competencias
-    competencias = CompetenciaEstudiante.query.filter(
-        CompetenciaEstudiante.materia_id.in_(materias_ids)
-    ).order_by(CompetenciaEstudiante.codigo).all() if materias_ids else []
+    if materia_id_seleccionada and grupo_id_seleccionado:
+        competencias_madres = CompetenciaEstudiante.query.filter_by(
+            materia_id=materia_id_seleccionada,
+            grupo_id=grupo_id_seleccionado
+        ).order_by(CompetenciaEstudiante.codigo).all()
 
+        print(f" [DEBUG] Competencias encontradas: {len(competencias_madres)}")
+
+        ids_madres = [c.id for c in competencias_madres]
+        if ids_madres:
+            indicadores_hijos = IndicadorLogro.query.filter(
+                IndicadorLogro.competencia_materia_id.in_(ids_madres)
+            ).order_by(IndicadorLogro.orden).all()
+    else:
+        print(" [WARN] No hay selección válida de materia/grupo.")
+
+    # 5. AGRUPAR EN ESTRUCTURA JERÁRQUICA PARA EL ACORDEÓN
+    competencias_agrupadas = {}
+
+    for comp in competencias_madres:
+        competencias_agrupadas[comp.id] = {
+            'madre': comp,
+            'hijos': []
+        }
+
+    for ind in indicadores_hijos:
+        if ind.competencia_materia_id in competencias_agrupadas:
+            competencias_agrupadas[ind.competencia_materia_id]['hijos'].append(ind)
+
+    lista_para_template = list(competencias_agrupadas.values())
+
+    # 6. RENDERIZAR TEMPLATE
     return render_template(
         "docentes/gestion_competencias.html",
-        periodo_actual=periodo_actual,
         periodo_abierto=periodo_abierto,
-        materias_para_select=materias_para_select,
-        competencias=competencias
+        opciones_materias=opciones_materias,
+        competencias=lista_para_template,
+        periodo_actual=periodo_actual,
+        materia_seleccionada_id=materia_id_seleccionada,
+        grupo_seleccionado_id=grupo_id_seleccionado
     )
 
-# ==========================================================
-# SELECTOR DE PLANILLA DE CALIFICACIONES
-# ==========================================================
-@docente_bp.route("/planilla-selector")
-@login_required
-def ver_planilla_selector():
-    """Vista intermedia para que el docente elija Grupo y Materia antes de ir a la planilla."""
-    if current_user.rol != 'docente':
-        abort(403)
 
-    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
-    if not docente:
-        flash("Perfil de docente no encontrado.", "danger")
-        return redirect(url_for('docente.dashboard'))
 
-    # Obtener asignaciones activas del docente
-    asignaciones = GrupoMateria.query.filter_by(docente_id=docente.id, activo=True).all()
-
-    # Agrupar por materia para facilitar la selección
-    materias_con_grupos = {}
-    for asig in asignaciones:
-        mat_nombre = asig.materia.nombre if asig.materia else "Sin Nombre"
-        if mat_nombre not in materias_con_grupos:
-            materias_con_grupos[mat_nombre] = {
-                'id': asig.materia_id,
-                'grupos': []
-            }
-
-        grupo = asig.grupo
-        if grupo and grupo.activo:
-            materias_con_grupos[mat_nombre]['grupos'].append({
-                'id': grupo.id,
-                'nombre': f"{grupo.grado} {grupo.nombre}"
-            })
-
-    return render_template(
-        "docentes/selector_planilla.html",
-        materias=materias_con_grupos
-    )
 
 
 # ============================================================
@@ -965,3 +901,425 @@ def analizar_estudiante_ia():
             "error": "No se pudo completar el análisis.",
             "detalle": str(e)
         }), 500
+
+# =============================================================================
+# PLAN-001 | Paso 1.1 | Endpoint GET: Planilla de Calificaciones
+# =============================================================================
+
+from flask import abort
+from sqlalchemy import text
+from app.models import (
+    Docente, Estudiante, Grupo, GrupoMateria, Materia,
+    PeriodoAcademico, CompetenciaEstudiante, IndicadorLogro,
+    EvaluacionEstudiante, NotaComponenteEstudiante
+)
+
+
+# ==========================================================
+# SELECTOR DE PLANILLA DE CALIFICACIONES
+# ==========================================================
+@docente_bp.route("/planilla-selector")
+@login_required
+def ver_planilla_selector():
+    """Vista intermedia para que el docente elija Grupo y Materia antes de ir a la planilla."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("Perfil de docente no encontrado.", "danger")
+        return redirect(url_for('docente.dashboard'))
+
+    # Obtener asignaciones activas del docente
+    asignaciones = GrupoMateria.query.filter_by(docente_id=docente.id, activo=True).all()
+
+    # Agrupar por materia para facilitar la selección
+    materias_con_grupos = {}
+    for asig in asignaciones:
+        mat_nombre = asig.materia.nombre if asig.materia else "Sin Nombre"
+        if mat_nombre not in materias_con_grupos:
+            materias_con_grupos[mat_nombre] = {
+                'id': asig.materia_id,
+                'grupos': []
+            }
+
+        grupo = asig.grupo
+        if grupo and grupo.activo:
+            materias_con_grupos[mat_nombre]['grupos'].append({
+                'id': grupo.id,
+                'nombre': f"{grupo.grado} {grupo.nombre}"
+            })
+
+    return render_template(
+        "docentes/selector_planilla.html",
+        materias=materias_con_grupos
+    )
+
+
+@docente_bp.route("/planilla/<int:grupo_id>/<int:materia_id>", methods=["GET", "POST"])
+@login_required
+def ver_planilla(grupo_id, materia_id):
+    """
+    GET: Muestra la planilla de calificaciones (1 columna por competencia).
+    POST: Guarda las notas y niveles de desempeño.
+    """
+    if current_user.rol not in ['docente', 'coordinador']:
+        abort(403)
+
+    # -------------------------------------------------------------------------
+    # 1. Datos comunes (GET y POST)
+    # -------------------------------------------------------------------------
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first_or_404()
+
+    asignacion = GrupoMateria.query.filter_by(
+        grupo_id=grupo_id,
+        materia_id=materia_id,
+        docente_id=docente.id,
+        activo=True
+    ).first_or_404()
+
+    grupo = asignacion.grupo
+    materia = asignacion.materia
+
+    periodo = PeriodoAcademico.query.filter_by(
+        colegio_id=docente.colegio_id,
+        activo=True
+    ).order_by(PeriodoAcademico.anio.desc()).first()
+
+    if not periodo:
+        flash("No hay un periodo académico activo.", "warning")
+        return redirect(url_for("docente.dashboard"))
+
+    periodo_id = periodo.id
+
+    # ✅ NUEVO: Leer configuración institucional de evaluación
+    config_eval = db.session.execute(text("""
+        SELECT tipo_captura FROM configuracion_evaluacion 
+        WHERE colegio_id = :cid
+    """), {"cid": docente.colegio_id}).fetchone()
+
+    tipo_captura = config_eval.tipo_captura if config_eval else 'NUMERICA'
+
+    # ========================================================================
+    # POST: GUARDAR NOTAS Y NIVELES
+    # ========================================================================
+    if request.method == "POST":
+        try:
+            # Auditoría: quién modifica
+            db.session.execute(
+                text("SET LOCAL app.current_user_id = :uid"),
+                {"uid": current_user.id}
+            )
+
+            # Detectar JSON o form tradicional
+            if request.is_json:
+                data = request.get_json()
+                notas = data.get('notas', {})
+                componentes = data.get('componentes', {})
+                ponderaciones = data.get('ponderaciones', {})
+                niveles = data.get('niveles', {})
+            else:
+                notas = {}
+                componentes = {}
+                ponderaciones = {}
+                niveles = {}
+                for key, val in request.form.items():
+                    if key.startswith('nota_'):
+                        parts = key.split('_')
+                        if len(parts) == 3:
+                            est_id, comp_id = parts[1], parts[2]
+                            if est_id not in notas:
+                                notas[est_id] = {}
+                            notas[est_id][comp_id] = val
+                    elif key.startswith('autoeval_'):
+                        est_id = key.split('_')[1]
+                        if est_id not in componentes:
+                            componentes[est_id] = {}
+                        componentes[est_id]['autoevaluacion'] = val
+                    elif key.startswith('examen_'):
+                        est_id = key.split('_')[1]
+                        if est_id not in componentes:
+                            componentes[est_id] = {}
+                        componentes[est_id]['examen_final'] = val
+                    elif key.startswith('nivel_'):
+                        parts = key.split('_')
+                        if len(parts) == 3:
+                            est_id, comp_id = parts[1], parts[2]
+                            if est_id not in niveles:
+                                niveles[est_id] = {}
+                            niveles[est_id][comp_id] = val
+
+            # -----------------------------------------------------------------
+            # Guardar notas por competencia (usando el primer indicador)
+            # -----------------------------------------------------------------
+            for est_id, competencias in notas.items():
+                for comp_id, valor in competencias.items():
+                    if valor is None or str(valor).strip() == '':
+                        continue
+
+                    nota_val = float(valor)
+                    if nota_val < 0 or nota_val > 5:
+                        msg = f"Nota fuera de rango (0-5): {nota_val}"
+                        if request.is_json:
+                            return jsonify({"success": False, "error": msg}), 400
+                        flash(msg, "danger")
+                        return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
+
+                    indicador = IndicadorLogro.query.filter_by(
+                        competencia_materia_id=int(comp_id)
+                    ).order_by(IndicadorLogro.id).first()
+
+                    if not indicador:
+                        indicador = IndicadorLogro(
+                            competencia_materia_id=int(comp_id),
+                            descripcion=f"Indicador general - Competencia {comp_id}",
+                            codigo="GENERAL"
+                        )
+                        db.session.add(indicador)
+                        db.session.flush()
+
+                    ev = EvaluacionEstudiante.query.filter_by(
+                        estudiante_id=int(est_id),
+                        indicador_id=indicador.id,
+                        periodo_id=periodo_id
+                    ).first()
+
+                    if ev:
+                        ev.calificacion = nota_val
+                    else:
+                        db.session.add(EvaluacionEstudiante(
+                            estudiante_id=int(est_id),
+                            indicador_id=indicador.id,
+                            periodo_id=periodo_id,
+                            calificacion=nota_val
+                        ))
+
+            # -----------------------------------------------------------------
+            # Guardar niveles de desempeño por competencia
+            # -----------------------------------------------------------------
+            for est_id, comps in niveles.items():
+                for comp_id, nivel in comps.items():
+                    if not nivel or str(nivel).strip() == '':
+                        continue
+
+                    indicador = IndicadorLogro.query.filter_by(
+                        competencia_materia_id=int(comp_id)
+                    ).order_by(IndicadorLogro.id).first()
+
+                    if not indicador:
+                        continue
+
+                    ev = EvaluacionEstudiante.query.filter_by(
+                        estudiante_id=int(est_id),
+                        indicador_id=indicador.id,
+                        periodo_id=periodo_id
+                    ).first()
+
+                    if ev:
+                        ev.nivel_desempeño = nivel
+                    else:
+                        db.session.add(EvaluacionEstudiante(
+                            estudiante_id=int(est_id),
+                            indicador_id=indicador.id,
+                            periodo_id=periodo_id,
+                            nivel_desempeño=nivel
+                        ))
+
+            # -----------------------------------------------------------------
+            # Guardar componentes (autoeval, examen)
+            # -----------------------------------------------------------------
+            for est_id, comps in componentes.items():
+                for tipo, valor in comps.items():
+                    if valor is None or str(valor).strip() == '':
+                        continue
+
+                    nota_val = float(valor)
+                    if nota_val < 0 or nota_val > 5:
+                        msg = f"Componente fuera de rango (0-5): {nota_val}"
+                        if request.is_json:
+                            return jsonify({"success": False, "error": msg}), 400
+                        flash(msg, "danger")
+                        return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
+
+                    nc = NotaComponenteEstudiante.query.filter_by(
+                        estudiante_id=int(est_id),
+                        grupo_materia_id=asignacion.id,
+                        periodo_academico_id=periodo_id,
+                        tipo_componente=tipo
+                    ).first()
+
+                    if nc:
+                        nc.calificacion = nota_val
+                        nc.registrada_por = current_user.id
+                    else:
+                        db.session.add(NotaComponenteEstudiante(
+                            estudiante_id=int(est_id),
+                            grupo_materia_id=asignacion.id,
+                            periodo_academico_id=periodo_id,
+                            tipo_componente=tipo,
+                            calificacion=nota_val,
+                            registrada_por=current_user.id
+                        ))
+
+            # -----------------------------------------------------------------
+            # Actualizar ponderaciones si vienen
+            # -----------------------------------------------------------------
+            if ponderaciones:
+                for comp_id, nuevo_pct in ponderaciones.items():
+                    comp = CompetenciaEstudiante.query.filter_by(
+                        id=int(comp_id), materia_id=materia_id
+                    ).first()
+                    if comp:
+                        comp.porcentaje = float(nuevo_pct)
+
+            db.session.commit()
+
+            if request.is_json:
+                return jsonify({"success": True, "message": "Notas guardadas correctamente"})
+
+            flash("✅ Notas guardadas correctamente", "success")
+            return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
+
+        except Exception as e:
+            db.session.rollback()
+            import traceback;
+            traceback.print_exc()
+            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+
+            if request.is_json:
+                return jsonify({"success": False, "error": error_msg}), 500
+
+            flash(f"Error al guardar: {error_msg}", "danger")
+            return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
+
+    # ========================================================================
+    # GET: RENDERIZAR PLANILLA
+    # ========================================================================
+    puede_editar = True
+    try:
+        result = db.session.execute(text("""
+            SELECT permite_editar_notas 
+            FROM configuracion_periodo 
+            WHERE colegio_id = :colegio_id AND periodo_id = :periodo_id
+        """), {
+            "colegio_id": docente.colegio_id,
+            "periodo_id": periodo_id
+        }).fetchone()
+        if result and result.permite_editar_notas is False:
+            puede_editar = False
+    except Exception:
+        pass
+
+    # ✅ CORREGIDO: Filtrar competencias por Materia Y Grupo específico
+    # Esto evita que se mezclen competencias de 10° y 11° en la misma planilla
+    competencias_raw = CompetenciaEstudiante.query.filter_by(
+        materia_id=materia_id,
+        grupo_id=grupo_id  # <--- FILTRO CLAVE AGREGADO
+    ).order_by(CompetenciaEstudiante.codigo).all()
+
+    comp_ids = [c.id for c in competencias_raw]
+    primer_indicador_por_comp = {}
+    if comp_ids:
+        todos_indicadores = IndicadorLogro.query.filter(
+            IndicadorLogro.competencia_materia_id.in_(comp_ids)
+        ).order_by(IndicadorLogro.competencia_materia_id, IndicadorLogro.id).all()
+        for ind in todos_indicadores:
+            if ind.competencia_materia_id not in primer_indicador_por_comp:
+                primer_indicador_por_comp[ind.competencia_materia_id] = ind.id
+
+    estructura = []
+    for comp in competencias_raw:
+        estructura.append({
+            "id": comp.id,
+            "nombre": comp.nombre,
+            "codigo": comp.codigo or f"C{comp.id}",
+            "porcentaje": float(comp.porcentaje) if comp.porcentaje else 0,
+            "primer_indicador_id": primer_indicador_por_comp.get(comp.id)
+        })
+
+    # Estudiantes
+    estudiantes_raw = Estudiante.query.filter_by(
+        grupo_id=grupo_id, activo=True
+    ).order_by(Estudiante.apellido, Estudiante.nombre).all()
+
+    estudiantes_ids = [e.id for e in estudiantes_raw]
+
+    # Notas y niveles por indicador
+    evaluaciones = EvaluacionEstudiante.query.filter(
+        EvaluacionEstudiante.estudiante_id.in_(estudiantes_ids),
+        EvaluacionEstudiante.periodo_id == periodo_id
+    ).all()
+
+    # Indexar por estudiante -> indicador
+    evals_por_indicador = {}
+    for ev in evaluaciones:
+        if ev.estudiante_id not in evals_por_indicador:
+            evals_por_indicador[ev.estudiante_id] = {}
+        evals_por_indicador[ev.estudiante_id][ev.indicador_id] = {
+            "calificacion": float(ev.calificacion) if ev.calificacion else None,
+            "nivel_desempeño": ev.nivel_desempeño
+        }
+
+    # Indexar por estudiante -> competencia (usando el primer indicador)
+    indicador_a_competencia = {v: k for k, v in primer_indicador_por_comp.items()}
+    evaluaciones_por_competencia = {}
+    for est_id in estudiantes_ids:
+        evaluaciones_por_competencia[est_id] = {}
+        for comp in competencias_raw:
+            primer_ind_id = primer_indicador_por_comp.get(comp.id)
+            if primer_ind_id and primer_ind_id in evals_por_indicador.get(est_id, {}):
+                evaluaciones_por_competencia[est_id][comp.id] = evals_por_indicador[est_id][primer_ind_id]
+            else:
+                evaluaciones_por_competencia[est_id][comp.id] = {
+                    "calificacion": None,
+                    "nivel_desempeño": None
+                }
+
+    # Componentes (autoeval, examen)
+    componentes = NotaComponenteEstudiante.query.filter(
+        NotaComponenteEstudiante.estudiante_id.in_(estudiantes_ids),
+        NotaComponenteEstudiante.grupo_materia_id == asignacion.id,
+        NotaComponenteEstudiante.periodo_academico_id == periodo_id
+    ).all()
+
+    componentes_por_estudiante = {}
+    for comp in componentes:
+        if comp.estudiante_id not in componentes_por_estudiante:
+            componentes_por_estudiante[comp.estudiante_id] = {}
+        componentes_por_estudiante[comp.estudiante_id][comp.tipo_componente] = float(
+            comp.calificacion) if comp.calificacion else None
+
+    # Preparar lista final
+    estudiantes = []
+    for est in estudiantes_raw:
+        piar_activo = False
+        if hasattr(est, 'piar') and est.piar:
+            piar_activo = getattr(est.piar, 'activo', False)
+
+        estudiantes.append({
+            "id": est.id,
+            "nombre": est.nombre or "",
+            "apellido": est.apellido or "",
+            "piar_activo": piar_activo,
+            "evaluaciones": evaluaciones_por_competencia.get(est.id, {}),
+            "autoeval": componentes_por_estudiante.get(est.id, {}).get("autoevaluacion", ""),
+            "examen": componentes_por_estudiante.get(est.id, {}).get("examen_final", "")
+        })
+
+    pct_autoeval = 5
+    pct_examen = 20
+    total_pct = sum(c["porcentaje"] for c in estructura) + pct_autoeval + pct_examen
+
+    return render_template(
+        "docentes/planilla.html",
+        grupo=grupo,
+        materia=materia,
+        periodo=periodo,
+        estructura=estructura,
+        estudiantes=estudiantes,
+        pct_autoeval=pct_autoeval,
+        pct_examen=pct_examen,
+        total_pct=total_pct,
+        puede_editar=puede_editar,
+        tipo_captura=tipo_captura
+    )

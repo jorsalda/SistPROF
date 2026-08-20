@@ -6,11 +6,17 @@ class EvaluacionEstudiante(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # ✅ COLUMNA CALIFICACIÓN (Corrección anterior mantenida)
+    # ✅ COLUMNA CALIFICACIÓN
     calificacion = db.Column(
-        "calificacion",  # Nombre real en BD
+        "calificacion",
         db.Float,
         nullable=False
+    )
+
+    # ✅ NUEVO: Nivel de desempeño cualitativo
+    nivel_desempeño = db.Column(
+        db.String(20),
+        nullable=True
     )
 
     observacion = db.Column(db.Text, nullable=True)
@@ -27,7 +33,6 @@ class EvaluacionEstudiante(db.Model):
         nullable=False
     )
 
-    # ✅ CORRECCIÓN CRÍTICA: FK explícita a periodos_academicos
     periodo_id = db.Column(
         db.Integer,
         db.ForeignKey("periodos_academicos.id", ondelete="CASCADE"),
@@ -42,12 +47,10 @@ class EvaluacionEstudiante(db.Model):
         back_populates="evaluaciones"
     )
 
-    # ✅ CORRECCIÓN CRÍTICA: Relación explícita al modelo correcto
-    # Usamos 'primaryjoin' para evitar que SQLAlchemy se confunda con otros modelos 'Periodo'
     periodo = db.relationship(
         "PeriodoAcademico",
-        foreign_keys=[periodo_id],  # Forzamos el uso de esta FK específica
-        backref="evaluaciones_estudiante"  # Usamos backref simple para evitar colisiones con back_populates
+        foreign_keys=[periodo_id],
+        backref="evaluaciones_estudiante"
     )
 
     def __repr__(self):

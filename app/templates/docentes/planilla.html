@@ -27,7 +27,6 @@
             </h1>
 
             <div class="ms-auto d-flex gap-2 align-items-center">
-                <!-- Botones de edición de ponderaciones -->
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnEditarPonderaciones" onclick="toggleEdicionPonderaciones(true)">
                     <i class="bi bi-sliders"></i> Ponderaciones
                 </button>
@@ -68,58 +67,53 @@
                 <table class="pl-table">
                     <thead>
                         <tr>
-                            <!-- NOMBRE (fijo izquierda) -->
-                            <th rowspan="2" class="col-name h-name">
+                            <!-- NOMBRE -->
+                            <th class="col-name h-name">
                                 <i class="bi bi-person"></i> Estudiante
                             </th>
 
-                            <!-- COMPETENCIAS (N dinámicas) -->
+                            <!-- COMPETENCIAS NUMÉRICAS -->
                             {% for comp in estructura %}
-                            <th colspan="{{ comp.indicadores|length + 1 }}"
-                                class="h-comp pl-tooltip"
+                            <th class="h-comp pl-tooltip text-center"
                                 title="{{ comp.nombre if comp.nombre else '' }}"
                                 data-comp-id="{{ comp.id }}"
                                 data-porcentaje="{{ comp.porcentaje|default(0) }}">
-                                <span>{{ comp.codigo if comp.codigo else 'C' ~ loop.index }}</span><br>
-                                <small class="pct-label">{{ comp.porcentaje|default(0) }}%</small>
+                                <span class="fw-bold text-dark" style="font-size: 1.1rem;">C{{ loop.index }}</span>
+                                <br>
+                                <small class="pct-label" style="font-size: 0.75rem;">{{ comp.porcentaje|default(0) }}%</small>
                             </th>
                             {% endfor %}
 
                             <!-- AUTOEVALUACIÓN -->
-                            <th rowspan="2" class="h-auto" data-porcentaje="{{ pct_autoeval }}">
+                            <th class="h-auto" data-porcentaje="{{ pct_autoeval }}">
                                 <i class="bi bi-person-check"></i> Auto<br>
                                 <small class="pct-label">{{ pct_autoeval }}%</small>
                             </th>
 
                             <!-- EXAMEN FINAL -->
-                            <th rowspan="2" class="h-examen" data-porcentaje="{{ pct_examen }}">
+                            <th class="h-examen" data-porcentaje="{{ pct_examen }}">
                                 <i class="bi bi-journal-check"></i> Examen<br>
                                 <small class="pct-label">{{ pct_examen }}%</small>
                             </th>
 
+                            <!-- NIVELES DE DESEMPEÑO -->
+                            {% for comp in estructura %}
+                            <th class="h-nivel col-nivel-header text-center" data-comp-id="{{ comp.id }}">
+                                <span class="fw-bold text-primary" style="font-size: 1rem;">C{{ loop.index }}</span>
+                                <br>
+                                <small class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Nivel</small>
+                            </th>
+                            {% endfor %}
+
                             <!-- NOTA DEFINITIVA -->
-                            <th rowspan="2" class="h-definitiva" title="Nota Definitiva">
+                            <th class="h-definitiva" title="Nota Definitiva">
                                 <i class="bi bi-calculator"></i> Definitiva
                             </th>
 
-                            <!-- BOTÓN IA (fijo derecha) -->
-                            <th rowspan="2" class="col-final h-final">
+                            <!-- BOTÓN IA -->
+                            <th class="col-final h-final">
                                 <i class="bi bi-robot"></i> IA
                             </th>
-                        </tr>
-
-                        <tr>
-                            <!-- Sub-encabezado: Indicadores de competencias -->
-                            {% for comp in estructura %}
-                                {% for ind in comp.indicadores %}
-                                    <th class="h-ind pl-tooltip" title="{{ ind.descripcion if ind.descripcion else '' }}">
-                                        {{ ind.codigo if ind.codigo else 'I' ~ loop.index }}
-                                    </th>
-                                {% endfor %}
-                                <th class="h-ind col-promedio" style="background: #e8f0fe; font-size:10px;">
-                                    ∑
-                                </th>
-                            {% endfor %}
                         </tr>
                     </thead>
 
@@ -135,26 +129,24 @@
                                 {% endif %}
                             </td>
 
-                            <!-- COMPETENCIAS + INDICADORES -->
+                            <!-- NOTAS POR COMPETENCIA -->
                             {% for comp in estructura %}
-                                {% for ind in comp.indicadores %}
-                                    <td class="ind-cell">
-                                        <input type="number"
-                                               step="0.1"
-                                               min="0"
-                                               max="5"
-                                               class="pl-input"
-                                               name="nota_{{ est.id }}_{{ ind.id }}"
-                                               data-estudiante-id="{{ est.id }}"
-                                               data-indicador-id="{{ ind.id }}"
-                                               data-competencia-id="{{ comp.id }}"
-                                               value="{{ est.notas[ind.id]|default('') }}"
-                                               placeholder="—"
-                                               {% if periodo and not periodo.activo %}disabled{% endif %}>
-                                    </td>
-                                {% endfor %}
-                                <td class="col-promedio" id="prom-{{ est.id }}-{{ comp.id }}">
-                                    —
+                                {% set eval_data = est.evaluaciones.get(comp.id, {}) %}
+                                {% set nota = eval_data.calificacion %}
+
+                                <td class="td-nota text-center" data-comp-id="{{ comp.id }}">
+                                    <input type="number"
+                                           step="0.1"
+                                           min="0"
+                                           max="5"
+                                           class="pl-input input-nota"
+                                           name="nota_{{ est.id }}_{{ comp.id }}"
+                                           data-estudiante-id="{{ est.id }}"
+                                           data-competencia-id="{{ comp.id }}"
+                                           value="{{ nota if nota is not none else '' }}"
+                                           placeholder="—"
+                                           onchange="sincronizarNivelAutomatico(this)"
+                                           {% if periodo and not periodo.activo %}disabled{% endif %}>
                                 </td>
                             {% endfor %}
 
@@ -188,14 +180,33 @@
                                        {% if periodo and not periodo.activo %}disabled{% endif %}>
                             </td>
 
+                            <!-- COLUMNAS DE NIVEL -->
+                            {% for comp in estructura %}
+                                {% set eval_data = est.evaluaciones.get(comp.id, {}) %}
+                                {% set nivel_guardado = eval_data.nivel_desempeño %}
+
+                                <td class="td-nivel col-nivel-cell text-center" data-comp-id="{{ comp.id }}">
+                                    <div class="nivel-container" id="nivel-{{ est.id }}-{{ comp.id }}">
+                                        {% if nivel_guardado %}
+                                            <span class="badge-nivel">{{ nivel_guardado }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </div>
+                                    <input type="hidden"
+                                           name="nivel_{{ est.id }}_{{ comp.id }}"
+                                           id="input-nivel-{{ est.id }}-{{ comp.id }}"
+                                           value="{{ nivel_guardado if nivel_guardado else '' }}">
+                                </td>
+                            {% endfor %}
+
                             <!-- NOTA DEFINITIVA -->
                             <td>
                                 <input type="text"
                                        class="pl-input definitiva"
                                        id="definitiva-{{ est.id }}"
                                        value="—"
-                                       readonly
-                                       style="font-weight:700; color:#0d6efd; background:#f0f7ff; cursor:default;">
+                                       readonly>
                             </td>
 
                             <!-- BOTÓN IA -->
@@ -216,15 +227,14 @@
             <div class="pl-footer">
                 <span class="hint">
                     <i class="bi bi-info-circle"></i>
-                    Rojo = nota &lt; 3.0 · Verde = nota &ge; 4.5 ·
-                    <span class="text-primary">∑ = promedio de la competencia</span>
+                    Rojo = nota &lt; 3.0 · Verde = nota &ge; 4.5 · Niveles automáticos según nota
                 </span>
 
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="calcularPromedios()">
                         <i class="bi bi-calculator"></i> Recalcular
                     </button>
-                    <button type="submit" class="btn btn-success btn-sm px-3" id="btnGuardar">
+                    <button type="button" class="btn btn-success btn-sm px-3" id="btn-guardar-notas">
                         <i class="bi bi-save"></i> Guardar cambios
                     </button>
                 </div>
@@ -262,18 +272,25 @@
     window.PLANILLA_CONFIG = {
         materiaId: {{ materia.id }},
         periodoId: {{ periodo.id if periodo else 0 }},
+        tipoCaptura: "{{ tipo_captura }}",
+
         competencias: [
             {% for comp in estructura %}
             {
                 id: {{ comp.id }},
-                codigo: '{{ comp.codigo if comp.codigo else "C" ~ loop.index }}',
-                porcentaje: {{ comp.porcentaje|default(0) }}
+                codigo: '{{ comp.codigo | default("C" ~ loop.index) }}',
+                porcentaje: {{ comp.porcentaje | default(0) }},
+                primerIndicadorId: {{ comp.primer_indicador_id if comp.primer_indicador_id else 'null' }}
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ],
-        pctAutoeval: {{ pct_autoeval }},
-        pctExamen: {{ pct_examen }}
+
+        pctAutoeval: {{ pct_autoeval | default(5) }},
+        pctExamen: {{ pct_examen | default(20) }}
     };
+
+    window.CSRF_TOKEN = "{{ csrf_token() }}";
 </script>
+
 <script src="{{ url_for('static', filename='js/planilla.js') }}"></script>
 {% endblock %}
