@@ -1,9 +1,12 @@
+# ==========================================================
+# DOCENTE ROUTES - SistPROF (CORREGIDO)
+# ==========================================================
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 import json
-import re
+from sqlalchemy import or_  # ✅ CORREGIDO: usar sqlalchemy.or_ en lugar de re.or_
 
 # Imports de Modelos Existentes
 from app.models.pregunta import Pregunta
@@ -14,7 +17,7 @@ from app.models.estudiante import Estudiante
 from app.models.grupo import Grupo
 from app.models.usuario import Usuario
 from app.models.sede import Sede
-from app.models.examen import Examen
+from app.models.examen import Examen, ProgramacionExamen
 from app.models.examen_contenido import ExamenContenido
 from app.extensions import db
 
@@ -25,8 +28,10 @@ from app.models.indicador_logro import IndicadorLogro
 from app.models.evaluacion_estudiante import EvaluacionEstudiante
 from app.models.periodo_academico import PeriodoAcademico
 from app.models.configuracion_periodo import ConfiguracionPeriodo
-from services.ia_service import generar_analisis_pedagogico, logger
+from app.models.nota_componente import NotaComponenteEstudiante
+from app.services.ia_service import generar_analisis_pedagogico, logger  # ✅ CORREGIDO: agregar 'app.' al inicio
 
+# ✅ BLUEPRINT DEFINIDO DESPUÉS DE TODOS LOS IMPORTS
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
 
 
@@ -92,8 +97,7 @@ def dashboard():
         Permiso.fecha_inicio <= hoy,
         Permiso.fecha_fin >= hoy
     ).count()
-    ultimos_permisos = Permiso.query.filter_by(docente_id=docente.id).order_by(Permiso.fecha_inicio.desc()).limit(
-        5).all()
+    ultimos_permisos = Permiso.query.filter_by(docente_id=docente.id).order_by(Permiso.fecha_inicio.desc()).limit(5).all()
 
     return render_template(
         "docentes/dashboard.html",
@@ -142,8 +146,10 @@ def mis_estudiantes():
     if todos_ids_grupos:
         consulta = Estudiante.query.filter(Estudiante.grupo_id.in_(todos_ids_grupos), Estudiante.activo == True)
         if search:
+            # ✅ CORREGIDO: usar sqlalchemy.or_ en lugar de re.or_
             consulta = consulta.filter(
-                re.or_(Estudiante.nombre.ilike(f"%{search}%"), Estudiante.apellido.ilike(f"%{search}%")))
+                or_(Estudiante.nombre.ilike(f"%{search}%"), Estudiante.apellido.ilike(f"%{search}%"))
+            )
         if sede_id:
             consulta = consulta.filter_by(sede_id=sede_id)
         if grupo_id:
@@ -195,11 +201,9 @@ def seguimiento():
         return redirect(url_for('docente.dashboard'))
 
 
-
 # ==========================================================
-# RESTO DE RUTAS EXISTENTES (Permisos, Perfil, CRUD Docentes, etc.)
+# GESTIÓN DE PERMISOS
 # ==========================================================
-
 @docente_bp.route("/mis-permisos")
 @login_required
 def mis_permisos():
@@ -269,6 +273,9 @@ def eliminar_permiso_docente(permiso_id):
     return redirect(url_for("docente.mis_permisos"))
 
 
+# ==========================================================
+# PERFIL Y CONTRASEÑA
+# ==========================================================
 @docente_bp.route("/mi-perfil", methods=["GET", "POST"])
 @login_required
 def mi_perfil():
@@ -322,20 +329,9 @@ def cambiar_password_docente():
     return render_template("docentes/cambiar_password.html")
 
 
-@docente_bp.route("/observador")
-@login_required
-def observador():
-    if current_user.rol != 'docente': abort(403)
-    return render_template("docentes/observador.html")
-
-
-@docente_bp.route("/citaciones")
-@login_required
-def citaciones():
-    if current_user.rol != 'docente': abort(403)
-    return render_template("docentes/citaciones.html")
-
-
+# ==========================================================
+# CRUD DOCENTES (ADMINISTRACIÓN)
+# ==========================================================
 @docente_bp.route("/")
 @login_required
 def listar():
@@ -476,6 +472,9 @@ def cambiar_estado(id):
     return jsonify({"success": True, "message": f"Docente {estado} correctamente", "activo": docente.activo})
 
 
+# ==========================================================
+# BANCO DE PREGUNTAS Y CREACIÓN DE EXÁMENES
+# ==========================================================
 @docente_bp.route("/banco-preguntas")
 @login_required
 def banco_preguntas():
@@ -545,7 +544,6 @@ def crear_desde_banco():
 def asignar_examen(id):
     if current_user.rol != 'docente':
         abort(403)
-    from app.models.examen import ProgramacionExamen
 
     examen = Examen.query.get_or_404(id)
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
@@ -589,7 +587,6 @@ def asignar_examen(id):
 # ============================================================
 # GENERADOR DE CÓDIGOS DE COMPETENCIA
 # ============================================================
-
 def generar_codigo_competencia(materia_id, nivel_educativo):
     """
     Genera un código único incremental basado en el nivel educativo.
@@ -632,47 +629,48 @@ def generar_codigo_competencia(materia_id, nivel_educativo):
 
     return f"{prefijo}{nuevo_num}"
 
+
 # ============================================================
 # GENERAR COMPETENCIAS MADRE
 # ============================================================
 @docente_bp.route("/api/competencias-madre", methods=["POST"])
 @login_required
 def crear_competencia_madre():
-    print("🔥 [DEBUG] Entrando a crear_competencia_madre")  # LOG 1
+    print("🔥 [DEBUG] Entrando a crear_competencia_madre")
 
     if current_user.rol != 'docente':
         abort(403)
 
     try:
         data = request.get_json()
-        print(f"🔥 [DEBUG] Datos recibidos: {data}")  # LOG 2
+        print(f"🔥 [DEBUG] Datos recibidos: {data}")
 
         materia_id = data.get('materia_id')
+        grupo_id = data.get('grupo_id')
         descripcion_madre = data.get('descripcion_madre', '').strip()
         indicadores = data.get('indicadores', {})
 
         if not all([materia_id, descripcion_madre]):
             return jsonify({"error": "Materia y descripción son obligatorios"}), 400
 
-        # Validar niveles
         niveles_requeridos = ['bajo', 'basico', 'alto', 'superior']
         for nivel in niveles_requeridos:
             if nivel not in indicadores or not indicadores[nivel].strip():
                 return jsonify({"error": f"Falta descripción para nivel: {nivel}"}), 400
 
-        # ✅ NUEVO: Obtener el GRUPO_ID correspondiente a esta materia y docente
-        # Esto evita que las nuevas competencias queden sin grupo (NULL)
-        grupo_materia = GrupoMateria.query.filter_by(
-            docente_id=current_user.id,
-            materia_id=materia_id,
-            activo=True
-        ).first()
+        grupo_id_para_guardar = grupo_id
 
-        grupo_id_para_guardar = grupo_materia.grupo_id if grupo_materia else None
-        print(f" [DEBUG] Grupo detectado para guardar: {grupo_id_para_guardar}")
+        if not grupo_id_para_guardar:
+            print("⚠️ [WARN] No se recibió grupo_id, buscando en GrupoMateria...")
+            grupo_materia = GrupoMateria.query.filter_by(
+                docente_id=current_user.id,
+                materia_id=materia_id,
+                activo=True
+            ).first()
+            grupo_id_para_guardar = grupo_materia.grupo_id if grupo_materia else None
 
-        # 1. GENERAR CÓDIGO SECUENCIAL (C1, C2...)
-        # Filtramos también por grupo para que la secuencia sea correcta por grado
+        print(f"📋 [DEBUG] Grupo detectado para guardar: {grupo_id_para_guardar}")
+
         ultima_comp = CompetenciaEstudiante.query.filter_by(
             materia_id=materia_id,
             grupo_id=grupo_id_para_guardar
@@ -687,9 +685,8 @@ def crear_competencia_madre():
                 pass
 
         codigo_madre = f"C{nuevo_numero}"
-        print(f"🔥 [DEBUG] Código generado: {codigo_madre}")  # LOG 3
+        print(f"🔥 [DEBUG] Código generado: {codigo_madre}")
 
-        # 2. Crear Competencia Madre CON GRUPO_ID
         nueva_competencia = CompetenciaEstudiante(
             materia_id=materia_id,
             nombre=descripcion_madre[:150],
@@ -697,12 +694,11 @@ def crear_competencia_madre():
             nivel_educativo='Integral',
             codigo=codigo_madre,
             porcentaje=20,
-            grupo_id=grupo_id_para_guardar  # ✅ ASIGNAR EL GRUPO AQUÍ
+            grupo_id=grupo_id_para_guardar
         )
         db.session.add(nueva_competencia)
         db.session.flush()
 
-        # 3. Crear Indicadores
         config_indicadores = {
             'bajo': {'codigo': 'b200', 'nombre': 'Bajo', 'orden': 1},
             'basico': {'codigo': 'B300', 'nombre': 'Basico', 'orden': 2},
@@ -721,7 +717,7 @@ def crear_competencia_madre():
             db.session.add(ind)
 
         db.session.commit()
-        print(f"✅ [DEBUG] Guardado exitoso ID: {nueva_competencia.id}")  # LOG 4
+        print(f"✅ [DEBUG] Guardado exitoso ID: {nueva_competencia.id}")
 
         return jsonify({
             "success": True,
@@ -730,11 +726,10 @@ def crear_competencia_madre():
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ [DEBUG] ERROR CRÍTICO: {e}")  # LOG 5
-        import traceback;
+        print(f"❌ [DEBUG] ERROR CRÍTICO: {e}")
+        import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
 
 
 # ============================================================
@@ -743,17 +738,15 @@ def crear_competencia_madre():
 @docente_bp.route("/competencias")
 @login_required
 def gestionar_competencias():
-    # 1. OBTENER DATOS BÁSICOS DEL DOCENTE Y PERIODO
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
-
     periodo_actual = PeriodoAcademico.query.filter_by(colegio_id=docente.colegio_id, activo=True).first()
+
     periodo_abierto = True
     if periodo_actual:
-        config_periodo = ConfiguracionPeriodo.query.filter_by(periodo_id=periodo_actual.id).first()
-        if config_periodo and not config_periodo.permite_editar_competencias:
+        config = ConfiguracionPeriodo.query.filter_by(periodo_id=periodo_actual.id).first()
+        if config and not config.permite_editar_competencias:
             periodo_abierto = False
 
-    # 2. CONSULTA DE MATERIAS (JOIN CON GRUPOS)
     materias_raw = db.session.query(GrupoMateria, Materia, Grupo).join(
         Materia, GrupoMateria.materia_id == Materia.id
     ).join(
@@ -765,16 +758,13 @@ def gestionar_competencias():
 
     opciones_materias = []
     for gm, mat, grp in materias_raw:
-        grado_info = f"{grp.grado}° {grp.nombre}" if grp else "Sin Grado"
-        label = f"{mat.nombre} ({grado_info})"
-
+        label = f"{mat.nombre} ({grp.grado}° {grp.nombre})"
         opciones_materias.append({
             'id': gm.materia_id,
             'grupo_id': grp.id,
             'label': label
         })
 
-    # 3. PARSEAR SELECCIÓN COMPUESTA (VALOR: "MATERIA_ID-GRUPO_ID")
     seleccion_raw = request.args.get('seleccion', '')
     materia_id_seleccionada = None
     grupo_id_seleccionado = None
@@ -784,41 +774,32 @@ def gestionar_competencias():
         try:
             materia_id_seleccionada = int(parts[0])
             grupo_id_seleccionado = int(parts[1])
+            print(f" [DEBUG] Selección detectada: Materia={materia_id_seleccionada}, Grupo={grupo_id_seleccionado}")
         except ValueError:
             pass
 
-    # Fallback: Si no hay selección válida, usar la primera opción disponible
     if not materia_id_seleccionada and opciones_materias:
-        primera_op = opciones_materias[0]
-        materia_id_seleccionada = primera_op['id']
-        grupo_id_seleccionado = primera_op['grupo_id']
+        materia_id_seleccionada = opciones_materias[0]['id']
+        grupo_id_seleccionado = opciones_materias[0]['grupo_id']
 
-    print(f" [DEBUG] Selección Cruda: {seleccion_raw}")
-    print(f" [DEBUG] Filtrando por Materia={materia_id_seleccionada}, Grupo={grupo_id_seleccionado}")
-
-    # 4. OBTENER COMPETENCIAS (FILTRO ESTRICTO POR MATERIA + GRUPO)
     competencias_madres = []
-    indicadores_hijos = []
-
     if materia_id_seleccionada and grupo_id_seleccionado:
         competencias_madres = CompetenciaEstudiante.query.filter_by(
             materia_id=materia_id_seleccionada,
             grupo_id=grupo_id_seleccionado
         ).order_by(CompetenciaEstudiante.codigo).all()
-
-        print(f" [DEBUG] Competencias encontradas: {len(competencias_madres)}")
-
-        ids_madres = [c.id for c in competencias_madres]
-        if ids_madres:
-            indicadores_hijos = IndicadorLogro.query.filter(
-                IndicadorLogro.competencia_materia_id.in_(ids_madres)
-            ).order_by(IndicadorLogro.orden).all()
+        print(f"📋 [DEBUG] Competencias encontradas para Grupo {grupo_id_seleccionado}: {len(competencias_madres)}")
     else:
-        print(" [WARN] No hay selección válida de materia/grupo.")
+        print("⚠️ [WARN] No se pudo determinar materia/grupo válido.")
 
-    # 5. AGRUPAR EN ESTRUCTURA JERÁRQUICA PARA EL ACORDEÓN
+    ids_madres = [c.id for c in competencias_madres]
+    indicadores_hijos = []
+    if ids_madres:
+        indicadores_hijos = IndicadorLogro.query.filter(
+            IndicadorLogro.competencia_materia_id.in_(ids_madres)
+        ).order_by(IndicadorLogro.orden).all()
+
     competencias_agrupadas = {}
-
     for comp in competencias_madres:
         competencias_agrupadas[comp.id] = {
             'madre': comp,
@@ -829,21 +810,17 @@ def gestionar_competencias():
         if ind.competencia_materia_id in competencias_agrupadas:
             competencias_agrupadas[ind.competencia_materia_id]['hijos'].append(ind)
 
-    lista_para_template = list(competencias_agrupadas.values())
+    lista_final = list(competencias_agrupadas.values())
 
-    # 6. RENDERIZAR TEMPLATE
     return render_template(
         "docentes/gestion_competencias.html",
         periodo_abierto=periodo_abierto,
         opciones_materias=opciones_materias,
-        competencias=lista_para_template,
+        competencias=lista_final,
         periodo_actual=periodo_actual,
         materia_seleccionada_id=materia_id_seleccionada,
         grupo_seleccionado_id=grupo_id_seleccionado
     )
-
-
-
 
 
 # ============================================================
@@ -853,7 +830,6 @@ def gestionar_competencias():
 @login_required
 def analizar_estudiante_ia():
     """Genera fortalezas, debilidades y plan de apoyo usando IA."""
-
     data = request.get_json()
     est_id = data.get('estudiante_id')
     mat_id = data.get('materia_id')
@@ -863,7 +839,6 @@ def analizar_estudiante_ia():
         return jsonify({"error": "Faltan parámetros requeridos"}), 400
 
     try:
-        # Obtener notas con contexto completo
         evaluaciones = EvaluacionEstudiante.query.filter_by(
             estudiante_id=est_id,
             periodo_id=per_id
@@ -876,7 +851,6 @@ def analizar_estudiante_ia():
                 "plan_apoyo": "Registre calificaciones para obtener un análisis pedagógico."
             }), 200
 
-        # Preparar contexto para IA
         contexto_notas = []
         for ev in evaluaciones:
             contexto_notas.append({
@@ -886,7 +860,6 @@ def analizar_estudiante_ia():
                 "nota": float(ev.calificacion) if ev.calificacion else 0.0
             })
 
-        # Llamar a servicio IA
         resultado_ia = generar_analisis_pedagogico(contexto_notas)
 
         return jsonify({
@@ -902,22 +875,13 @@ def analizar_estudiante_ia():
             "detalle": str(e)
         }), 500
 
-# =============================================================================
-# PLAN-001 | Paso 1.1 | Endpoint GET: Planilla de Calificaciones
-# =============================================================================
 
-from flask import abort
+# =============================================================================
+# PLANILLA DE CALIFICACIONES
+# =============================================================================
 from sqlalchemy import text
-from app.models import (
-    Docente, Estudiante, Grupo, GrupoMateria, Materia,
-    PeriodoAcademico, CompetenciaEstudiante, IndicadorLogro,
-    EvaluacionEstudiante, NotaComponenteEstudiante
-)
 
 
-# ==========================================================
-# SELECTOR DE PLANILLA DE CALIFICACIONES
-# ==========================================================
 @docente_bp.route("/planilla-selector")
 @login_required
 def ver_planilla_selector():
@@ -930,10 +894,8 @@ def ver_planilla_selector():
         flash("Perfil de docente no encontrado.", "danger")
         return redirect(url_for('docente.dashboard'))
 
-    # Obtener asignaciones activas del docente
     asignaciones = GrupoMateria.query.filter_by(docente_id=docente.id, activo=True).all()
 
-    # Agrupar por materia para facilitar la selección
     materias_con_grupos = {}
     for asig in asignaciones:
         mat_nombre = asig.materia.nombre if asig.materia else "Sin Nombre"
@@ -966,9 +928,6 @@ def ver_planilla(grupo_id, materia_id):
     if current_user.rol not in ['docente', 'coordinador']:
         abort(403)
 
-    # -------------------------------------------------------------------------
-    # 1. Datos comunes (GET y POST)
-    # -------------------------------------------------------------------------
     docente = Docente.query.filter_by(usuario_id=current_user.id).first_or_404()
 
     asignacion = GrupoMateria.query.filter_by(
@@ -992,7 +951,6 @@ def ver_planilla(grupo_id, materia_id):
 
     periodo_id = periodo.id
 
-    # ✅ NUEVO: Leer configuración institucional de evaluación
     config_eval = db.session.execute(text("""
         SELECT tipo_captura FROM configuracion_evaluacion 
         WHERE colegio_id = :cid
@@ -1005,13 +963,11 @@ def ver_planilla(grupo_id, materia_id):
     # ========================================================================
     if request.method == "POST":
         try:
-            # Auditoría: quién modifica
             db.session.execute(
                 text("SET LOCAL app.current_user_id = :uid"),
                 {"uid": current_user.id}
             )
 
-            # Detectar JSON o form tradicional
             if request.is_json:
                 data = request.get_json()
                 notas = data.get('notas', {})
@@ -1049,9 +1005,6 @@ def ver_planilla(grupo_id, materia_id):
                                 niveles[est_id] = {}
                             niveles[est_id][comp_id] = val
 
-            # -----------------------------------------------------------------
-            # Guardar notas por competencia (usando el primer indicador)
-            # -----------------------------------------------------------------
             for est_id, competencias in notas.items():
                 for comp_id, valor in competencias.items():
                     if valor is None or str(valor).strip() == '':
@@ -1094,9 +1047,6 @@ def ver_planilla(grupo_id, materia_id):
                             calificacion=nota_val
                         ))
 
-            # -----------------------------------------------------------------
-            # Guardar niveles de desempeño por competencia
-            # -----------------------------------------------------------------
             for est_id, comps in niveles.items():
                 for comp_id, nivel in comps.items():
                     if not nivel or str(nivel).strip() == '':
@@ -1125,9 +1075,6 @@ def ver_planilla(grupo_id, materia_id):
                             nivel_desempeño=nivel
                         ))
 
-            # -----------------------------------------------------------------
-            # Guardar componentes (autoeval, examen)
-            # -----------------------------------------------------------------
             for est_id, comps in componentes.items():
                 for tipo, valor in comps.items():
                     if valor is None or str(valor).strip() == '':
@@ -1161,9 +1108,6 @@ def ver_planilla(grupo_id, materia_id):
                             registrada_por=current_user.id
                         ))
 
-            # -----------------------------------------------------------------
-            # Actualizar ponderaciones si vienen
-            # -----------------------------------------------------------------
             if ponderaciones:
                 for comp_id, nuevo_pct in ponderaciones.items():
                     comp = CompetenciaEstudiante.query.filter_by(
@@ -1182,7 +1126,7 @@ def ver_planilla(grupo_id, materia_id):
 
         except Exception as e:
             db.session.rollback()
-            import traceback;
+            import traceback
             traceback.print_exc()
             error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
 
@@ -1193,7 +1137,7 @@ def ver_planilla(grupo_id, materia_id):
             return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
 
     # ========================================================================
-    # GET: RENDERIZAR PLANILLA
+    # GET: RENDERIZAR PLANILLA CON CÁLCULO 75/25
     # ========================================================================
     puede_editar = True
     try:
@@ -1210,11 +1154,9 @@ def ver_planilla(grupo_id, materia_id):
     except Exception:
         pass
 
-    # ✅ CORREGIDO: Filtrar competencias por Materia Y Grupo específico
-    # Esto evita que se mezclen competencias de 10° y 11° en la misma planilla
     competencias_raw = CompetenciaEstudiante.query.filter_by(
         materia_id=materia_id,
-        grupo_id=grupo_id  # <--- FILTRO CLAVE AGREGADO
+        grupo_id=grupo_id
     ).order_by(CompetenciaEstudiante.codigo).all()
 
     comp_ids = [c.id for c in competencias_raw]
@@ -1237,20 +1179,17 @@ def ver_planilla(grupo_id, materia_id):
             "primer_indicador_id": primer_indicador_por_comp.get(comp.id)
         })
 
-    # Estudiantes
     estudiantes_raw = Estudiante.query.filter_by(
         grupo_id=grupo_id, activo=True
     ).order_by(Estudiante.apellido, Estudiante.nombre).all()
 
     estudiantes_ids = [e.id for e in estudiantes_raw]
 
-    # Notas y niveles por indicador
     evaluaciones = EvaluacionEstudiante.query.filter(
         EvaluacionEstudiante.estudiante_id.in_(estudiantes_ids),
         EvaluacionEstudiante.periodo_id == periodo_id
     ).all()
 
-    # Indexar por estudiante -> indicador
     evals_por_indicador = {}
     for ev in evaluaciones:
         if ev.estudiante_id not in evals_por_indicador:
@@ -1260,8 +1199,6 @@ def ver_planilla(grupo_id, materia_id):
             "nivel_desempeño": ev.nivel_desempeño
         }
 
-    # Indexar por estudiante -> competencia (usando el primer indicador)
-    indicador_a_competencia = {v: k for k, v in primer_indicador_por_comp.items()}
     evaluaciones_por_competencia = {}
     for est_id in estudiantes_ids:
         evaluaciones_por_competencia[est_id] = {}
@@ -1275,7 +1212,6 @@ def ver_planilla(grupo_id, materia_id):
                     "nivel_desempeño": None
                 }
 
-    # Componentes (autoeval, examen)
     componentes = NotaComponenteEstudiante.query.filter(
         NotaComponenteEstudiante.estudiante_id.in_(estudiantes_ids),
         NotaComponenteEstudiante.grupo_materia_id == asignacion.id,
@@ -1289,26 +1225,59 @@ def ver_planilla(grupo_id, materia_id):
         componentes_por_estudiante[comp.estudiante_id][comp.tipo_componente] = float(
             comp.calificacion) if comp.calificacion else None
 
-    # Preparar lista final
+    PCT_AUTOEVAL = 5.0
+    PCT_EXAMEN = 20.0
+
     estudiantes = []
     for est in estudiantes_raw:
         piar_activo = False
         if hasattr(est, 'piar') and est.piar:
             piar_activo = getattr(est.piar, 'activo', False)
 
+        evals_est = evaluaciones_por_competencia.get(est.id, {})
+        comps_est = componentes_por_estudiante.get(est.id, {})
+
+        nota_auto = comps_est.get("autoevaluacion")
+        nota_examen = comps_est.get("examen_final")
+
+        val_auto_calc = float(nota_auto) if nota_auto is not None else 0.0
+        val_examen_calc = float(nota_examen) if nota_examen is not None else 0.0
+
+        aporte_fijo = 0.0
+        if nota_auto is not None:
+            aporte_fijo += val_auto_calc * (PCT_AUTOEVAL / 5.0)
+        if nota_examen is not None:
+            aporte_fijo += val_examen_calc * (PCT_EXAMEN / 5.0)
+
+        aporte_competencias = 0.0
+        suma_pcts_docente = 0.0
+
+        for comp in estructura:
+            comp_id = comp["id"]
+            pct_comp = comp["porcentaje"]
+            suma_pcts_docente += pct_comp
+
+            eval_data = evals_est.get(comp_id, {})
+            nota_comp = eval_data.get("calificacion")
+
+            if nota_comp is not None:
+                val_comp = float(nota_comp)
+                aporte_competencias += val_comp * (pct_comp / 5.0)
+
+        puntaje_total = aporte_competencias + aporte_fijo
+        definitiva = round(puntaje_total, 1)
+
         estudiantes.append({
             "id": est.id,
             "nombre": est.nombre or "",
             "apellido": est.apellido or "",
             "piar_activo": piar_activo,
-            "evaluaciones": evaluaciones_por_competencia.get(est.id, {}),
-            "autoeval": componentes_por_estudiante.get(est.id, {}).get("autoevaluacion", ""),
-            "examen": componentes_por_estudiante.get(est.id, {}).get("examen_final", "")
+            "evaluaciones": evals_est,
+            "autoeval": nota_auto,
+            "examen": nota_examen,
+            "definitiva_calculada": definitiva,
+            "suma_pcts_comps": suma_pcts_docente
         })
-
-    pct_autoeval = 5
-    pct_examen = 20
-    total_pct = sum(c["porcentaje"] for c in estructura) + pct_autoeval + pct_examen
 
     return render_template(
         "docentes/planilla.html",
@@ -1317,9 +1286,27 @@ def ver_planilla(grupo_id, materia_id):
         periodo=periodo,
         estructura=estructura,
         estudiantes=estudiantes,
-        pct_autoeval=pct_autoeval,
-        pct_examen=pct_examen,
-        total_pct=total_pct,
+        pct_autoeval=PCT_AUTOEVAL,
+        pct_examen=PCT_EXAMEN,
         puede_editar=puede_editar,
         tipo_captura=tipo_captura
     )
+
+
+# ==========================================================
+# OBSERVADOR Y CITACIONES
+# ==========================================================
+@docente_bp.route("/observador")
+@login_required
+def observador():
+    if current_user.rol != 'docente':
+        abort(403)
+    return render_template("docentes/observador.html")
+
+
+@docente_bp.route("/citaciones")
+@login_required
+def citaciones():
+    if current_user.rol != 'docente':
+        abort(403)
+    return render_template("docentes/citaciones.html")

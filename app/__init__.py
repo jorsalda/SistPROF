@@ -19,20 +19,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 # Extensiones centrales
 from .extensions import db, login_manager, mail
 
-# Blueprints — orden alfabético por nombre de módulo
-from .routes.acudiente import acudiente_bp
-from .routes.admin_routes import admin_bp
-from .routes.api_acudiente import api_acudiente_bp
-from .routes.api_examen_bp import api_examen_bp
-from .routes.auth_routes import auth_bp
-from .routes.colegio_routes import colegio_bp
-from .routes.coordinador_routes import coordinador_bp
-from .routes.docente_routes import docente_bp
-from .routes.estudiantes_routes import estudiante_bp
-from .routes.examen_routes import examen_bp
-from .routes.membresia_routes import membresia_bp
-from .routes.permiso_routes import permiso_bp
-
 logger = logging.getLogger(__name__)
 migrate = Migrate()
 
@@ -81,8 +67,28 @@ def create_app():
         return db.session.get(Usuario, int(user_id))
 
     # -------------------------------------------------------------------------
-    # 4. BLUEPRINTS
+    # 4. BLUEPRINTS (Importaciones locales para evitar conflictos)
     # -------------------------------------------------------------------------
+    try:
+        from .routes.acudiente import acudiente_bp
+        from .routes.admin_routes import admin_bp
+        from .routes.api_acudiente import api_acudiente_bp
+        from .routes.api_examen_bp import api_examen_bp
+        from .routes.auth_routes import auth_bp
+        from .routes.colegio_routes import colegio_bp
+        from .routes.coordinador_routes import coordinador_bp
+        from .routes.docente_routes import docente_bp
+
+        # ✅ IMPORTACIÓN CRÍTICA: Debe coincidir con estudiantes_routes.py
+        from .routes.estudiantes_routes import estudiante_bp
+
+        from .routes.examen_routes import examen_bp
+        from .routes.membresia_routes import membresia_bp
+        from .routes.permiso_routes import permiso_bp
+    except ImportError as e:
+        logger.error(f"❌ ERROR CRÍTICO AL IMPORTAR BLUEPRINTS: {e}")
+        raise
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(permiso_bp)
     app.register_blueprint(docente_bp)

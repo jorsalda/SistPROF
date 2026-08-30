@@ -1,0 +1,151 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Asignar {{ examen.titulo }} | SistPROF{% endblock %}
+
+{% block docente_page_title %}
+<i class="bi bi-calendar-plus me-2"></i>Asignar Examen a Grupo
+{% endblock %}
+
+{% block docente_content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4 p-4">
+                    <h3 class="mb-0 h5"><i class="bi bi-link-45deg me-2"></i>Asignar "{{ examen.titulo }}"</h3>
+                    <p class="mb-0 opacity-75 small">Selecciona grupo, materia y competencia evaluada</p>
+                </div>
+
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" id="formAsignar">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Grupo -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Grupo <span class="text-danger">*</span></label>
+                            <select name="grupo_id" id="grupo_id" class="form-select form-select-sm" required>
+                                <option value="">-- Selecciona Grupo --</option>
+                                {% for g in grupos %}
+                                <option value="{{ g.id }}">{{ g.grado }}° {{ g.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Materia -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Materia <span class="text-danger">*</span></label>
+                            <select name="materia_id" id="materia_id" class="form-select form-select-sm" required>
+                                <option value="">-- Selecciona Materia --</option>
+                                {% for m in materias %}
+                                <option value="{{ m.id }}">{{ m.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Competencia (Dinámico) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">
+                                Competencia Evaluada <span class="text-danger">*</span>
+                            </label>
+                            <select name="competencia_materia_id" id="competencia_id" class="form-select form-select-sm"
+                                    required>
+                                <option value="" disabled selected>Selecciona una competencia</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                Obligatorio. El examen se vinculará a esta competencia y sus indicadores.
+                            </small>
+                        </div>
+
+                        <!-- Fechas -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Fecha Apertura <span
+                                        class="text-danger">*</span></label>
+                                <input type="datetime-local" name="fecha_apertura" class="form-control form-control-sm"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Fecha Cierre <span class="text-danger">*</span></label>
+                                <input type="datetime-local" name="fecha_cierre" class="form-control form-control-sm"
+                                       required>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('examen.ver_examen', id=examen.id) }}"
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-save me-2"></i>Guardar Asignación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const grupoSelect = document.getElementById('grupo_id');
+        const materiaSelect = document.getElementById('materia_id');
+        const compSelect = document.getElementById('competencia_id');
+
+        function cargarCompetencias() {
+            const grupoId = grupoSelect.value;
+            const materiaId = materiaSelect.value;
+
+            compSelect.innerHTML = '<option value="" disabled selected>Cargando competencias...</option>';
+            compSelect.disabled = true;
+
+            if (!grupoId || !materiaId) {
+                compSelect.innerHTML = '<option value="" disabled selected>Primero selecciona grupo y materia</option>';
+                return;
+            }
+
+            fetch(`/api/examen/api/competencias-por-grupo-materia?grupo_id=${grupoId}&materia_id=${materiaId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar competencias');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        compSelect.innerHTML = '<option value="" disabled selected>No hay competencias para esta combinación</option>';
+                        return;
+                    }
+
+                    // ✅ Opción por defecto: obliga a seleccionar algo
+                    compSelect.innerHTML = '<option value="" disabled selected>Selecciona una competencia</option>';
+
+                    data.forEach(comp => {
+                        const option = document.createElement('option');
+                        option.value = comp.id;
+                        option.textContent = `${comp.codigo} - ${comp.nombre}`;
+                        compSelect.appendChild(option);
+                    });
+
+                    compSelect.disabled = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    compSelect.innerHTML = '<option value="" disabled selected>Error al cargar competencias</option>';
+                });
+        }
+
+        grupoSelect.addEventListener('change', cargarCompetencias);
+        materiaSelect.addEventListener('change', cargarCompetencias);
+    });
+</script>
+{% endblock %}

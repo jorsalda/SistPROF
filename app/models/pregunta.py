@@ -27,6 +27,13 @@ class Pregunta(db.Model):
     url_contexto = db.Column(db.String(300), nullable=True)
     tipo_contexto = db.Column(db.String(20), nullable=True)
 
+    # ✅ NUEVO: Vínculo con el indicador de logro para calificación por competencia
+    indicador_logro_id = db.Column(
+        db.Integer,
+        db.ForeignKey("indicadores_logro.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     activo = db.Column(db.Boolean, default=True)
 
@@ -34,6 +41,9 @@ class Pregunta(db.Model):
     materia = db.relationship("Materia", backref="preguntas")
     docente = db.relationship("Usuario", backref="preguntas_creadas", foreign_keys=[docente_id])
     examen = db.relationship("Examen", backref="preguntas_asignadas", foreign_keys=[examen_id])
+
+    # ✅ RELACIÓN CON INDICADOR DE LOGRO
+    indicador_logro = db.relationship("IndicadorLogro", backref="preguntas_vinculadas")
 
     def to_dict(self):
         return {
@@ -50,7 +60,9 @@ class Pregunta(db.Model):
             'examen_id': self.examen_id,
             # ✅ Incluir contexto en el diccionario
             'url_contexto': self.url_contexto,
-            'tipo_contexto': self.tipo_contexto
+            'tipo_contexto': self.tipo_contexto,
+            # ✅ AGREGADO: ID del indicador
+            'indicador_logro_id': self.indicador_logro_id
         }
 
     def __repr__(self):

@@ -26,22 +26,19 @@
         <div class="card-body">
             <form id="formCompetenciaMadre" class="row g-3">
                 <div class="col-md-4">
-    <label class="form-label small fw-bold">Materia *</label>
-    <!-- Cambiamos el name a 'seleccion' para manejar el valor compuesto -->
-    <select name="seleccion" id="materia_select" class="form-select" required onchange="this.form.submit()">
-        <option value="">Seleccione...</option>
-        {% for op in opciones_materias %}
-        <!-- El value ahora es "ID_MATERIA-ID_GRUPO" -->
-        <option value="{{ op.id }}-{{ op.grupo_id }}"
-                data-materia="{{ op.id }}"
-                data-grupo="{{ op.grupo_id }}"
-                {% if op.id == materia_seleccionada_id and op.grupo_id == grupo_seleccionado_id %}selected{% endif %}>
-            {{ op.label }}
-        </option>
-        {% endfor %}
-    </select>
-</div>
-
+                    <label class="form-label small fw-bold">Materia *</label>
+                    <select name="seleccion" id="materia_select" class="form-select" required onchange="this.form.submit()">
+                        <option value="">Seleccione...</option>
+                        {% for op in opciones_materias %}
+                        <option value="{{ op.id }}-{{ op.grupo_id }}"
+                                data-materia="{{ op.id }}"
+                                data-grupo="{{ op.grupo_id }}"
+                                {% if op.id == materia_seleccionada_id and op.grupo_id == grupo_seleccionado_id %}selected{% endif %}>
+                            {{ op.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="col-md-8">
                     <label class="form-label small fw-bold">Descripción General de la Competencia *</label>
                     <textarea name="descripcion_madre" id="descripcion_madre" class="form-control" rows="2"
@@ -94,7 +91,7 @@
                 {% for grupo in competencias %}
                 <div class="accordion-item border-bottom">
 
-                    <!-- CABECERA: Fila completa con info + botón editar SEPARADO -->
+                    <!-- CABECERA -->
                     <div class="accordion-header p-0" id="heading{{ grupo.madre.id }}">
                         <div class="d-flex align-items-center w-100 py-2 px-3 bg-light hover-bg transition"
                              style="cursor: pointer; min-width: 0;"
@@ -103,23 +100,18 @@
                              aria-expanded="false"
                              aria-controls="collapse{{ grupo.madre.id }}">
 
-                            <!-- Icono expandir -->
                             <i class="bi bi-chevron-right me-2 text-muted small toggle-icon flex-shrink-0"></i>
 
-                            <!-- Código -->
                             <span class="badge bg-primary fs-6 me-3 flex-shrink-0" style="min-width: 45px;">{{ grupo.madre.codigo }}</span>
 
-                            <!-- Materia -->
                             <span class="text-muted small me-3 d-none d-md-block flex-shrink-0" style="width: 120px;">
                                 {{ grupo.madre.materia.nombre if grupo.madre.materia else '' }}
                             </span>
 
-                            <!-- Descripción -->
                             <span class="flex-grow-1 text-secondary small text-truncate me-3" style="min-width: 0;">
                                 {{ grupo.madre.descripcion }}
                             </span>
 
-                            <!-- Botón editar FUERA del área clickeable del acordeón -->
                             <button type="button"
                                     class="btn btn-sm btn-outline-primary ms-auto me-2 flex-shrink-0"
                                     onclick="event.stopPropagation(); editarCompetencia({{ grupo.madre.id }});"
@@ -185,65 +177,23 @@
 </div>
 
 <style>
-/* Animación suave para el icono del acordeón */
-.toggle-icon {
-    transition: transform 0.2s ease;
-}
+.toggle-icon { transition: transform 0.2s ease; }
 .accordion-item .collapsed .toggle-icon,
-.accordion-item [aria-expanded="false"] .toggle-icon {
-    transform: rotate(0deg);
-}
-.accordion-item [aria-expanded="true"] .toggle-icon {
-    transform: rotate(90deg);
-}
-/* Hover suave en la fila del acordeón */
-.hover-bg:hover {
-    background-color: #e9ecef !important;
-}
-.transition {
-    transition: background-color 0.15s ease;
-}
+.accordion-item [aria-expanded="false"] .toggle-icon { transform: rotate(0deg); }
+.accordion-item [aria-expanded="true"] .toggle-icon { transform: rotate(90deg); }
+.hover-bg:hover { background-color: #e9ecef !important; }
+.transition { transition: background-color 0.15s ease; }
 
-/* ============================================
-   FIX ANTI-DESBORDAMIENTO - Gestión de Competencias
-   ============================================ */
-
-/* El formulario nunca excede el ancho */
-#formCompetenciaMadre {
-    width: 100%;
-    max-width: 100%;
-}
+#formCompetenciaMadre { width: 100%; max-width: 100%; }
 #formCompetenciaMadre .form-control,
-#formCompetenciaMadre .form-select {
-    max-width: 100%;
-    width: 100%;
-    box-sizing: border-box;
-    resize: vertical;
-}
+#formCompetenciaMadre .form-select { max-width: 100%; width: 100%; box-sizing: border-box; resize: vertical; }
 
-/* Acordeón: forzar que el flex respete el ancho y el truncate funcione */
-.accordion-header .d-flex {
-    min-width: 0 !important;
-}
-.accordion-header .text-truncate {
-    display: block;
-    min-width: 0 !important;
-}
+.accordion-header .d-flex { min-width: 0 !important; }
+.accordion-header .text-truncate { display: block; min-width: 0 !important; }
 
-/* Tabla de indicadores: scroll horizontal si es necesario, nunca desborda la página */
-.accordion-body {
-    overflow-x: auto;
-    max-width: 100%;
-}
-.accordion-body table {
-    width: 100%;
-    max-width: 100%;
-    table-layout: fixed;
-}
-.accordion-body td {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
+.accordion-body { overflow-x: auto; max-width: 100%; }
+.accordion-body table { width: 100%; max-width: 100%; table-layout: fixed; }
+.accordion-body td { word-wrap: break-word; overflow-wrap: break-word; }
 </style>
 
 <script>
@@ -260,8 +210,20 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
 
+        // ✅ EXTRAER MATERIA_ID Y GRUPO_ID DEL SELECT COMPUESTO
+        const seleccionRaw = document.getElementById('materia_select').value;
+        let materiaId = null;
+        let grupoId = null;
+
+        if (seleccionRaw && seleccionRaw.includes('-')) {
+            const parts = seleccionRaw.split('-');
+            materiaId = parseInt(parts[0]);
+            grupoId = parseInt(parts[1]);
+        }
+
         const payload = {
-            materia_id: parseInt(document.getElementById('materia_id').value),
+            materia_id: materiaId,
+            grupo_id: grupoId, // ✅ ENVIAR GRUPO_ID AL BACKEND
             descripcion_madre: document.getElementById('descripcion_madre').value.trim(),
             indicadores: {
                 bajo: document.getElementById('desc_bajo').value.trim(),

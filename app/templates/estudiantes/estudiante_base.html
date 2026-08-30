@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SistPROF - Estudiante</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -19,37 +20,42 @@
 
         <ul class="sidebar-menu">
             <li class="menu-item">
-                <a href="{{ url_for('estudiante.dashboard_estudiante') }}" class="menu-link {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active{% endif %}">
+                <a href="{{ url_for('estudiante.dashboard_estudiante') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
 
             <li class="menu-item">
-                <a href="{{ url_for('examen.listado_examenes') }}" class="menu-link">
+                <a href="{{ url_for('estudiante.examenes_disponibles') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.examenes_disponibles' %}active{% endif %}">
                     <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
                 </a>
             </li>
 
             <li class="menu-item">
-                <a href="{{ url_for('auth.estado_cuenta') }}" class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
+                <a href="{{ url_for('estudiante.mis_calificaciones') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mis_calificaciones' %}active{% endif %}">
+                    <i class="bi bi-journal-text"></i> Mis Calificaciones
+                </a>
+            </li>
+
+            <li class="menu-item">
+                <a href="{{ url_for('auth.estado_cuenta') }}"
+                   class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
                     <i class="bi bi-person-badge"></i> Mi Cuenta
                 </a>
             </li>
 
-            <!-- ✅ PASO 1: Mi Membresía (SOLO para independientes) -->
             {% if current_user.colegio_id == 46 %}
             <li class="menu-item">
-                <a href="{{ url_for('membresia.ver_mi_plan') }}" class="menu-link {% if request.endpoint == 'membresia.ver_mi_plan' %}active{% endif %}">
+                <a href="{{ url_for('membresia.ver_mi_plan') }}"
+                   class="menu-link {% if request.endpoint == 'membresia.ver_mi_plan' %}active{% endif %}">
                     <i class="bi bi-credit-card"></i> Mi Membresía
                 </a>
             </li>
             {% endif %}
-            <li class="menu-item">
-    <!-- ✅ AHORA (Ruta nueva y segura) -->
-<a href="{{ url_for('estudiante.examenes_disponibles') }}" class="nav-link">
-    <i class="bi bi-file-earmark-text me-2"></i>Mis Exámenes Disponibles
-</a>
-</li>       
+
             <li class="menu-item logout-item">
                 <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
                     <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
@@ -66,27 +72,26 @@
 
         <div class="coordinador-main-content">
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
             {% endwith %}
 
-            <!-- ✅ PASO 2: Alerta de membresía (SOLO para independientes) -->
             {% if current_user.colegio_id == 46 %}
             <div class="alert alert-info d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>📋 Estado de tu membresía:</strong>
+                    <strong> Estado de tu membresía:</strong>
                     {% if dias_restantes is defined and dias_restantes > 0 %}
-                        Te quedan {{ dias_restantes }} días de prueba.
+                    Te quedan {{ dias_restantes }} días de prueba.
                     {% elif dias_restantes is defined and dias_restantes <= 0 %}
-                        Tu periodo de prueba ha vencido. Por favor renueva tu membresía.
+                    Tu periodo de prueba ha vencido. Por favor renueva tu membresía.
                     {% else %}
-                        Verifica el estado de tu membresía.
+                    Verifica el estado de tu membresía.
                     {% endif %}
                 </div>
                 <a href="{{ url_for('membresia.ver_mi_plan') }}" class="btn btn-sm btn-primary">
@@ -101,15 +106,5 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-function scrollToExamen(event) {
-    event.preventDefault();
-    const examenSection = document.getElementById('examen');
-    if (examenSection) {
-        examenSection.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-</script>
 </body>
 </html>

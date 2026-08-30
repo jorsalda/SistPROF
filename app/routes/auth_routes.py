@@ -44,7 +44,7 @@ def index():
 
         # ESTUDIANTE
         elif current_user.rol == 'estudiante':
-            return redirect(url_for('estudiante.dashboard_estudiante'))
+            return redirect(url_for('estudiante.mis_calificaciones'))
 
         # ACUDIENTE
         elif current_user.rol == 'acudiente':
@@ -85,7 +85,7 @@ def login():
 
             # ESTUDIANTE
             elif resultado.rol == 'estudiante':
-                return redirect(url_for('estudiante.dashboard_estudiante'))
+                return redirect(url_for('estudiante.mis_calificaciones'))
 
             # ACUDIENTE
             elif resultado.rol == 'acudiente':
@@ -96,7 +96,7 @@ def login():
 
         else:
             flash(resultado, 'danger')
-            return redirect(url_for('auth.login'))  # ✅ AQUÍ ESTÁ EL CAMBIO
+            return redirect(url_for('auth.login'))
 
     return render_template('auth/login.html')
 
@@ -295,4 +295,3 @@ def handle_rate_limit(error):
     return redirect(
         url_for('auth.login')
     )
-

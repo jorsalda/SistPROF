@@ -3,7 +3,7 @@
 {% block title %}Resultados: {{ examen.titulo }} | SistPROF{% endblock %}
 
 {% block docente_page_title %}
-    <i class="bi bi-bar-chart-fill me-2"></i>Resultados del Examen
+<i class="bi bi-bar-chart-fill me-2"></i>Resultados del Examen
 {% endblock %}
 
 {% block docente_content %}
@@ -12,7 +12,8 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="h4 fw-bold mb-1">{{ examen.titulo }}</h2>
-            <p class="text-muted mb-0">Grupo: {{ grupo.grado }}° {{ grupo.nombre }} | Materia: {{ examen.materia.nombre }}</p>
+            <p class="text-muted mb-0">Grupo: {{ grupo.grado }}° {{ grupo.nombre }} | Materia: {{ examen.materia.nombre
+                }}</p>
         </div>
         <a href="{{ url_for('examen.ver_examen', id=examen.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i> Volver al Examen
@@ -64,64 +65,64 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Estudiante</th>
-                            <th>Estado</th>
-                            <th>Nota</th>
-                            <th>Literal</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
+                    <tr>
+                        <th class="ps-4">Estudiante</th>
+                        <th>Estado</th>
+                        <th>Nota</th>
+                        <th>Literal</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {% for est in estudiantes %}
-                        {% set res = resultados_map.get(est.id) %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="fw-semibold">{{ est.nombres }} {{ est.apellidos }}</div>
-                                <small class="text-muted">{{ est.documento }}</small>
-                            </td>
-                            <td>
-                                {% if res %}
-                                    <span class="badge bg-success rounded-pill">Presentado</span>
-                                {% else %}
-                                    <span class="badge bg-secondary rounded-pill">Pendiente</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if res %}
-                                    <span class="fw-bold fs-5">{{ res.nota_numerica }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if res %}
-                                    <span class="badge {% if res.literal == 'S' or res.literal == 'A' %}bg-success{% elif res.literal == 'I' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                    {% for est in estudiantes %}
+                    {% set res = resultados_map.get(est.id) %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold">{{ est.apellido or '' }} {{ est.nombre or '' }}</div>
+                            <small class="text-muted">{{ est.documento }}</small>
+                        </td>
+                        <td>
+                            {% if res %}
+                            <span class="badge bg-success rounded-pill">Presentado</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if res %}
+                            <span class="fw-bold fs-5">{{ res.nota_numerica }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if res %}
+                            <span class="badge {% if res.literal == 'S' or res.literal == 'A' %}bg-success{% elif res.literal == 'I' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
                                         {{ res.literal }}
                                     </span>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td class="text-end pe-4">
-                                {% if res %}
-                                <button class="btn btn-sm btn-outline-primary" title="Ver detalle">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                {% else %}
-                                <button class="btn btn-sm btn-outline-secondary" disabled title="Aún no presenta">
-                                    <i class="bi bi-lock"></i>
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
-                                No hay estudiantes registrados en este grupo.
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            {% if res %}
+                            <button class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="Aún no presenta">
+                                <i class="bi bi-lock"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            No hay estudiantes registrados en este grupo.
+                        </td>
+                    </tr>
+                    {% endfor %}
                     </tbody>
                 </table>
             </div>

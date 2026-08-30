@@ -1,3 +1,6 @@
+# ==========================================================
+# ESTUDIANTES ROUTES - SistPROF (CORREGIDO)
+# ==========================================================
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
@@ -19,12 +22,185 @@ from app.models.grupo_materia import GrupoMateria
 from app.models.examen import Examen, ProgramacionExamen
 from app.models.resultado_examen import ResultadoExamen
 from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
+from app.models.evaluacion_estudiante import EvaluacionEstudiante
+from app.models.indicador_logro import IndicadorLogro
+from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+from app.models.materia import Materia
+from app.models.periodo_academico import PeriodoAcademico
 
+# ✅ CORRECCIÓN CRÍTICA: EL BLUEPRINT DEBE DEFINIRSE ANTES DE CUALQUIER RUTA
 estudiante_bp = Blueprint(
     "estudiante",
     __name__,
     url_prefix="/estudiantes"
 )
+
+
+# ==========================================================
+# DASHBOARD ESTUDIANTE
+# ==========================================================
+@estudiante_bp.route('/dashboard')
+@login_required
+def dashboard_estudiante():
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.resultado_examen import ResultadoExamen
+    from datetime import datetime
+
+    ultimos_resultados = ResultadoExamen.query.filter_by(
+        estudiante_id=estudiante.id
+    ).order_by(ResultadoExamen.fecha_finalizacion.desc()).limit(5).all()
+
+    total_examenes = ResultadoExamen.query.filter_by(estudiante_id=estudiante.id).count()
+
+    notas_validas = [r.nota_numerica for r in ultimos_resultados if r.nota_numerica is not None]
+    promedio_general = round(sum(notas_validas) / len(notas_validas), 2) if notas_validas else '-'
+    mejor_nota = max(notas_validas) if notas_validas else '-'
+
+    hoy = datetime.now()
+
+    return render_template(
+        'estudiantes/dashboard.html',
+        estudiante=estudiante,
+        total_examenes=total_examenes,
+        promedio_general=promedio_general,
+        mejor_nota=mejor_nota,
+        ultimos_resultados=ultimos_resultados,
+        hoy=hoy
+    )
+
+
+# ==========================================================
+# MIS CALIFICACIONES POR COMPETENCIA E INDICADOR
+# ==========================================================
+@estudiante_bp.route('/mis-calificaciones')
+@login_required
+def mis_calificaciones():
+    """Vista de calificaciones del estudiante con tooltips coherentes."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    # Consulta JOIN explícita
+    evaluaciones = db.session.query(
+        EvaluacionEstudiante, IndicadorLogro, CompetenciaEstudiante, Materia, PeriodoAcademico
+    ).join(
+        IndicadorLogro, EvaluacionEstudiante.indicador_id == IndicadorLogro.id
+    ).join(
+        CompetenciaEstudiante, IndicadorLogro.competencia_materia_id == CompetenciaEstudiante.id
+    ).join(
+        Materia, CompetenciaEstudiante.materia_id == Materia.id
+    ).join(
+        PeriodoAcademico, EvaluacionEstudiante.periodo_id == PeriodoAcademico.id
+    ).filter(
+        EvaluacionEstudiante.estudiante_id == estudiante.id
+    ).order_by(
+        PeriodoAcademico.anio.desc(),
+        PeriodoAcademico.nombre,
+        Materia.nombre,
+        CompetenciaEstudiante.codigo,
+        IndicadorLogro.orden
+    ).all()
+
+    # ESTRUCTURA LIMPIA
+    calificaciones_por_periodo = {}
+
+    for ev, ind, comp, mat, per in evaluaciones:
+        pn = per.nombre
+        mn = mat.nombre
+        cc = comp.codigo
+        cn = comp.nombre
+
+        if pn not in calificaciones_por_periodo:
+            calificaciones_por_periodo[pn] = {}
+
+        if mn not in calificaciones_por_periodo[pn]:
+            calificaciones_por_periodo[pn][mn] = type('MateriaObj', (), {
+                'materia_id': mat.id,
+                'competencias': {},
+                'definitiva': 0.0
+            })()
+
+        if cc not in calificaciones_por_periodo[pn][mn].competencias:
+            calificaciones_por_periodo[pn][mn].competencias[cc] = type('CompObj', (), {
+                'nombre': cn,
+                'indicadores': [],
+                'promedio': None,
+                'nivel': '',
+                'enunciado_nivel': ''
+            })()
+
+        nota = float(ev.calificacion) if ev.calificacion else None
+
+        calificaciones_por_periodo[pn][mn].competencias[cc].indicadores.append({
+            'codigo': ind.codigo,
+            'descripcion': ind.descripcion[:80] + '...' if len(ind.descripcion) > 80 else ind.descripcion,
+            'nota': nota,
+            'nivel_desempeño': getattr(ev, 'nivel_desempeño', None),
+            'observacion': ev.observacion
+        })
+
+    # Calcular promedios y enunciados EXACTOS
+    for periodo in calificaciones_por_periodo.values():
+        for materia in periodo.values():
+            def_suma = 0.0
+            def_cuenta = 0
+
+            for comp in materia.competencias.values():
+                notas_validas = [i['nota'] for i in comp.indicadores if i['nota'] is not None]
+
+                if notas_validas:
+                    comp.promedio = round(sum(notas_validas) / len(notas_validas), 1)
+                    p = comp.promedio
+
+                    # Asignar nivel cualitativo
+                    if p >= 4.5:
+                        comp.nivel = 'Superior'
+                    elif p >= 3.0:
+                        comp.nivel = 'Alto'
+                    elif p >= 2.0:
+                        comp.nivel = 'Básico'
+                    else:
+                        comp.nivel = 'Bajo'
+
+                    # ✅ LÓGICA ESTRICTA: Buscar SOLO el indicador con nivel_desempeño exacto
+                    enunciado_encontrado = ''
+                    for ind_data in comp.indicadores:
+                        # Comparación exacta de strings (case-sensitive)
+                        if ind_data.get('nivel_desempeño') == comp.nivel and ind_data.get('descripcion'):
+                            enunciado_encontrado = ind_data['descripcion']
+                            break  # Salir al encontrar el primero
+
+                    # Si no hay coincidencia exacta, dejar vacío (no mezclar)
+                    comp.enunciado_nivel = enunciado_encontrado
+
+                    def_suma += p
+                    def_cuenta += 1
+                else:
+                    comp.promedio = None
+                    comp.nivel = ''
+                    comp.enunciado_nivel = ''
+
+            materia.definitiva = round(def_suma / def_cuenta, 2) if def_cuenta > 0 else 0.0
+
+    return render_template(
+        'estudiantes/mis_calificaciones.html',
+        estudiante=estudiante,
+        calificaciones=calificaciones_por_periodo
+    )
+
 
 
 # =========================================================
@@ -116,7 +292,6 @@ def nuevo():
         telefono = request.form.get("telefono", "").strip()
         acudiente_principal_id = request.form.get("acudiente_principal_id", type=int)
 
-        # Validaciones básicas
         campos_requeridos = {
             "nombre": nombre, "apellido": apellido, "tipo_documento": tipo_documento,
             "documento": documento, "email": email, "direccion": direccion,
@@ -176,7 +351,6 @@ def nuevo():
         )
         db.session.add(estudiante)
 
-        # Matricular automáticamente en clases del grupo
         clases_del_grupo = db.session.query(Clase).join(
             GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id
         ).filter(
@@ -200,7 +374,6 @@ def nuevo():
         )
         return redirect(url_for("estudiante.listar"))
 
-    # GET
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
     jornadas = Jornada.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
     docentes = Docente.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
@@ -277,7 +450,6 @@ def editar(id):
         flash(f"Estudiante '{nombre} {apellido}' actualizado", "success")
         return redirect(url_for("estudiante.listar"))
 
-    # GET
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
     jornadas = Jornada.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
     docentes = Docente.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
@@ -460,58 +632,9 @@ def mis_resultados():
         Examen.nombre.label('examen_nombre')
     ).join(Examen, ResultadoExamen.examen_id == Examen.id).filter(
         ResultadoExamen.estudiante_id == estudiante.id
-    ).order_by(ResultadoExamen.fecha.desc()).all()
+    ).order_by(ResultadoExamen.fecha_finalizacion.desc()).all()
 
     return render_template('estudiantes/mis_resultados.html', estudiante=estudiante, resultados=resultados)
-
-
-# =========================================================
-# DASHBOARD ESTUDIANTE
-# =========================================================
-@estudiante_bp.route('/dashboard')
-@login_required
-def dashboard_estudiante():
-    if current_user.rol != 'estudiante':
-        flash('Acceso no autorizado', 'danger')
-        return redirect(url_for('auth.logout'))
-
-    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
-    if not estudiante:
-        flash('Perfil no encontrado', 'warning')
-        return redirect(url_for('auth.logout'))
-
-    resultados = ResultadoExamen.query.filter_by(estudiante_id=estudiante.id).all()
-    total_examenes = len(resultados)
-
-    promedio_general = 0
-    mejor_nota = 0
-    if total_examenes > 0:
-        notas = [float(r.nota_numerica) for r in resultados if r.nota_numerica]
-        if notas:
-            promedio_general = round(sum(notas) / len(notas), 2)
-            mejor_nota = max(notas)
-
-    ultimos_resultados = db.session.query(
-        ResultadoExamen,
-        Examen.nombre.label('examen_nombre')
-    ).join(Examen, ResultadoExamen.examen_id == Examen.id).filter(
-        ResultadoExamen.estudiante_id == estudiante.id
-    ).order_by(ResultadoExamen.fecha.desc()).limit(5).all()
-
-    dias_restantes = 0
-    if current_user.fecha_expiracion:
-        dias_restantes = (current_user.fecha_expiracion - datetime.utcnow()).days
-
-    return render_template(
-        'estudiantes/dashboard_estudiante.html',
-        estudiante=estudiante,
-        total_examenes=total_examenes,
-        promedio_general=promedio_general,
-        mejor_nota=mejor_nota,
-        ultimos_resultados=ultimos_resultados,
-        hoy=datetime.now(),
-        dias_restantes=dias_restantes
-    )
 
 
 # =========================================================
@@ -532,7 +655,7 @@ def gestion_estudiantes():
         page=page, per_page=15,
         search=search if search else None,
         grado=grado if grado else None,
-        grupo_id=grupo_id
+        grupo_id=grupo_id if grupo_id else None
     )
 
     estadisticas = EstudianteService.get_estadisticas(current_user.colegio_id)
@@ -601,7 +724,6 @@ def mis_materias():
 
     materias = []
     if estudiante.grupo_id:
-        from app.models.materia import Materia
         grupo_materias = GrupoMateria.query.filter_by(grupo_id=estudiante.grupo_id, activo=True).all()
         materias_ids = [gm.materia_id for gm in grupo_materias if gm.materia_id]
         if materias_ids:
@@ -693,7 +815,6 @@ def registro_publico():
 @estudiante_bp.route('/presentar-examen/<int:id>')
 @login_required
 def presentar_examen(id):
-    """Vista puente que carga examen_estudiante.html pasando el ID seguro"""
     if current_user.rol != 'estudiante':
         abort(403)
 
@@ -703,7 +824,6 @@ def presentar_examen(id):
 
     examen = Examen.query.get_or_404(id)
 
-    # Seguridad: No permitir repetir
     ya_respondio = ResultadoExamen.query.filter_by(
         examen_id=id, estudiante_id=estudiante.id
     ).first()
@@ -712,10 +832,9 @@ def presentar_examen(id):
         flash("Ya has presentado este examen.", "warning")
         return redirect(url_for('estudiante.mis_resultados'))
 
-    # Renderizamos el template JS existente pero inyectamos el ID
     return render_template(
         'estudiantes/examen_estudiante.html',
-        examen_id=id  # ✅ Variable clave para que el JS no dependa de URL params
+        examen_id=id
     )
 
 
@@ -725,7 +844,6 @@ def presentar_examen(id):
 @estudiante_bp.route('/guardar-respuesta/<int:id>', methods=["POST"])
 @login_required
 def guardar_respuesta(id):
-    """Guarda respuestas y califica. Usado si el JS falla o como respaldo."""
     if current_user.rol != 'estudiante':
         abort(403)
 
@@ -742,7 +860,7 @@ def guardar_respuesta(id):
     preguntas = examen.contenido_json or []
     if not preguntas:
         flash("Este examen no tiene preguntas.", "danger")
-        return redirect(url_for('estudiante.mis_examenes_disponibles'))
+        return redirect(url_for('estudiante.examenes_disponibles'))
 
     respuestas_correctas = 0
     detalles = []
@@ -767,7 +885,6 @@ def guardar_respuesta(id):
     porcentaje = (respuestas_correctas / total_preguntas) * 100
     nota_numerica = round((porcentaje / 100) * 5, 2)
 
-    # Escala literal
     if porcentaje >= 90:
         literal = "S"
     elif porcentaje >= 80:
@@ -789,7 +906,6 @@ def guardar_respuesta(id):
         porcentaje=porcentaje,
         nota_numerica=nota_numerica,
         literal=literal,
-        fecha=datetime.utcnow(),
         fecha_finalizacion=datetime.utcnow()
     )
     db.session.add(resultado)
@@ -804,7 +920,7 @@ def guardar_respuesta(id):
 
 
 # =========================================================
-# EXÁMENES DISPONIBLES (ÚNICA VERSIÓN VÁLIDA)
+# EXÁMENES DISPONIBLES
 # =========================================================
 @estudiante_bp.route("/examenes-disponibles")
 @login_required
@@ -819,7 +935,6 @@ def examenes_disponibles():
 
     ahora = datetime.now()
 
-    # Consulta segura: Solo exámenes activos, asignados a su grupo y dentro del horario
     examenes = Examen.query.join(ProgramacionExamen).filter(
         ProgramacionExamen.grupo_id == estudiante.grupo_id,
         ProgramacionExamen.activo == True,
@@ -830,7 +945,6 @@ def examenes_disponibles():
         Examen.activo == True
     ).order_by(ProgramacionExamen.fecha_apertura.desc()).all()
 
-    # Obtener IDs de exámenes ya presentados para mostrar estado
     resultados_previos = ResultadoExamen.query.filter_by(estudiante_id=estudiante.id).all()
     examenes_respondidos_ids = {r.examen_id for r in resultados_previos}
 

@@ -7,7 +7,7 @@ Presentar Examen
 {% endblock %}
 
 {% block estudiante_content %}
-
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/examen_estilos.css') }}">
 
 <!-- TÍTULO Y CONTROLES -->
@@ -40,7 +40,7 @@ Presentar Examen
     </div>
 </div>
 
-<!-- 🔥 CONTADORES DE TIEMPO - Esquina inferior derecha -->
+<!-- 🔥 CONTADORES DE TIEMPO -->
 <div id="timers-container" style="display:none;">
     <div id="question-timer" class="timer-badge timer-warning">
         <i class="bi bi-clock"></i> Pregunta: <span id="question-time">2:00</span>
@@ -78,25 +78,25 @@ Presentar Examen
     </div>
 
 </div>
-</div> 
+</div>
 <div id="result" style="display:none;"></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
 
 <script>
-    // ✅ INYECCIÓN DIRECTA DEL ID DESDE FLASK (No depende de URL params)
     const EXAMEN_ID_FLASK = {{ examen_id | default(0) }};
+    const MATERIA_ID_FLASK = {{ materia_id | default('null') }};
 
     $(document).ready(function() {
         if (typeof clsEstudiante !== 'undefined') {
-            // Usar el ID inyectado O el de la URL (fallback por si acaso)
             const urlParams = new URLSearchParams(window.location.search);
             const examenId = EXAMEN_ID_FLASK || parseInt(urlParams.get('id'));
+            const materiaId = MATERIA_ID_FLASK || parseInt(urlParams.get('materia_id'));
 
             if (examenId && examenId > 0) {
-                console.log('>>>>> Iniciando examen ID:', examenId);
-                clsEstudiante.seleccionarExamen(examenId);
+                console.log('>>>>> Iniciando examen ID:', examenId, 'Materia:', materiaId);
+                clsEstudiante.seleccionarExamen(examenId, materiaId);
             } else {
                 $('#question').html('<div class="alert alert-danger">Error: No se recibió ID de examen. Contacta al docente.</div>');
             }

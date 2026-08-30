@@ -128,7 +128,7 @@ Dashboard Estudiante
             <i class="bi bi-list-check"></i>
             Mis Últimos Exámenes
         </h5>
-        <a href="{{ url_for('estudiante.mis_resultados') }}" class="btn btn-light btn-sm">
+        <a href="{{ url_for('estudiante.mis_calificaciones') }}" class="btn btn-light btn-sm">
             Ver Todos
         </a>
     </div>
@@ -148,11 +148,17 @@ Dashboard Estudiante
                 {% if ultimos_resultados %}
                     {% for resultado in ultimos_resultados %}
                     <tr>
-                        <td>{{ resultado.examen_nombre }}</td>
-                        <td>{{ resultado.nota_numerica or '-' }}</td>
-                        <td>{{ resultado.porcentaje }}%</td>
-                        <td>{{ resultado.literal or '-' }}</td>
-                        <td>{{ resultado.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ resultado['examen_nombre'] }}</td>
+                        <td>{{ resultado['nota_numerica']|default('-', true) }}</td>
+                        <td>{{ resultado['porcentaje']|default(0, true) }}%</td>
+                        <td>{{ resultado['literal']|default('-', true) }}</td>
+                        <td>
+                            {% if resultado['fecha'] %}
+                                {{ resultado['fecha'].strftime('%d/%m/%Y') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
@@ -162,8 +168,7 @@ Dashboard Estudiante
                             <p class="text-muted mt-3">
                                 No has presentado ningún examen aún.
                             </p>
-                            <!-- ✅ CORREGIDO: Enlace a la ruta segura del estudiante -->
-                            <a href="{{ url_for('estudiante.examenes_disponibles') }}" class="btn btn-primary">
+                            <a href="{{ url_for('examen.render_examen_estudiante') }}" class="btn btn-primary">
                                 <i class="bi bi-play-fill me-1"></i> Ver Exámenes Disponibles
                             </a>
                         </td>
@@ -178,5 +183,4 @@ Dashboard Estudiante
 {% endblock %}
 
 {% block js %}
-<!-- Sin JavaScript complicado, todo funciona con enlaces directos -->
 {% endblock %}
