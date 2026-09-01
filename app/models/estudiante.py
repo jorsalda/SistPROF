@@ -259,39 +259,3 @@ class Estudiante(db.Model):
             f"- {self.grado}{self.grupo or ''}>"
         )
 
-
-# =========================================================
-# TABLA INTERMEDIA: ESTUDIANTE - ACUDIENTE
-# =========================================================
-
-class EstudianteAcudiente(db.Model):
-    """Tabla intermedia para relación muchos-a-muchos entre
-    estudiantes y acudientes"""
-    __tablename__ = "estudiante_acudiente"
-    __table_args__ = {'extend_existing': True}
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    estudiante_id = db.Column(
-        db.Integer,
-        db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
-        nullable=False
-    )
-
-    acudiente_id = db.Column(
-        db.Integer,
-        db.ForeignKey("acudientes.id", ondelete="CASCADE"),
-        nullable=False
-    )
-
-    # Restricción única para evitar duplicados
-    __table_args__ = (
-        db.UniqueConstraint(
-            'estudiante_id',
-            'acudiente_id',
-            name='unica_relacion'
-               ),
-    )
-
-    def __repr__(self):
-        return f"<EstudianteAcudiente est={self.estudiante_id} acu={self.acudiente_id}>"

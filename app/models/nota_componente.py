@@ -57,5 +57,31 @@ class NotaComponenteEstudiante(db.Model):
         onupdate=datetime.utcnow
     )
 
+    # ── RELACIONES ORM (backref — crea automáticamente el inverso) ──
+
+    estudiante = db.relationship(
+        "Estudiante",
+        backref="notas_componente",
+        lazy=True
+    )
+
+    grupo_materia = db.relationship(
+        "GrupoMateria",
+        backref="notas_componente_estudiante",
+        lazy=True
+    )
+
+    periodo_academico = db.relationship(
+        "PeriodoAcademico",
+        backref="notas_componente_estudiante",
+        lazy=True
+    )
+
+    registrador = db.relationship(
+        "Usuario",
+        backref="notas_componente_registradas",
+        lazy=True
+    )
+
     def __repr__(self):
         return f"<NotaComponente {self.tipo_componente}: {self.calificacion}>"
