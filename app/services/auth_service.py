@@ -275,7 +275,9 @@ def verificar_token_reset(token):
 def resetear_contrasena_por_email(email, nueva_contrasena):
     """Resetea la contraseña de un usuario por email"""
     try:
-        usuario = Usuario.query.filter_by(email=email).first()
+        usuario = Usuario.query.filter(
+            db.func.lower(Usuario.email) == email.lower().strip()
+        ).first()
         if not usuario:
             return False, "Usuario no encontrado"
 
