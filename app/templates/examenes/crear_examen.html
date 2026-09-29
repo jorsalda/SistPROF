@@ -20,11 +20,10 @@
                     <select id="metodoCreacion" class="form-select form-select-sm w-auto bg-white text-dark">
                         <option value="banco">🏦 Desde mi Banco</option>
                         <option value="ia">🤖 Generar con IA</option>
-                        <option value="manual">️ Crear Manualmente</option>
+                        <option value="manual">✏️ Crear Manualmente</option>
                         <option value="archivo">📄 Importar Archivo</option>
                     </select>
                 </div>
-
                 <div class="card-body p-4">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
@@ -37,12 +36,21 @@
                         {% endif %}
                     {% endwith %}
 
-                    <form method="POST" enctype="multipart/form-data" id="formCrearExamen">
+                    <!-- FORMULARIO CON ATRIBUTOS DATA PARA JAVASCRIPT SEGURO -->
+                    <form method="POST" enctype="multipart/form-data" id="formCrearExamen"
+                          data-estructura='{{ estructura_evaluacion|tojson|safe if estructura_evaluacion else "{}" }}'
+                          data-materias='[
+                            {% if materias %}
+                                {% for m in materias %}
+                                    {"id": "{{ m.id }}", "nombre": "{{ m.nombre }}"}{% if not loop.last %},{% endif %}
+                                {% endfor %}
+                            {% endif %}
+                          ]'>
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Input oculto para guardar IDs seleccionados del banco -->
                         <input type="hidden" name="ids_preguntas_banco" id="ids_preguntas_banco">
 
-                        <!-- DATOS GENERALES (Común a todos los métodos) -->
+                        <!-- DATOS GENERALES -->
                         <div class="row mb-4 border-bottom pb-4">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold small">Título del Examen <span class="text-danger">*</span></label>
@@ -68,9 +76,8 @@
                             </div>
                         </div>
 
-                        <!-- SECCIÓN DINÁMICA: CAMBIA SEGÚN EL MÉTODO SELECCIONADO -->
-
-                        <!-- 1. OPCIÓN BANCO (Por defecto visible) -->
+                        <!-- SECCIÓN DINÁMICA -->
+                        <!-- 1. OPCIÓN BANCO -->
                         <div id="seccion-banco" class="metodo-seccion">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="fw-bold h6">Selecciona preguntas de tu banco personal</h5>
@@ -108,7 +115,7 @@
                                 </button>
                             </div>
                             <div id="contenedor-preguntas-manuales">
-                                <!-- Aquí se insertarán las preguntas dinámicamente -->
+                                <!-- Las preguntas dinámicas se insertan aquí -->
                             </div>
                         </div>
 
@@ -153,7 +160,9 @@
                     <div class="col-md-3">
                         <select id="filtroMateria" class="form-select form-select-sm">
                             <option value="">Todas las materias</option>
-                            {% for m in materias %}<option value="{{ m.id }}">{{ m.nombre }}</option>{% endfor %}
+                            {% for m in materias %}
+                                <option value="{{ m.id }}">{{ m.nombre }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -166,18 +175,38 @@
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-hover align-middle">
                         <thead class="table-light sticky-top">
-                            <tr><th width="5%">Sel.</th><th width="10%">ID</th><th width="15%">Materia</th><th width="50%">Enunciado</th><th width="10%">Tipo</th><th width="10%">Dif.</th></tr>
+                            <tr>
+                                <th width="5%">Sel.</th>
+                                <th width="10%">ID</th>
+                                <th width="15%">Materia</th>
+                                <th width="50%">Enunciado</th>
+                                <th width="10%">Tipo</th>
+                                <th width="10%">Dif.</th>
+                            </tr>
                         </thead>
                         <tbody id="listaPreguntasBanco">
                             {% for p in preguntas_banco %}
-                            <tr class="fila-pregunta" data-id="{{ p.id }}" data-texto="{{ p.texto|lower }}" data-materia="{{ p.materia_id }}">
-                                <td class="text-center"><input type="checkbox" class="form-check-input chk-pregunta" value="{{ p.id }}"></td>
-                                <td><span class="badge bg-secondary">{{ p.id }}</span></td>
-                                <td><small class="fw-bold">{{ p.materia.nombre if p.materia else 'N/A' }}</small></td>
-                                <td class="text-truncate" style="max-width: 250px;">{{ p.texto[:60] }}...</td>
-                                <td><span class="badge bg-info">{{ p.tipo }}</span></td>
-                                <td>{{ p.dificultad|capitalize }}</td>
-                            </tr>
+                                {% set pregunta_id = p.id if p.id is defined else p['id'] %}
+                                {% set texto_pregunta = (p.texto if p.texto is defined else p.get('texto')) or (p.enunciado if p.enunciado is defined else p.get('enunciado')) or '' %}
+                                {% set mat_id = p.materia_id if p.materia_id is defined else p.get('materia_id') %}
+                                {% set mat_nom = (p.materia.nombre if p.materia is defined and p.materia else None) or p.get('materia_nombre') or 'Matemáticas' %}
+                                {% set tip_preg = (p.tipo if p.tipo is defined else p.get('tipo')) or 'Opción múltiple' %}
+                                {% set dif_preg = (p.dificultad if p.dificultad is defined else p.get('dificultad')) or 'media' %}
+
+                                <tr class="fila-pregunta" data-id="{{ pregunta_id }}" data-texto="{{ texto_pregunta|lower }}" data-materia="{{ mat_id }}">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input chk-pregunta" value="{{ pregunta_id }}">
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ pregunta_id }}</span></td>
+                                    <td><small class="fw-bold">{{ mat_nom }}</small></td>
+                                    <td class="text-truncate" style="max-width: 250px;">{{ texto_pregunta[:60] }}...</td>
+                                    <td><span class="badge bg-info">{{ tip_preg }}</span></td>
+                                    <td>{{ dif_preg|capitalize }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No se encontraron preguntas registradas.</td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -192,24 +221,48 @@
 </div>
 
 <script>
-    // ✅ Cargar estructura de evaluación desde Python (JSON seguro)
-    let estructuraEvaluacion = {{ estructura_evaluacion|safe }};
+    // 1. Asignar los datos pasados desde Flask a variables globales limpias
+    window.preguntasBanco = {{ preguntas_banco_json | safe if preguntas_banco_json else '[]' }};
 
-    // 1. Lógica de Cambio de Pestañas/Métodos
-    document.getElementById('metodoCreacion').addEventListener('change', function() {
-        document.querySelectorAll('.metodo-seccion').forEach(el => el.classList.add('d-none'));
-        const seccionActiva = document.getElementById('seccion-' + this.value);
-        if(seccionActiva) seccionActiva.classList.remove('d-none');
-    });
+    console.log("Preguntas cargadas desde Flask:", preguntasBanco);
+    const formElement = document.getElementById('formCrearExamen');
+    let estructuraEvaluacion = {};
+    let listaMaterias = [];
 
-    // 2. Lógica del Banco
+    if (formElement) {
+        try {
+            estructuraEvaluacion = JSON.parse(formElement.dataset.estructura || '{}');
+            listaMaterias = JSON.parse(formElement.dataset.materias || '[]');
+        } catch (e) {
+            console.error('Error al parsear datos JSON desde el HTML:', e);
+        }
+    }
+
+    // 2. Lógica de Cambio de Pestañas/Métodos
+    const metodoCreacion = document.getElementById('metodoCreacion');
+    if (metodoCreacion) {
+        metodoCreacion.addEventListener('change', function() {
+            document.querySelectorAll('.metodo-seccion').forEach(el => el.classList.add('d-none'));
+            const seccionActiva = document.getElementById('seccion-' + this.value);
+            if (seccionActiva) {
+                seccionActiva.classList.remove('d-none');
+            }
+            if (this.value === 'manual') {
+                const contenedor = document.getElementById('contenedor-preguntas-manuales');
+                if (contenedor && contenedor.children.length === 0) {
+                    agregarPreguntaManual();
+                }
+            }
+        });
+    }
+
+    // 3. Lógica del Banco de Preguntas
     let preguntasSeleccionadas = [];
-
     document.querySelectorAll('.chk-pregunta').forEach(chk => {
         chk.addEventListener('change', function() {
-            const id = parseInt(this.value);
-            if(this.checked) {
-                if(!preguntasSeleccionadas.includes(id)) preguntasSeleccionadas.push(id);
+            const id = parseInt(this.value, 10);
+            if (this.checked) {
+                if (!preguntasSeleccionadas.includes(id)) preguntasSeleccionadas.push(id);
             } else {
                 preguntasSeleccionadas = preguntasSeleccionadas.filter(p => p !== id);
             }
@@ -219,26 +272,37 @@
 
     function actualizarContadores() {
         const count = preguntasSeleccionadas.length;
-        document.getElementById('contadorSeleccionModal').innerText = `${count} seleccionadas`;
-        document.getElementById('count-banco').innerText = count;
-        document.getElementById('ids_preguntas_banco').value = JSON.stringify(preguntasSeleccionadas);
+        const countModal = document.getElementById('contadorSeleccionModal');
+        const countBanco = document.getElementById('count-banco');
+        const inputBanco = document.getElementById('ids_preguntas_banco');
+
+        if (countModal) countModal.innerText = `${count} seleccionadas`;
+        if (countBanco) countBanco.innerText = count;
+        if (inputBanco) inputBanco.value = JSON.stringify(preguntasSeleccionadas);
     }
 
     function filtrarPreguntas() {
-        const texto = document.getElementById('filtroTexto').value.toLowerCase();
-        const materia = document.getElementById('filtroMateria').value;
+        const inputTexto = document.getElementById('filtroTexto');
+        const selectMateria = document.getElementById('filtroMateria');
+        const texto = inputTexto ? inputTexto.value.toLowerCase() : '';
+        const materia = selectMateria ? selectMateria.value : '';
+
         document.querySelectorAll('.fila-pregunta').forEach(fila => {
-            const matchTexto = fila.dataset.texto.includes(texto);
+            const matchTexto = (fila.dataset.texto || '').toLowerCase().includes(texto);
             const matchMateria = !materia || fila.dataset.materia === materia;
             fila.style.display = (matchTexto && matchMateria) ? '' : 'none';
         });
     }
 
     function confirmarSeleccionBanco() {
-        bootstrap.Modal.getInstance(document.getElementById('modalBancoPreguntas')).hide();
+        const modalEl = document.getElementById('modalBancoPreguntas');
+        if (modalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalInstance.hide();
+        }
     }
 
-    // ✅ Funciones auxiliares para selectores dependientes
+    // 4. Funciones auxiliares para selectores dependientes
     function cargarCompetencias(selectMateria, index) {
         const materiaId = selectMateria.value;
         const card = document.getElementById(`pregunta-card-${index}`);
@@ -279,24 +343,25 @@
                     selectInd.innerHTML += `<option value="${i.id}">${i.codigo} - ${i.desc}</option>`;
                 });
                 selectInd.disabled = false;
+            } else {
+                selectInd.disabled = true;
             }
         } else {
             selectInd.disabled = true;
         }
     }
 
-    // 3. Lógica Manual CON VINCULACIÓN CURRICULAR Y CONTEXTO MULTIMEDIA
+    // 5. Lógica Manual
     function agregarPreguntaManual() {
         const contenedor = document.getElementById('contenedor-preguntas-manuales');
         if (!contenedor) return;
 
         const index = contenedor.children.length;
 
-        // Generar opciones de materias dinámicamente
         let opcionesMaterias = '<option value="">-- Selecciona Materia --</option>';
-        {% for m in materias %}
-        opcionesMaterias += `<option value="{{ m.id }}">{{ m.nombre }}</option>`;
-        {% endfor %}
+        listaMaterias.forEach(m => {
+            opcionesMaterias += `<option value="${m.id}">${m.nombre}</option>`;
+        });
 
         const html = `
             <div class="card mb-3 border-primary shadow-sm animate__animated animate__fadeIn" id="pregunta-card-${index}">
@@ -308,7 +373,7 @@
                 </div>
                 <div class="card-body p-3">
 
-                    <!-- ✅ VINCULACIÓN CURRICULAR (NUEVO) -->
+                    <!-- VINCULACIÓN CURRICULAR -->
                     <div class="row mb-3 bg-warning-subtle p-3 rounded border border-warning">
                         <div class="col-12 mb-2">
                             <label class="form-label small fw-bold text-dark"><i class="bi bi-target me-1"></i>Vinculación Curricular</label>
@@ -344,7 +409,7 @@
                         <textarea name="preguntas_manual[${index}][texto]" class="form-control" rows="3" placeholder="Escribe la pregunta aquí..." required></textarea>
                     </div>
 
-                    <!-- ✅ CONTEXTO MULTIMEDIA (URL COMPATIBLE CON ESTUDIANTEJS) -->
+                    <!-- CONTEXTO MULTIMEDIA -->
                     <div class="row mb-3 bg-light p-3 rounded border border-secondary-subtle">
                         <div class="col-12 mb-2">
                             <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>Contexto Multimedia (Opcional)</label>
@@ -356,7 +421,7 @@
                                 <option value="">-- Sin contexto --</option>
                                 <option value="imagen">🖼️ Imagen</option>
                                 <option value="video">▶️ Video</option>
-                                <option value="audio"> Audio</option>
+                                <option value="audio">🔊 Audio</option>
                             </select>
                         </div>
                         <div class="col-md-8">
@@ -380,8 +445,10 @@
                         <div class="col-md-4">
                             <label class="small fw-bold mb-1">Respuesta Correcta:</label>
                             <select name="preguntas_manual[${index}][correcta]" class="form-select form-select-sm w-auto border-success">
-                                <option value="A">A</option><option value="B">B</option>
-                                <option value="C">C</option><option value="D">D</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
                             </select>
                         </div>
                     </div>
@@ -389,18 +456,15 @@
             </div>`;
 
         contenedor.insertAdjacentHTML('beforeend', html);
-
-        // Scroll suave hacia la nueva pregunta
         contenedor.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Inicializar con una pregunta vacía si se carga en modo manual
+    // 6. Inicializar al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
         const selector = document.getElementById('metodoCreacion');
         const seccionManual = document.getElementById('seccion-manual');
         const contenedor = document.getElementById('contenedor-preguntas-manuales');
 
-        // Si el selector ya está en manual (por recarga o valor por defecto) y está vacío
         if (selector && selector.value === 'manual' && seccionManual && !seccionManual.classList.contains('d-none') && contenedor && contenedor.children.length === 0) {
             agregarPreguntaManual();
         }

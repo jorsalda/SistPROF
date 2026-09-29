@@ -1,8 +1,7 @@
-{% extends "docentes/docente_base.html" %}
-
-{% block title %}Mis Estudiantes | SistPROF{% endblock %}
-
-{% block docente_page_title %}
+<!-- ✅ CORRECTO: Extiende base del colegio como exige la ruta lista_estudiantes -->
+{% extends "colegio/colegio_base.html" %}
+{% block colegio_page_title %}Lista de Estudiantes{% endblock %}
+{% block colegio_content %}
 Mis Estudiantes
 {% endblock %}
 

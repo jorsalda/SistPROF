@@ -23,6 +23,8 @@ class Coordinador(db.Model):
     # ✅ CAMPOS NUEVOS A AGREGAR
     documento = db.Column(db.String(20), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
+    direccion = db.Column(db.String(255), nullable=True)  # ✅ NUEVO CAMPO DIRECCIÓN
+    apellido = db.Column(db.String(100), nullable=True)   # ✅ NUEVO CAMPO APELLIDO
 
     __table_args__ = (
         db.ForeignKeyConstraint(["colegio_id"], ["colegios.id"]),

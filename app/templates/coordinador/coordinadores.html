@@ -7,10 +7,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Lista de Coordinadores</h1>
         <a href="{{ url_for('colegio.nuevo_coordinador') }}"
-   class="btn btn-primary">
-    <i class="bi bi-person-plus"></i>
-    Nuevo Coordinador
-</a>
+           class="btn btn-primary">
+            <i class="bi bi-person-plus"></i>
+            Nuevo Coordinador
+        </a>
     </div>
 
     <!-- Filtro por sede -->
@@ -22,7 +22,7 @@
                     <select name="sede_id" class="form-select" onchange="this.form.submit()">
                         <option value="">Todas las sedes</option>
                         {% for sede in sedes %}
-                        <option value="{{ sede.id }}" {% if sede_actual_id== sede.id %}selected{% endif %}>
+                        <option value="{{ sede.id }}" {% if sede_actual_id == sede.id %}selected{% endif %}>
                             {{ sede.nombre }}
                         </option>
                         {% endfor %}
@@ -31,8 +31,6 @@
             </form>
         </div>
     </div>
-
-    <!-- Tabla de coordinadores -->
 
     <!-- Tabla de coordinadores -->
     <div class="card shadow">
@@ -53,7 +51,6 @@
                     <tbody>
                     {% for coordinador in coordinadores %}
                     <tr>
-
                         <td>
                             {{ coordinador.usuario.nombre if coordinador.usuario else 'N/A' }}
                         </td>
@@ -72,62 +69,46 @@
 
                         <td>
                             {% if coordinador.usuario and coordinador.usuario.is_active %}
-                            <span class="badge bg-success">Activo</span>
+                                <span class="badge bg-success">Activo</span>
                             {% else %}
-                            <span class="badge bg-danger">Inactivo</span>
+                                <span class="badge bg-danger">Inactivo</span>
                             {% endif %}
                         </td>
 
+                        <!-- ✅ CORREGIDO: Todos usan 'coordinador_id' como exige Python -->
                         <td>
-
-                            <!-- Editar  y eliminar-->
-
-                        <td>
-                            <a href="{{ url_for('colegio.editar_coordinador',  coordinador_id=coordinador.id) }}"
+                            <a href="{{ url_for('colegio.editar_coordinador', coordinador_id=coordinador.id) }}"
                                class="btn btn-sm btn-outline-primary" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
 
                             {% if coordinador.usuario.is_active %}
-
-                            <a href="{{ url_for('colegio.cambiar_estado_coordinador',
-                        coordinador_id=coordinador.id) }}"
-                               class="btn btn-sm btn-outline-warning"
-                               title="Desactivar">
-                                <i class="bi bi-pause-circle"></i>
-                            </a>
-
+                                <a href="{{ url_for('colegio.cambiar_estado_coordinador', coordinador_id=coordinador.id) }}"
+                                   class="btn btn-sm btn-outline-warning"
+                                   title="Desactivar">
+                                    <i class="bi bi-pause-circle"></i>
+                                </a>
                             {% else %}
-
-                            <a href="{{ url_for('colegio.cambiar_estado_coordinador',
-                        coordinador_id=coordinador.id) }}"
-                               class="btn btn-sm btn-outline-success"
-                               title="Activar">
-                                <i class="bi bi-play-circle"></i>
-                            </a>
-
+                                <a href="{{ url_for('colegio.cambiar_estado_coordinador', coordinador_id=coordinador.id) }}"
+                                   class="btn btn-sm btn-outline-success"
+                                   title="Activar">
+                                    <i class="bi bi-play-circle"></i>
+                                </a>
                             {% endif %}
 
-                            <a href="{{ url_for('colegio.cambiar_password_coordinador',
-                    coordinador_id=coordinador.id) }}"
+                            <a href="{{ url_for('colegio.cambiar_password_coordinador', coordinador_id=coordinador.id) }}"
                                class="btn btn-sm btn-outline-dark"
                                title="Cambiar contraseña">
                                 <i class="bi bi-key"></i>
                             </a>
 
-
-                         <a href="{{ url_for('colegio.eliminar_coordinador',
-        coordinador_id=coordinador.id) }}"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('¿Está seguro de eliminar este coordinador?')"
-                           title="Eliminar">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                            <a href="{{ url_for('colegio.eliminar_coordinador', coordinador_id=coordinador.id) }}"
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('¿Está seguro de eliminar este coordinador?')"
+                               title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </td>
-
-                        </td>
-
-
 
                     </tr>
 
@@ -147,8 +128,6 @@
         </div>
     </div>
 
-
 </div>
-
 
 {% endblock %}

@@ -94,17 +94,6 @@ Grupos
                     Materias
                 </a>
 
-                                <!-- MATERIAS -->
-                <a href="{{ url_for(
-                    'colegio.asignar_materias_grupo',
-                    grupo_id=grupo.id
-                ) }}"
-                   class="btn btn-outline-info btn-sm"
-                   title="Asignar materias">
-                    <i class="bi bi-book"></i>
-                    Materias
-                </a>
-
                 <!-- HORARIO -->
                 <a href="{{ url_for(
                     'colegio.horario_grupo',
@@ -115,7 +104,6 @@ Grupos
                     <i class="bi bi-calendar-week"></i>
                     Horario
                 </a>
-
 
                 <!-- FUSIONAR -->
                 <a href="{{ url_for(

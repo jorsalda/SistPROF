@@ -39,6 +39,38 @@
                 </a>
             </li>
 
+            <!-- ✅ Estructura Institucional (Módulo Admin) -->
+            <li class="menu-item">
+                <a href="#estructuraAdminSubmenu"
+                   class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_todas', 'colegio.grupos_todos'] %}active{% endif %}"
+                   data-bs-toggle="collapse"
+                   aria-expanded="{% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_todas', 'colegio.grupos_todos'] %}true{% else %}false{% endif %}">
+                    <i class="bi bi-building"></i>
+                    Estructura Inst.
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse sub-menu {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_todas', 'colegio.grupos_todos'] %}show{% endif %}" id="estructuraAdminSubmenu">
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.sedes') }}"
+                           class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede'] %}active{% endif %}">
+                            <i class="bi bi-geo-alt me-1"></i> Sedes
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.jornadas_todas') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.jornadas_todas' %}active{% endif %}">
+                            <i class="bi bi-clock me-1"></i> Jornadas
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.grupos_todos') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.grupos_todos' %}active{% endif %}">
+                            <i class="bi bi-people me-1"></i> Grupos
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- ⚠️ Estadísticas: Desactivado temporalmente -->
             <li class="menu-item">
                 <a href="#" class="menu-link" onclick="return false;" title="Próximamente">

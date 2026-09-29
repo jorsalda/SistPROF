@@ -55,11 +55,11 @@
                     <form method="POST" action="{{ url_for('colegio.nuevo_coordinador') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- FILA 1: Nombre y Documento (2 columnas) -->
+                        <!-- FILA 1: Nombre y Apellido (2 columnas) ✅ APELLIDO AGREGADO -->
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Nombre completo <span class="text-danger">*</span>
+                                    Nombres <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
@@ -68,41 +68,44 @@
                                     <input type="text"
                                            name="nombre"
                                            class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: María González Pérez"
+                                           placeholder="Ej: María"
                                            required>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Documento de identidad
+                                    Apellidos <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-person-vcard text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="apellido"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: González Pérez"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 2: Documento y Correo Electrónico (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Documento de identidad <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-credit-card text-muted"></i>
                                     </span>
                                     <input type="text"
+                                           id="documento_coord"
                                            name="documento"
                                            class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: 1234567890">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FILA 2: Teléfono y Email (2 columnas) -->
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Teléfono
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-telephone text-muted"></i>
-                                    </span>
-                                    <input type="tel"
-                                           name="telefono"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: 300 123 4567">
+                                           placeholder="Ej: 1234567890"
+                                           required>
                                 </div>
                             </div>
 
@@ -127,21 +130,25 @@
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    Contraseña <span class="text-danger">*</span>
+                                    Contraseña inicial <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-key text-muted"></i>
                                     </span>
                                     <input type="password"
+                                           id="password_coord"
                                            name="password"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Mínimo 6 caracteres"
-                                           required
-                                           minlength="6">
+                                           class="form-control border-start-0 ps-0 form-control-lg bg-light"
+                                           placeholder="Se autocompleta con el documento"
+                                           readonly
+                                           tabindex="-1">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassCoord()">
+                                        <i class="bi bi-eye" id="eyeIcon"></i>
+                                    </button>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> La contraseña debe tener al menos 6 caracteres
+                                    <i class="bi bi-info-circle"></i> La contraseña es igual al documento.
                                 </div>
                             </div>
 
@@ -156,11 +163,42 @@
                                     <select name="sede_id" class="form-select border-start-0 ps-0 form-control-lg" required>
                                         <option value="">Seleccione una sede</option>
                                         {% for sede in sedes %}
-                                        <option value="{{ sede.id }}">
-                                            {{ sede.nombre }}
-                                        </option>
+                                        <option value="{{ sede.id }}">{{ sede.nombre }}</option>
                                         {% endfor %}
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 4: Teléfono y Dirección (2 columnas) -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                    </span>
+                                    <input type="tel"
+                                           name="telefono"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: 300 123 4567">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Dirección de residencia
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="direccion"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           placeholder="Ej: Cra 45 #65A-3564">
                                 </div>
                             </div>
                         </div>
@@ -174,9 +212,9 @@
                                 <div class="flex-grow-1 ms-3">
                                     <strong>Información importante</strong><br>
                                     <small>
-                                        • El coordinador podrá acceder al sistema con su correo y contraseña.<br>
-                                        • El cargo se asigna automáticamente como "Coordinador Académico".<br>
-                                        • Puede cambiar la contraseña más tarde desde la lista de coordinadores.
+                                        • La contraseña inicial será automáticamente el número de documento.<br>
+                                        • El coordinador accederá con su correo y esta contraseña.<br>
+                                        • Puede cambiarla luego desde la lista de coordinadores.
                                     </small>
                                 </div>
                             </div>
@@ -202,34 +240,31 @@
 </div>
 
 <style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .form-control:focus, .form-select:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-    }
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    .btn-outline-secondary:hover {
-        transform: translateY(-2px);
-    }
-    .card {
-        transition: transform 0.3s ease;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .form-control-lg, .form-select-lg {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-    }
+    .bg-gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .btn-outline-secondary:hover { transform: translateY(-2px); }
+    .card { transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-5px); }
+    .form-control-lg, .form-select-lg { padding: 0.75rem 1rem; font-size: 1rem; }
 </style>
+
+<!-- Script de autocompletado y toggle de contraseña -->
+<script>
+    const docInput = document.getElementById('documento_coord');
+    const passInput = document.getElementById('password_coord');
+    if(docInput && passInput) {
+        docInput.addEventListener('input', function() { passInput.value = this.value; });
+    }
+    function togglePassCoord() {
+        const icon = document.getElementById('eyeIcon');
+        if (passInput.type === 'password') {
+            passInput.type = 'text'; icon.classList.remove('bi-eye'); icon.classList.add('bi-eye-slash');
+        } else {
+            passInput.type = 'password'; icon.classList.remove('bi-eye-slash'); icon.classList.add('bi-eye');
+        }
+    }
+</script>
 
 {% endblock %}

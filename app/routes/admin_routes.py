@@ -210,6 +210,10 @@ def _calcular_estado_colegio(colegio):
 # [TEMPORAL] CREAR ADMIN COLEGIO INDEPENDIENTES
 # ═══════════════════════════════════════════════════════════════
 
+# ════════════════════════════════════════════════════════════════
+# [TEMPORAL] CREAR ADMIN COLEGIO INDEPENDIENTES
+# ═══════════════════════════════════════════════════════════════
+
 @admin_bp.route("/crear-admin-independientes")
 @login_required
 @superuser_required
@@ -218,6 +222,8 @@ def crear_admin_independientes():
     [TEMPORAL] Crear usuario admin para el colegio independiente (ID 46)
     ELIMINAR ESTA RUTA DESPUÉS DE USARLA UNA VEZ
     """
+    import os
+
     # Verificar si ya existe
     usuario_existente = Usuario.query.filter_by(
         email='admin.independientes@sistprof.com'
@@ -226,19 +232,25 @@ def crear_admin_independientes():
     if usuario_existente:
         return "⚠️ El usuario ya existe en la base de datos"
 
-    # Crear usuario admin
-    usuario = Usuario(
-        nombre='Admin Independientes',
-        email='admin.independientes@sistprof.com',
-        password_hash=generate_password_hash('jes8026!!!'),
-        rol='admin',
-        colegio_id=46,  # Colegio Estudiantes Independientes
-        is_active=True,
-        is_approved=True
-    )
+    try:
+        # Obtener contraseña desde variable de entorno o usar valor por defecto seguro
+        password_inicial = os.environ.get('ADMIN_INDEPENDIENTES_PASSWORD', 'Cambiar123!Segura')
 
-    db.session.add(usuario)
-    db.session.commit()
+        # Crear usuario admin
+        usuario = Usuario(
+            nombre='Admin Independientes',
+            email='admin.independientes@sistprof.com',
+            password_hash=generate_password_hash(password_inicial),
+            rol='admin_colegio',  # 🔧 Corregido: 'admin_colegio' coincide con el ENUM
+            colegio_id=46,  # Colegio Estudiantes Independientes
+            is_active=True,
+            is_approved=True
+        )
 
-    return
+        db.session.add(usuario)
+        db.session.commit()
 
+        return f"✅ Usuario admin.independientes@sistprof.com creado exitosamente. Contraseña inicial: {password_inicial}"
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ Error al crear usuario: {str(e)}"

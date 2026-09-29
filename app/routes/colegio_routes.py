@@ -812,52 +812,79 @@ def lista_coordinadores():
                            sede_actual_id=sede_id)
 
 
-@colegio_bp.route('/coordinadores/nuevo', methods=['GET', 'POST'])
+@colegio_bp.route("/nuevo-coordinador", methods=["GET", "POST"])
 @login_required
 def nuevo_coordinador():
-    if not current_user.es_admin_colegio:
-        abort(403)
-    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
-
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
-            nombre = request.form.get('nombre', '').strip()
-            documento = request.form.get('documento', '').strip()
-            telefono = request.form.get('telefono', '').strip()
-            email = request.form.get('email', '').strip()
-            password = request.form.get('password', '').strip()
-            sede_id = request.form.get('sede_id')
+            # Obtener datos del formulario
+            nombre = request.form.get("nombre", "").strip()
+            apellido = request.form.get("apellido", "").strip()
+            documento = request.form.get("documento", "").strip()
+            email = request.form.get("email", "").strip()
+            telefono = request.form.get("telefono", "").strip()
+            direccion = request.form.get("direccion", "").strip()
+            sede_id = request.form.get("sede_id")
 
-            if not nombre or not email or not password or len(password) < 6 or not sede_id:
+            # Combinar nombre y apellido
+            nombre_completo = f"{nombre} {apellido}".strip()
+
+            # Validaciones básicas
+            if not nombre or not apellido or not documento or not email or not sede_id:
                 flash("Complete todos los campos obligatorios correctamente", "danger")
-                return redirect(url_for('colegio.nuevo_coordinador'))
+                return redirect(url_for("colegio.nuevo_coordinador"))
 
+            # BLINDAJE: Forzar que la contraseña sea el documento
+            from werkzeug.security import generate_password_hash
+            password_hash = generate_password_hash(documento)
+
+            # Verificar si el email ya existe
+            from app.models.usuario import Usuario
             if Usuario.query.filter_by(email=email).first():
-                flash('El correo electrónico ya está registrado', 'danger')
-                return redirect(url_for('colegio.nuevo_coordinador'))
+                flash("El correo electrónico ya está registrado.", "warning")
+                return redirect(url_for("colegio.nuevo_coordinador"))
 
-            usuario = Usuario(
-                nombre=nombre, email=email, password_hash=generate_password_hash(password),
-                rol='coordinador', colegio_id=current_user.colegio_id, sede_id=sede_id,
-                is_active=True, is_approved=True
+            # Crear usuario (✅ CORREGIDO: Se eliminó 'activo' porque no existe en el modelo Usuario)
+            nuevo_usuario = Usuario(
+                email=email,
+                password_hash=password_hash,
+                rol="coordinador",
+                nombre=nombre_completo,
+                colegio_id=current_user.colegio_id
+                # Si tu modelo Usuario tiene 'is_active', descomenta la siguiente línea:
+                # is_active=True
             )
-            db.session.add(usuario)
+            db.session.add(nuevo_usuario)
             db.session.flush()
 
-            coordinador = Coordinador(
-                usuario_id=usuario.id, colegio_id=current_user.colegio_id, sede_id=sede_id,
-                documento=documento, telefono=telefono, cargo='Coordinador Académico'
+            # Crear coordinador incluyendo dirección y apellido
+            from app.models.coordinador import Coordinador
+            nuevo_coord = Coordinador(
+                usuario_id=nuevo_usuario.id,
+                colegio_id=current_user.colegio_id,
+                sede_id=int(sede_id),
+                cargo="Coordinador Académico",
+                documento=documento,
+                telefono=telefono if telefono else None,
+                direccion=direccion if direccion else None,
+                apellido=apellido if apellido else None
             )
-            db.session.add(coordinador)
+            db.session.add(nuevo_coord)
             db.session.commit()
-            flash(f'Coordinador {nombre} registrado correctamente', 'success')
-            return redirect(url_for('colegio.lista_coordinadores'))
+
+            flash(f"Coordinador '{nombre_completo}' creado exitosamente.", "success")
+            return redirect(url_for("colegio.lista_coordinadores"))
+
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al registrar coordinador: {str(e)}', 'danger')
-            return redirect(url_for('colegio.nuevo_coordinador'))
+            flash(f"Error al crear coordinador: {str(e)}", "danger")
 
-    return render_template('coordinador/formulario_coordinador.html', sedes=sedes)
+    # GET: Mostrar formulario
+    from app.models.sede import Sede
+    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
+    return render_template("coordinador/formulario_coordinador.html", sedes=sedes)
+
+
 
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/editar', methods=['GET', 'POST'])

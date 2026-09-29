@@ -65,12 +65,55 @@
                 </a>
             </li>
 
-            <!-- Sedes -->
+            <!-- Sedes (Submenú Completo y Seguro) -->
             <li class="menu-item">
-                <a href="{{ url_for('colegio.sedes') }}"
-                   class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede'] %}active{% endif %}">
+                <a href="#sedesSubmenu"
+                   class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_sede'] %}active{% endif %}"
+                   data-bs-toggle="collapse"
+                   aria-expanded="{% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_sede'] %}true{% else %}false{% endif %}">
                     <i class="bi bi-building-gear"></i> Sedes
+                    <i class="bi bi-chevron-down ms-auto"></i>
                 </a>
+                <ul class="collapse sub-menu {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_sede'] %}show{% endif %}" id="sedesSubmenu">
+
+                    <!-- Lista de Sedes -->
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.sedes') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.sedes' %}active{% endif %}">
+                            <i class="bi bi-geo-alt me-1"></i> Lista de Sedes
+                        </a>
+                    </li>
+
+                    <!-- Nueva Sede -->
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.nueva_sede') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.nueva_sede' %}active{% endif %}">
+                            <i class="bi bi-plus-circle me-1"></i> Nueva Sede
+                        </a>
+                    </li>
+
+                    <!-- Jornadas (Redirige a las jornadas de la sede seleccionada o la primera disponible) -->
+                    {% set sede_ref_id = session.get('sede_actual_id') or (current_user.colegio.sedes[0].id if current_user.colegio and current_user.colegio.sedes else None) %}
+                    {% if sede_ref_id %}
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.jornadas_sede', sede_id=sede_ref_id) }}"
+                           class="menu-link {% if request.endpoint == 'colegio.jornadas_sede' %}active{% endif %}">
+                            <i class="bi bi-clock-history me-1"></i> Jornadas
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Niveles / Grados (A través del detalle de sede) -->
+                    {% if sede_ref_id %}
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.detalle_sede', sede_id=sede_ref_id) }}"
+                           class="menu-link {% if request.endpoint == 'colegio.detalle_sede' %}active{% endif %}">
+                            <i class="bi bi-layers me-1"></i> Grados / Niveles
+                        </a>
+                    </li>
+                    {% endif %}
+
+                </ul>
             </li>
 
             <!-- Plan de Estudios -->
@@ -185,8 +228,6 @@
                 </a>
             </li>
 
-
-            <!-- Configuración del Sistema -->
             <!-- Configuración del Sistema -->
             <li class="menu-item">
                 <a href="#configSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="false">
@@ -200,7 +241,6 @@
                             <i class="bi bi-calendar-plus me-1"></i> Configurar Periodos
                         </a>
                     </li>
-                    <!-- ✅ BOTÓN PARA HABILITAR TIEMPOS DE INGRESO DE COMPETENCIAS -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.administrar_periodos') }}"
                            class="menu-link {% if request.endpoint == 'colegio.administrar_periodos' %}active{% endif %}">

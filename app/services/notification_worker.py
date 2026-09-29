@@ -51,7 +51,7 @@ def _construir_email_ingreso(estudiante_nombre: str, hora_ingreso: str, sede_nom
     """
 
 
-def process_pending_citaciones(app: Optional[Flask] = None) -> Dict[str, Any]:
+def process_pending_citations(app: Optional[Flask] = None) -> Dict[str, Any]:
     """
     Busca citaciones pendientes y envía emails automáticamente.
     OPTIMIZADO para alto volumen (miles de registros/día).
@@ -86,7 +86,6 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
     start_time = datetime.utcnow()
 
     try:
-        # ✅ CONSULTA OPTIMIZADA: Solo trae los 7 campos que realmente usamos
         query = db.session.query(
             CitacionAcudiente.id,
             CitacionAcudiente.motivo,
@@ -100,7 +99,6 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
             .join(Estudiante, CitacionAcudiente.estudiante_id == Estudiante.id) \
             .filter(CitacionAcudiente.estado == 'pendiente')
 
-        # Aplicar límite si se especifica (útil para testing o Celery con batches)
         if limite is not None:
             query = query.limit(limite)
 
@@ -114,21 +112,17 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
 
         logger.info(f"📦 Encontradas {total_pendientes} citaciones pendientes.")
 
-        # Contadores para métricas
         exitosas = 0
         fallidas = 0
 
-        # ✅ PROCESAMIENTO EN LOTES (batch processing)
         for idx, citacion in enumerate(pendientes, 1):
             try:
-                # Construir contenido del email usando función dedicada
                 html_content = _construir_email_citacion(
                     estudiante_nombre=citacion.estudiante_nombre,
                     motivo=citacion.motivo,
                     fecha_citacion=citacion.fecha_citacion
                 )
 
-                # Enviar email
                 resultado = send_notification(
                     tipo='citacion_acudiente',
                     destinatario=citacion.email,
@@ -143,8 +137,6 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
                 )
 
                 if resultado['success']:
-                    # ✅ UPDATE DIRECTO: Sin cargar el objeto completo
-                    # Esto es 5-10x más rápido que: citacion.estado = 'notificada'
                     db.session.execute(
                         db.update(CitacionAcudiente)
                         .where(CitacionAcudiente.id == citacion.id)
@@ -156,7 +148,6 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
 
                     exitosas += 1
 
-                    # Log cada 100 registros para no saturar
                     if idx % 100 == 0:
                         logger.info(f"⏳ Progreso: {idx}/{total_pendientes} procesadas")
                 else:
@@ -168,10 +159,8 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
                 logger.error(f"❌ Error procesando citación {citacion.id}: {str(e)}")
                 db.session.rollback()
 
-        # Commit final de todas las actualizaciones
         db.session.commit()
 
-        # Métricas finales
         elapsed_time = (datetime.utcnow() - start_time).total_seconds()
         logger.info(f"🏁 Proceso completado:")
         logger.info(f"   ✅ Exitosas: {exitosas}")
@@ -184,7 +173,7 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
         return {'exitosas': exitosas, 'fallidas': fallidas, 'total': total_pendientes}
 
     except Exception as e:
-        logger.error(f"💥 Error crítico en process_pending_citaciones: {str(e)}")
+        logger.error(f"💥 Error crítico en process_pending_citations: {str(e)}")
         db.session.rollback()
         return {'exitosas': 0, 'fallidas': total_pendientes if 'total_pendientes' in locals() else 0, 'total': 0}
 
@@ -192,19 +181,9 @@ def _procesar_citaciones_interno(limite: Optional[int] = None) -> Dict[str, int]
 def notify_student_ingress(estudiante_id: int, hora_ingreso: str, sede_nombre: str) -> bool:
     """
     Envía notificación inmediata al acudiente cuando el estudiante ingresa por QR.
-    Se llama directamente desde la ruta de escaneo.
-
-    Args:
-        estudiante_id: ID del estudiante que ingresó
-        hora_ingreso: Hora formateada del ingreso
-        sede_nombre: Nombre de la sede donde ingresó
-
-    Returns:
-        bool: True si se envió correctamente, False en caso de error
     """
     with current_app.app_context():
         try:
-            # ✅ Consulta optimizada: solo email y nombre
             resultado = db.session.query(
                 Estudiante.nombre,
                 Acudiente.email
@@ -219,14 +198,12 @@ def notify_student_ingress(estudiante_id: int, hora_ingreso: str, sede_nombre: s
 
             estudiante_nombre, acudiente_email = resultado
 
-            # Construir contenido usando función dedicada
             html_content = _construir_email_ingreso(
                 estudiante_nombre=estudiante_nombre,
                 hora_ingreso=hora_ingreso,
                 sede_nombre=sede_nombre
             )
 
-            # Enviar
             resultado_envio = send_notification(
                 tipo='ingreso_qr',
                 destinatario=acudiente_email,
@@ -249,3 +226,7 @@ def notify_student_ingress(estudiante_id: int, hora_ingreso: str, sede_nombre: s
         except Exception as e:
             logger.error(f"❌ Error en notify_student_ingress: {str(e)}")
             return False
+
+
+# Alias para mantener compatibilidad con app/services/__init__.py
+process_pending_citaciones = process_pending_citations

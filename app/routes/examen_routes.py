@@ -1,44 +1,71 @@
 # app/routes/examen_routes.py
-from app.models.periodo_academico import PeriodoAcademico
-from app.routes.estudiantes_routes import estudiante_bp
-from app.models.tipo_examen import TipoExamen
-from app.services.document_service import extraer_texto_de_archivo
-from app.services.ia_service import generar_preguntas_json
-from app.models.materia import Materia
+
+import json
+import random
+from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload
+from sqlalchemy import text, or_
+
+from app.extensions import db
+from app.models.periodo_academico import PeriodoAcademico
+from app.models.tipo_examen import TipoExamen
+from app.models.materia import Materia
 from app.models.examen import Examen, ProgramacionExamen
 from app.models.pregunta import Pregunta
 from app.models.resultado_examen import ResultadoExamen
 from app.models.respuestas_examen_detalle import RespuestaExamenDetalle
 from app.models.estudiante import Estudiante
-from app.extensions import db
-from datetime import datetime
-import random
 from app.models.examen_contenido import ExamenContenido
-import json
 from app.models.evaluacion_estudiante import EvaluacionEstudiante
-from sqlalchemy.orm import joinedload  # ✅ IMPORT NECESARIO PARA CARGA EXPLÍCITA
+from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+from app.models.indicador_logro import IndicadorLogro
+from app.services.document_service import extraer_texto_de_archivo
+from app.services.ia_service import generar_preguntas_json
 
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 
-from app.models.CompetenciaEstudiante import CompetenciaEstudiante
-from app.models.indicador_logro import IndicadorLogro
-
 
 # ==========================================================
-# CREAR EXAMEN UNIFICADO (MANUAL + BANCO + IA + COMPETENCIAS)
+# CREAR EXAMEN UNIFICADO (BANCO Y MANUAL)
 # ==========================================================
-@examen_bp.route("/crear", methods=["GET", "POST"])
+@examen_bp.route("/crear", methods=["GET", "POST"], endpoint="crear_examen")
+@examen_bp.route("/crear-desde-banco", methods=["GET", "POST"], endpoint="crear_desde_banco")
 @login_required
 def crear_examen():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
 
-    # 1. Cargar datos base
+    # 1. Cargar materias del colegio o globales
     materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
+    if not materias:
+        materias = Materia.query.all()
 
-    # ✅ Construir estructura jerárquica para JS: Materia -> Competencias -> Indicadores
+    # 2. Obtener la lista completa de preguntas de la base de datos
+    preguntas_db = Pregunta.query.all()
+
+    # 3. Formatear las preguntas a una lista de diccionarios compatible con el modal JS
+    preguntas_banco_list = []
+    for p in preguntas_db:
+        # Extraer el texto de forma segura sin importar si el atributo es 'texto' o 'enunciado'
+        contenido_texto = getattr(p, 'texto', None) or getattr(p, 'enunciado', '')
+
+        # Obtener el nombre de la materia asociada
+        materia_obj = next((m for m in materias if m.id == p.materia_id), None)
+        nombre_materia = materia_obj.nombre if materia_obj else "Matemáticas"
+
+        preguntas_banco_list.append({
+            'id': p.id,
+            'texto': contenido_texto,
+            'enunciado': contenido_texto,  # Mapeo clave para la columna del modal
+            'materia_id': p.materia_id,
+            'materia_nombre': nombre_materia,
+            'dificultad': getattr(p, 'dificultad', 'media'),
+            'tipo': getattr(p, 'tipo', 'Múltiple Opción')
+        })
+
+    # 4. Construir la estructura de competencias e indicadores para la vista
     estructura_evaluacion = {}
     for m in materias:
         competencias = CompetenciaEstudiante.query.filter_by(materia_id=m.id).all()
@@ -53,137 +80,73 @@ def crear_examen():
             })
         estructura_evaluacion[m.id] = comps_data
 
-    # 2. Procesar POST (Guardado)
+    # 5. Guardar la evaluación enviada desde el formulario (POST)
     if request.method == "POST":
         try:
-            titulo = request.form.get("titulo_examen", "").strip()
+            titulo = request.form.get("titulo", "").strip() or request.form.get("titulo_examen", "").strip()
             materia_id = request.form.get("materia_id")
-            grado = request.form.get("grado")
+            preguntas_ids = request.form.getlist("preguntas_seleccionadas")
 
             if not titulo or not materia_id:
-                flash("Título y materia son obligatorios.", "danger")
+                flash("El título y la materia son obligatorios.", "danger")
                 return redirect(url_for("examen.crear_examen"))
 
-            # Recolectar preguntas manuales CON sus indicadores
-            preguntas_data = []
-            idx_manual = 0
+            # Consultar los registros seleccionados
+            ids_limpios = [int(pid) for pid in preguntas_ids if pid.isdigit()]
+            preguntas_objs = Pregunta.query.filter(Pregunta.id.in_(ids_limpios)).all() if ids_limpios else []
 
-            while True:
-                texto_m = request.form.get(f"preguntas_manual[{idx_manual}][texto]")
-                if not texto_m: break
+            contenido_json = []
+            for idx, p in enumerate(preguntas_objs, start=1):
+                contenido_texto_p = getattr(p, 'texto', None) or getattr(p, 'enunciado', '')
+                contenido_json.append({
+                    "numero": idx,
+                    "texto": contenido_texto_p,
+                    "opciones": p.opciones if isinstance(p.opciones, dict) else {},
+                    "respuesta_correcta": getattr(p, 'respuesta_correcta', ''),
+                    "dificultad": getattr(p, 'dificultad', 'media'),
+                    "puntos_maximos": getattr(p, 'puntos', 1)
+                })
 
-                # ✅ Capturar vinculación curricular
-                indicador_id = request.form.get(f"preguntas_manual[{idx_manual}][indicador_logro_id]")
-
-                pregunta = {
-                    "numero": len(preguntas_data) + 1,
-                    "texto": texto_m,
-                    "opciones": {
-                        "A": request.form.get(f"preguntas_manual[{idx_manual}][opcion_a]"),
-                        "B": request.form.get(f"preguntas_manual[{idx_manual}][opcion_b]"),
-                        "C": request.form.get(f"preguntas_manual[{idx_manual}][opcion_c]"),
-                        "D": request.form.get(f"preguntas_manual[{idx_manual}][opcion_d]")
-                    },
-                    "respuesta_correcta": request.form.get(f"preguntas_manual[{idx_manual}][correcta]"),
-                    "dificultad": "media",
-                    "puntos_maximos": 1,
-                    "explicacion": "",
-                    # ✅ Guardar el ID del indicador en el JSON del examen
-                    "indicador_logro_id": int(indicador_id) if indicador_id else None,
-                    "url_contexto": request.form.get(f"preguntas_manual[{idx_manual}][url_contexto]"),
-                    "tipo_contexto": request.form.get(f"preguntas_manual[{idx_manual}][tipo_contexto]")
-                }
-                preguntas_data.append(pregunta)
-                idx_manual += 1
-
-            if not preguntas_data:
-                flash("Debes agregar al menos una pregunta.", "warning")
-                return redirect(url_for("examen.crear_examen"))
-
-            # Crear Examen
             nuevo_examen = Examen(
                 titulo=titulo,
                 nombre=titulo,
-                descripcion=f"Examen creado para {grado}",
-                materia_id=materia_id,
+                descripcion="Evaluación creada desde el banco de preguntas",
+                materia_id=int(materia_id),
                 colegio_id=current_user.colegio_id,
-                contenido_json=preguntas_data,
+                contenido_json=contenido_json,
                 tiempo_limite_minutos=30,
                 fecha_creacion=datetime.now(),
-                activo=True
+                activo=True,
+                eliminado=False
             )
             db.session.add(nuevo_examen)
             db.session.commit()
 
-            flash(f"✅ Examen '{titulo}' creado con {len(preguntas_data)} preguntas vinculadas.", "success")
+            flash("✅ Examen guardado exitosamente.", "success")
             return redirect(url_for("examen.listar_examenes"))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Error al crear examen: {str(e)}", "danger")
-            import traceback;
-            traceback.print_exc()
+            flash(f"Error al guardar el examen: {str(e)}", "danger")
 
-    # 3. Renderizar GET
     return render_template(
         "examenes/crear_examen.html",
         materias=materias,
+        preguntas_banco=preguntas_banco_list,  # <-- CAMBIAR AQUÍ (estaba como preguntas_db)
+        preguntas_banco_json=json.dumps(preguntas_banco_list),
         estructura_evaluacion=json.dumps(estructura_evaluacion)
     )
 
-
 # ==========================================================
-# CREAR EXAMEN CON ASISTENCIA DE IA (FORMULARIO INICIAL)
+# VISTA: FORMULARIO GENERADOR DE EXÁMENES CON IA
 # ==========================================================
-@examen_bp.route("/crear-con-ia", methods=["GET", "POST"])
+@examen_bp.route("/crear-ia", methods=["GET"])
 @login_required
 def crear_examen_ia():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
-
-    if request.method == "POST":
-        materia_id = request.form.get("materia_id")
-        grado = request.form.get("grado")
-        cantidad = int(request.form.get("cantidad", 5))
-        archivo = request.files.get("archivo")
-
-        if not archivo or archivo.filename == '':
-            flash("Debes seleccionar un archivo para subir.", "danger")
-            return redirect(request.url)
-
-        ext = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
-        if ext not in ['pdf', 'docx']:
-            flash("Solo se permiten archivos en formato PDF o DOCX.", "danger")
-            return redirect(request.url)
-
-        try:
-            texto_extraido = extraer_texto_de_archivo(archivo, ext)
-            if not texto_extraido or len(texto_extraido.strip()) < 50:
-                flash("No se pudo extraer suficiente texto del documento.", "warning")
-                return redirect(request.url)
-
-            materia = Materia.query.get(materia_id)
-            nombre_materia = materia.nombre if materia else "la materia asignada"
-
-            flash(" La IA está analizando el documento...", "info")
-            resultado_ia = generar_preguntas_json(texto_extraido, nombre_materia, grado, cantidad)
-
-            return render_template(
-                "examenes/preview_ia.html",
-                preguntas=resultado_ia.get("preguntas", []),
-                materia_id=materia_id,
-                grado=grado,
-                cantidad=cantidad,
-                nombre_materia=nombre_materia
-            )
-
-        except Exception as e:
-            flash(f"Error al procesar el documento con IA: {str(e)}", "danger")
-            return redirect(request.url)
-
-    materias = Materia.query.order_by(Materia.nombre).all()
+    materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
     return render_template("examenes/crear_examen_ia.html", materias=materias)
-
 
 # ==========================================================
 # GUARDAR EXAMEN GENERADO POR IA (DESDE PREVIEW)
@@ -193,7 +156,6 @@ def crear_examen_ia():
 def guardar_examen_ia():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
-
     try:
         titulo = request.form.get("titulo_examen", "").strip()
         materia_id = request.form.get("materia_id")
@@ -205,29 +167,29 @@ def guardar_examen_ia():
 
         preguntas_data = []
         idx = 0
-
         while True:
             texto = request.form.get(f"preguntas[{idx}][texto]")
             if not texto:
                 break
 
-            # ✅ CAPTURA DE CONTEXTO EN PREVIEW IA (Si el docente lo editó/agregó)
             tipo_ctx = request.form.get(f"preguntas[{idx}][tipo_contexto]", "")
             url_ctx = request.form.get(f"preguntas[{idx}][url_contexto]", "")
+            indicador_id = request.form.get(f"preguntas[{idx}][indicador_logro_id]")
 
             pregunta = {
                 "numero": idx + 1,
-                "texto": texto,
+                "texto": texto.strip(),
                 "opciones": {
-                    "A": request.form.get(f"preguntas[{idx}][opcion_a]"),
-                    "B": request.form.get(f"preguntas[{idx}][opcion_b]"),
-                    "C": request.form.get(f"preguntas[{idx}][opcion_c]"),
-                    "D": request.form.get(f"preguntas[{idx}][opcion_d]")
+                    "A": request.form.get(f"preguntas[{idx}][opcion_a]", "").strip(),
+                    "B": request.form.get(f"preguntas[{idx}][opcion_b]", "").strip(),
+                    "C": request.form.get(f"preguntas[{idx}][opcion_c]", "").strip(),
+                    "D": request.form.get(f"preguntas[{idx}][opcion_d]", "").strip()
                 },
                 "respuesta_correcta": request.form.get(f"preguntas[{idx}][respuesta_correcta]"),
                 "dificultad": request.form.get(f"preguntas[{idx}][dificultad]", "media"),
                 "puntos_maximos": int(request.form.get(f"preguntas[{idx}][puntos]", 1)),
-                "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", ""),
+                "explicacion": request.form.get(f"preguntas[{idx}][explicacion]", "").strip(),
+                "indicador_logro_id": int(indicador_id) if indicador_id and indicador_id.isdigit() else None,
                 "url_contexto": url_ctx if url_ctx else None,
                 "tipo_contexto": tipo_ctx if tipo_ctx else None
             }
@@ -242,127 +204,132 @@ def guardar_examen_ia():
             titulo=titulo,
             nombre=titulo,
             descripcion=f"Evaluación generada con IA para {grado}",
-            materia_id=materia_id,
+            materia_id=int(materia_id),
             colegio_id=current_user.colegio_id,
             contenido_json=preguntas_data,
             tiempo_limite_minutos=30,
             fecha_creacion=datetime.now(),
-            activo=True
+            activo=True,
+            eliminado=False
         )
         db.session.add(nuevo_examen)
-        db.session.flush()
-
-        for p_data in preguntas_data:
-            nueva_pregunta = Pregunta(
-                texto=p_data["texto"],
-                tipo="icfes",
-                opciones=p_data["opciones"],
-                respuesta_correcta=p_data["respuesta_correcta"],
-                explicacion=p_data["explicacion"],
-                dificultad=p_data["dificultad"],
-                puntos_maximos=p_data["puntos_maximos"],
-                materia_id=materia_id,
-                fecha_creacion=datetime.now(),
-                activo=True,
-                docente_id=current_user.id,
-                examen_id=None,
-                # ✅ GUARDAR CONTEXTO EN EL BANCO
-                url_contexto=p_data.get("url_contexto"),
-                tipo_contexto=p_data.get("tipo_contexto")
-            )
-            db.session.add(nueva_pregunta)
-
         db.session.commit()
 
         flash(f"✅ Examen '{titulo}' guardado exitosamente con {len(preguntas_data)} preguntas.", "success")
-
-        try:
-            return redirect(url_for("examen.listar_examenes"))
-        except:
-            return redirect(url_for("docente.dashboard"))
+        return redirect(url_for("examen.listar_examenes"))
 
     except Exception as e:
         db.session.rollback()
         flash(f"Error al guardar el examen: {str(e)}", "danger")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for("examen.crear_examen_ia"))
 
-
 # ==========================================================
-# OBTENER JSON DEL EXAMEN (PARA ESTUDIANTES)
+# ENDPOINT ÚNICO JSON: OBTENER EXAMEN PARA EL ESTUDIANTE (FRONTEND)
 # ==========================================================
-@examen_bp.route('/<int:examen_id>/json', methods=['GET'])
+@examen_bp.route("/<int:examen_id>/json", methods=["GET"])
 @login_required
-def obtener_json_examen(examen_id):
-    examen = Examen.query.get_or_404(examen_id)
+def obtener_examen_json(examen_id):
+    try:
+        examen = Examen.query.filter_by(
+            id=examen_id,
+            colegio_id=current_user.colegio_id,
+            eliminado=False
+        ).first()
 
-    if examen.colegio_id != current_user.colegio_id:
-        return jsonify({'error': 'No tiene acceso a este examen'}), 403
+        preguntas_formateadas = []
 
-    num_preguntas = request.args.get('cantidad', default=10, type=int)
-
-    # Intentar cargar desde el Banco de Preguntas primero
-    preguntas_db = Pregunta.query.filter_by(
-        materia_id=examen.materia_id,
-        tipo='icfes',
-        activo=True
-    ).all()
-
-    preguntas_formateadas = []
-
-    if preguntas_db:
-        # --- CASO 1: Preguntas del Banco (BD) ---
-        random.shuffle(preguntas_db)
-        preguntas_seleccionadas = preguntas_db[:num_preguntas]
-
-        for p in preguntas_seleccionadas:
-            # Convertir opciones de Objeto {"A":"...", "B":"..."} a Lista ["...", "..."]
-            lista_opciones = []
-            if p.opciones and isinstance(p.opciones, dict):
-                for key in sorted(p.opciones.keys()):
-                    lista_opciones.append(p.opciones[key])
-
-            preguntas_formateadas.append({
-                "pregunta": p.texto,
-                "opciones": lista_opciones,
-                "respuesta": p.respuesta_correcta,
-                "explicacion": p.explicacion or "",
-                "tema": p.tema or "",
-                "dificultad": p.dificultad or "media",
-                "url_contexto": p.url_contexto,
-                "tipo_contexto": p.tipo_contexto,
-                # ✅ AGREGADO: ID del indicador para vincular con competencia
-                "indicador_logro_id": p.indicador_logro_id if hasattr(p, 'indicador_logro_id') else None
-            })
-
-    else:
-        # --- CASO 2: Fallback a JSON antiguo (IA) ---
-        if examen.contenido_json:
-            contenido = examen.contenido_json if isinstance(examen.contenido_json, list) else examen.contenido_json.get(
-                'preguntas', [])
-
-            for p in contenido[:num_preguntas]:
-                ops_raw = p.get("opciones", {})
-                lista_ops = list(ops_raw.values()) if isinstance(ops_raw, dict) else (
-                    ops_raw if isinstance(ops_raw, list) else [])
+        # OPCIÓN A: El examen existe y contiene preguntas en contenido_json
+        if examen and examen.contenido_json:
+            preguntas_raw = examen.contenido_json
+            for idx, p in enumerate(preguntas_raw, start=1):
+                opciones_dict = p.get("opciones", {})
+                if isinstance(opciones_dict, dict):
+                    opciones_lista = [
+                        opciones_dict.get('A', ''),
+                        opciones_dict.get('B', ''),
+                        opciones_dict.get('C', ''),
+                        opciones_dict.get('D', '')
+                    ]
+                elif isinstance(opciones_dict, list):
+                    opciones_lista = opciones_dict
+                else:
+                    opciones_lista = []
 
                 preguntas_formateadas.append({
+                    "id": p.get("numero", idx),
+                    "numero": p.get("numero", idx),
                     "pregunta": p.get("texto", ""),
-                    "opciones": lista_ops,
+                    "texto": p.get("texto", ""),
+                    "opciones": opciones_lista,
                     "respuesta": p.get("respuesta_correcta", ""),
+                    "respuesta_correcta": p.get("respuesta_correcta", ""),
                     "explicacion": p.get("explicacion", ""),
-                    "tema": p.get("tema", ""),
+                    "contexto": p.get("contexto"),
                     "dificultad": p.get("dificultad", "media"),
+                    "puntos": p.get("puntos_maximos", 1),
+                    "indicador_logro_id": p.get("indicador_logro_id"),
                     "url_contexto": p.get("url_contexto"),
-                    "tipo_contexto": p.get("tipo_contexto"),
-                    # ✅ AGREGADO: ID del indicador desde el JSON del examen
-                    "indicador_logro_id": p.get("indicador_logro_id")
+                    "tipo_contexto": p.get("tipo_contexto")
                 })
 
-    if not preguntas_formateadas:
-        return jsonify({'error': 'No hay preguntas disponibles'}), 404
+        # OPCIÓN B: Consultar directamente de la tabla Pregunta (PostgreSQL)
+        else:
+            cantidad = request.args.get('cantidad', default=10, type=int)
+            preguntas_db = Pregunta.query.filter(
+                or_(
+                    Pregunta.materia_id == (examen.materia_id if examen else 1),
+                    Pregunta.docente_id == current_user.id
+                )
+            ).limit(cantidad).all()
 
-    return jsonify({"preguntas": preguntas_formateadas})
+            for idx, p in enumerate(preguntas_db, start=1):
+                opciones_raw = p.opciones
+                if isinstance(opciones_raw, dict):
+                    opciones_lista = [
+                        opciones_raw.get('A', ''),
+                        opciones_raw.get('B', ''),
+                        opciones_raw.get('C', ''),
+                        opciones_raw.get('D', '')
+                    ]
+                elif isinstance(opciones_raw, list):
+                    opciones_lista = opciones_raw
+                else:
+                    opciones_lista = []
 
+                preguntas_formateadas.append({
+                    "id": p.id,
+                    "numero": idx,
+                    "pregunta": getattr(p, 'texto', None) or getattr(p, 'enunciado', ''),
+                    "texto": getattr(p, 'texto', None) or getattr(p, 'enunciado', ''),
+                    "opciones": opciones_lista,
+                    "respuesta": getattr(p, 'respuesta_correcta', None) or getattr(p, 'correcta', ''),
+                    "respuesta_correcta": getattr(p, 'respuesta_correcta', None) or getattr(p, 'correcta', ''),
+                    "explicacion": getattr(p, 'explicacion', ''),
+                    "contexto": getattr(p, 'contexto', None),
+                    "dificultad": getattr(p, 'dificultad', 'media'),
+                    "puntos": getattr(p, 'puntos', 1),
+                    "indicador_logro_id": getattr(p, 'indicador_logro_id', None)
+                })
+
+        return jsonify({
+            "success": True,
+            "examen": {
+                "id": examen.id if examen else examen_id,
+                "titulo": (examen.titulo or examen.nombre) if examen else "Examen de Evaluación",
+                "descripcion": examen.descripcion if examen else "",
+                "tiempo_limite": (examen.tiempo_limite_minutos if examen else 30) or 30,
+                "total_preguntas": len(preguntas_formateadas),
+                "preguntas": preguntas_formateadas
+            },
+            "preguntas": preguntas_formateadas
+        }), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Error al cargar examen: {str(e)}"}), 500
 
 # ==========================================================
 # RENDERIZAR VISTA DE EXAMEN PARA ESTUDIANTE
@@ -372,14 +339,11 @@ def obtener_json_examen(examen_id):
 def render_examen_estudiante():
     exam_id = request.args.get('id', type=int)
     examen_obj = Examen.query.get(exam_id) if exam_id else Examen.query.filter_by(activo=True).first()
-
     examen_data = {
         'id': examen_obj.id if examen_obj else 1,
         'materia_id': examen_obj.materia_id if examen_obj else 1
     }
-
     return render_template('estudiantes/examen_estudiante.html', examen=examen_data)
-
 
 # ==========================================================
 # GUARDAR RESULTADOS DEL EXAMEN
@@ -389,7 +353,6 @@ def render_examen_estudiante():
 def guardar_resultado_examen():
     try:
         data = request.get_json()
-
         if 'examen_id' not in data or 'respuestas' not in data:
             return jsonify({'error': 'Faltan campos requeridos: examen_id o respuestas'}), 400
 
@@ -397,8 +360,6 @@ def guardar_resultado_examen():
         if not estudiante:
             return jsonify({'error': 'Usuario no es un estudiante válido'}), 400
 
-        # ✅ CORREGIDO: PeriodoAcademico en lugar de tabla 'periodos'
-        from app.models.periodo_academico import PeriodoAcademico
         periodo_activo = PeriodoAcademico.query.filter_by(
             activo=True,
             colegio_id=current_user.colegio_id
@@ -409,8 +370,6 @@ def guardar_resultado_examen():
 
         periodo_id = periodo_activo.id
 
-        # Verificar que el periodo permita edición de notas
-        from sqlalchemy import text
         config_result = db.session.execute(
             text("SELECT permite_editar_notas FROM configuracion_periodo WHERE periodo_id = :pid"),
             {"pid": periodo_id}
@@ -462,8 +421,6 @@ def guardar_resultado_examen():
         db.session.add(resultado)
         db.session.flush()
 
-        # ✅ CORREGIDO: Filtrar ProgramacionExamen por grupo del estudiante
-        # Si el campo de grupo en Estudiante no se llama 'grupo_id', cámbialo aquí:
         prog = ProgramacionExamen.query.filter_by(
             examen_id=data['examen_id'],
             grupo_id=estudiante.grupo_id,
@@ -528,7 +485,6 @@ def guardar_resultado_examen():
                     )
                     db.session.add(nueva_eval)
 
-        # Guardar detalles de respuestas
         for idx, resp in enumerate(respuestas):
             detalle = RespuestaExamenDetalle(
                 resultado_examen_id=resultado.id,
@@ -556,6 +512,7 @@ def guardar_resultado_examen():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
 # ==========================================================
 # LISTADO DE EXÁMENES (VISTA ESTUDIANTE)
 # ==========================================================
@@ -567,14 +524,12 @@ def listado_examenes():
         return redirect(url_for('auth.login'))
     return render_template('estudiantes/listado_examenes.html')
 
-
 # ==========================================================
-# LISTAR MIS EXÁMENES (VISTA DOCENTE) - ✅ CORREGIDO CON JOINEDLOAD
+# LISTAR MIS EXÁMENES (VISTA DOCENTE)
 # ==========================================================
 @examen_bp.route("/mis-examenes")
 @login_required
 def listar_examenes():
-    # ✅ CARGA EXPLÍCITA DE LA RELACIÓN 'programaciones' PARA EVITAR LAZY LOADING ERRORS
     examenes = Examen.query.options(
         joinedload(Examen.programaciones)
     ).filter_by(
@@ -588,16 +543,13 @@ def listar_examenes():
         total = 0
         if e.contenido_json and isinstance(e.contenido_json, list):
             total += len(e.contenido_json)
-
         contenidos = ExamenContenido.query.filter_by(examen_id=e.id, activo=True).all()
         for c in contenidos:
             if c.contenido_json and isinstance(c.contenido_json, list):
                 total += len(c.contenido_json)
-
         examenes_con_contteo.append({'examen': e, 'total_preguntas': total})
 
     return render_template("examenes/listar_examenes.html", examenes=examenes_con_contteo)
-
 
 # ==========================================================
 # VER DETALLE DE EXAMEN
@@ -610,31 +562,23 @@ def ver_examen(id):
         abort(403)
     return render_template("examenes/ver_examen.html", examen=examen)
 
-
 # ==========================================================
 # ELIMINAR EXAMEN (BORRADO LÓGICO)
 # ==========================================================
-@examen_bp.route("/eliminar/<int:id>", methods=["POST"])  # ✅ Cambiado a POST por seguridad
+@examen_bp.route("/eliminar/<int:id>", methods=["POST"])
 @login_required
 def eliminar_examen(id):
     examen = Examen.query.get_or_404(id)
-
-    # Validación de seguridad
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
-
     try:
-        # ✅ BORRADO LÓGICO: Usamos el nuevo campo 'eliminado'
         examen.eliminado = True
         db.session.commit()
         flash("Examen eliminado correctamente", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"Error al eliminar: {str(e)}", "danger")
-
-    # ✅ Redirección segura usando URL directa
     return redirect("/api/examen/mis-examenes")
-
 
 # ==========================================================
 # EDITAR EXAMEN (CON EDICIÓN DE PREGUNTAS)
@@ -643,36 +587,28 @@ def eliminar_examen(id):
 @login_required
 def editar_examen(id):
     examen = Examen.query.get_or_404(id)
-
-    # 1. Validación de seguridad (Nivel Colegio)
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
 
-    # 2. ✅ VALIDACIÓN TEMPRANA DE CONTENIDO (FUERA DEL IF ANTERIOR)
-    # Si no hay preguntas, no tiene sentido mostrar el formulario de edición
     if not examen.contenido_json or len(examen.contenido_json) == 0:
         flash("No se puede editar un examen sin preguntas. Por favor, cree uno nuevo.", "warning")
         return redirect(url_for('examen.ver_examen', id=examen.id))
 
-    # 3. Procesamiento del Formulario (POST)
     if request.method == "POST":
         try:
-            # Actualizar metadatos básicos
             examen.titulo = request.form.get("titulo", "").strip()
             examen.nombre = examen.titulo
             examen.descripcion = request.form.get("descripcion", "").strip()
-
             tiempo = request.form.get("tiempo_limite_minutos")
+
             if tiempo and tiempo.isdigit():
                 examen.tiempo_limite_minutos = int(tiempo)
             else:
                 flash("El tiempo límite debe ser un número válido", "danger")
                 return redirect(url_for('examen.editar_examen', id=id))
 
-            # Procesar preguntas editadas
             preguntas_data = []
             idx = 0
-
             while True:
                 texto = request.form.get(f"preguntas[{idx}][texto]")
                 if not texto:
@@ -711,10 +647,8 @@ def editar_examen(id):
                 flash("Un examen debe tener al menos una pregunta", "danger")
                 return redirect(url_for('examen.editar_examen', id=id))
 
-            # Guardar cambios en BD
             examen.contenido_json = preguntas_data
             db.session.commit()
-
             flash("Examen actualizado correctamente", "success")
             return redirect(url_for('examen.ver_examen', id=examen.id))
 
@@ -723,9 +657,7 @@ def editar_examen(id):
             flash(f"Error al actualizar: {str(e)}", "danger")
             return redirect(url_for('examen.editar_examen', id=id))
 
-    # GET: Mostrar formulario (Solo llega aquí si pasó las validaciones anteriores)
     return render_template("examenes/editar_examen.html", examen=examen)
-
 
 # ==========================================================
 # FUNCIÓN AUXILIAR: GUARDAR SELECCIÓN DE PREGUNTAS
@@ -745,6 +677,7 @@ def guardar_seleccion_preguntas(examen_id, preguntas_seleccionadas):
             )
             db.session.add(nuevo_contenido)
             flash("Preguntas vinculadas al examen exitosamente", "success")
+
         db.session.commit()
         return True
     except Exception as e:
@@ -752,20 +685,16 @@ def guardar_seleccion_preguntas(examen_id, preguntas_seleccionadas):
         flash(f"Error al guardar selección: {str(e)}", "danger")
         return False
 
-
 # ==========================================================
 # SEGUIMIENTO DE RESULTADOS Y ESTADÍSTICAS
 # ==========================================================
 @examen_bp.route("/resultados/<int:id>")
 @login_required
 def ver_resultados_examen(id):
-    from app.models.examen import ProgramacionExamen
-
     examen = Examen.query.get_or_404(id)
     if examen.colegio_id != current_user.colegio_id:
         abort(403)
 
-    # Obtener la programación activa para saber a qué grupo pertenece
     prog = ProgramacionExamen.query.filter_by(
         examen_id=examen.id,
         activo=True
@@ -775,35 +704,27 @@ def ver_resultados_examen(id):
         flash("Este examen no está asignado a ningún grupo.", "warning")
         return redirect(url_for('examen.ver_examen', id=examen.id))
 
-    # Obtener todos los estudiantes activos de ese grupo
     estudiantes = Estudiante.query.filter_by(
         grupo_id=prog.grupo_id,
         activo=True
     ).order_by(Estudiante.apellido, Estudiante.nombre).all()
 
-    # Obtener resultados existentes para este examen
     resultados_map = {}
     for r in ResultadoExamen.query.filter_by(examen_id=examen.id).all():
         resultados_map[r.estudiante_id] = r
 
-    # Calcular Estadísticas Básicas
     total_estudiantes = len(estudiantes)
     presentados = sum(1 for e in estudiantes if e.id in resultados_map)
     pendientes = total_estudiantes - presentados
-
     notas_validas = [r.nota_numerica for r in resultados_map.values() if r.nota_numerica is not None]
     promedio_grupo = round(sum(notas_validas) / len(notas_validas), 2) if notas_validas else 0
-
-    # Pregunta con más errores (Estadística avanzada simple)
-    # Nota: Esto requiere iterar sobre RespuestaExamenDetalle si quieres precisión total
-    # Por ahora usaremos un placeholder o una consulta simple si tienes la tabla de detalles
 
     stats = {
         'total': total_estudiantes,
         'presentados': presentados,
         'pendientes': pendientes,
         'promedio': promedio_grupo,
-        'aprobados': sum(1 for n in notas_validas if n >= 3.0),  # Asumiendo 3.0 como mínimo
+        'aprobados': sum(1 for n in notas_validas if n >= 3.0),
         'reprobados': sum(1 for n in notas_validas if n < 3.0)
     }
 
@@ -816,56 +737,18 @@ def ver_resultados_examen(id):
         stats=stats
     )
 
-
-# =========================================================
-# API: OBTENER PREGUNTAS DE UN EXAMEN (PARA CLSESTUDIANTE)
-# =========================================================
-@examen_bp.route("/api/examen/<int:id>/json")
-@login_required
-def api_examen_json(id):
-    """Devuelve las preguntas de un examen en formato JSON para el JS"""
-    if current_user.rol != 'estudiante':
-        return jsonify({"error": "No autorizado"}), 403
-
-    examen = Examen.query.get_or_404(id)
-
-    # Verificar seguridad básica
-    if not examen.contenido_json or not isinstance(examen.contenido_json, list):
-        return jsonify({"error": "Examen sin preguntas"}), 404
-
-    preguntas = []
-    for p in examen.contenido_json:
-        # Adaptar el formato de la BD al formato que espera ClsEstudiante.js
-        preguntas.append({
-            "pregunta": p.get("texto", ""),  # JS espera 'pregunta', BD tiene 'texto'
-            "opciones": list(p.get("opciones", {}).values()),  # Solo los textos de opciones
-            "respuesta": p.get("respuesta_correcta", ""),  # JS espera 'respuesta'
-            "explicacion": p.get("explicacion", ""),
-            "contexto": None  # Si usas contextos, adáptalo aquí
-        })
-
-    return jsonify({"preguntas": preguntas})
-
-
-# =========================================================
+# ==========================================================
 # API: COMPETENCIAS POR GRUPO Y MATERIA
-# =========================================================
+# ==========================================================
 @examen_bp.route("/api/competencias-por-grupo-materia", methods=["GET"])
 @login_required
 def api_competencias_por_grupo_materia():
-    """
-    Devuelve competencias filtrando por Materia Y/O Grupo.
-    Esto soluciona el problema cuando las competencias están vinculadas al grupo específico.
-    """
     try:
         grupo_id = request.args.get('grupo_id', type=int)
         materia_id = request.args.get('materia_id', type=int)
 
         if not materia_id and not grupo_id:
             return jsonify({"error": "Faltan parámetros"}), 400
-
-        # ✅ CONSULTA FLEXIBLE: Busca competencias que coincidan con la materia O con el grupo
-        from sqlalchemy import or_
 
         query = CompetenciaEstudiante.query.filter(
             or_(
@@ -875,7 +758,6 @@ def api_competencias_por_grupo_materia():
         ).order_by(CompetenciaEstudiante.codigo)
 
         competencias = query.all()
-
         resultado = []
         for comp in competencias:
             resultado.append({
@@ -886,22 +768,17 @@ def api_competencias_por_grupo_materia():
             })
 
         return jsonify(resultado), 200
-
     except Exception as e:
-        print(f"ERROR API COMPETENCIAS: {e}")
-        import traceback;
+        import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-
-
-# =========================================================
+# ==========================================================
 # ASIGNAR EXAMEN A GRUPO (CON COMPETENCIA)
-# =========================================================
+# ==========================================================
 @examen_bp.route("/<int:examen_id>/asignar", methods=["GET", "POST"])
 @login_required
 def asignar_examen(examen_id):
-    """Vista para asignar un examen a un grupo y seleccionar competencia"""
     if current_user.rol not in ['docente', 'coordinador']:
         abort(403)
 
@@ -914,7 +791,6 @@ def asignar_examen(examen_id):
     from app.models.docente import Docente
 
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
-
     if docente:
         ids_grupos_docente = db.session.query(GrupoMateria.grupo_id).filter_by(
             docente_id=docente.id,
@@ -922,13 +798,11 @@ def asignar_examen(examen_id):
         ).distinct().all()
         ids_grupos_docente = [g[0] for g in ids_grupos_docente]
 
-        # Todos los grupos del docente
         grupos_todos = Grupo.query.filter(
             Grupo.id.in_(ids_grupos_docente),
             Grupo.activo == True
         ).order_by(Grupo.grado, Grupo.nombre).all() if ids_grupos_docente else []
 
-        # ✅ NUEVO: Excluir grupos YA asignados a este examen
         grupos_ya_asignados = db.session.query(ProgramacionExamen.grupo_id).filter_by(
             examen_id=examen_id,
             activo=True
@@ -957,7 +831,6 @@ def asignar_examen(examen_id):
                 flash("La competencia seleccionada no existe.", "danger")
                 return redirect(url_for("examen.asignar_examen", examen_id=examen_id))
 
-            # Verificar si ya existe programación activa para este examen+grupo
             prog_existente = ProgramacionExamen.query.filter_by(
                 examen_id=examen_id,
                 grupo_id=grupo_id,
@@ -994,7 +867,8 @@ def asignar_examen(examen_id):
         except Exception as e:
             db.session.rollback()
             flash(f"Error al asignar: {str(e)}", "danger")
-            import traceback; traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
     return render_template(
         "examenes/asignar_examen.html",
@@ -1003,13 +877,12 @@ def asignar_examen(examen_id):
         materias=materias
     )
 
-# =========================================================
+# ==========================================================
 # API: EXÁMENES DISPONIBLES PARA ESTUDIANTE (JSON)
-# =========================================================
+# ==========================================================
 @examen_bp.route('/disponibles')
 @login_required
 def api_examenes_disponibles():
-    """Devuelve JSON con exámenes disponibles para el estudiante logueado"""
     if current_user.rol != 'estudiante':
         return jsonify({'error': 'No autorizado'}), 403
 
@@ -1018,7 +891,6 @@ def api_examenes_disponibles():
         return jsonify([])
 
     ahora = datetime.now()
-
     examenes = Examen.query.join(ProgramacionExamen).filter(
         ProgramacionExamen.grupo_id == estudiante.grupo_id,
         ProgramacionExamen.activo == True,
