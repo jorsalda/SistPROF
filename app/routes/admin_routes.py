@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
+from sqlalchemy import func
 
 from app.extensions import db
 from app.models.usuario import Usuario
@@ -27,18 +28,56 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 def dashboard():
     """Panel principal de administración con estadísticas"""
 
-    # Estadísticas generales
+    # ── Estadísticas generales ────────────────────────────────
     total_usuarios = Usuario.query.count()
     superadmins = Usuario.query.filter_by(rol='superadmin').count()
     usuarios_aprobados = Usuario.query.filter_by(is_approved=True).count()
-    usuarios_pendientes = Usuario.query.filter_by(is_approved=False).filter(Usuario.rol != 'superadmin').count()
+    usuarios_pendientes = (
+        Usuario.query.filter_by(is_approved=False)
+        .filter(Usuario.rol != 'superadmin')
+        .count()
+    )
     usuarios_activos = Usuario.query.filter_by(is_active=True).count()
 
-    # Estadísticas de colegios
+    # ── Estadísticas de colegios ──────────────────────────────
     total_colegios = Colegio.query.count()
     total_permisos = Permiso.query.count()
 
-    # Lista de colegios para superadmin (Los "Usuarios" del sistema)
+    # ── Colegios por estado (para gráfico de dona) ────────────
+    colegios_aprobados = Colegio.query.filter_by(activo=True, en_prueba=False).count()
+    colegios_en_prueba = Colegio.query.filter_by(activo=True, en_prueba=True).count()
+    colegios_bloqueados = Colegio.query.filter_by(activo=False).count()
+
+    # ── Usuarios por rol (para gráfico de barras) ─────────────
+    roles_query = (
+        db.session.query(Usuario.rol, func.count(Usuario.id))
+        .group_by(Usuario.rol)
+        .all()
+    )
+    usuarios_por_rol = {
+        'superadmin': 0,
+        'admin_colegio': 0,
+        'docente': 0,
+        'estudiante': 0,
+        'acudiente': 0,
+        'coordinador': 0,
+    }
+    for rol, cantidad in roles_query:
+        rol_str = rol.value if hasattr(rol, 'value') else str(rol)
+        usuarios_por_rol[rol_str] = cantidad
+
+    # ── Top 5 colegios con más usuarios ───────────────────────
+    top_colegios_query = (
+        db.session.query(Colegio.nombre, func.count(Usuario.id).label('total'))
+        .join(Usuario, Usuario.colegio_id == Colegio.id)
+        .group_by(Colegio.id, Colegio.nombre)
+        .order_by(func.count(Usuario.id).desc())
+        .limit(5)
+        .all()
+    )
+    top_colegios = [{'nombre': nombre, 'total': total} for nombre, total in top_colegios_query]
+
+    # ── Lista de colegios para superadmin (últimos 5) ─────────
     if current_user.rol == 'superadmin':
         lista_colegios_raw = Colegio.query.order_by(Colegio.id.desc()).limit(5).all()
         lista_colegios = []
@@ -53,15 +92,16 @@ def dashboard():
     else:
         lista_colegios = []
 
-    # Nuevos usuarios (últimos 7 días)
+    # ── Nuevos usuarios (últimos 7 días) ──────────────────────
     hace_7_dias = datetime.utcnow() - timedelta(days=7)
     nuevos_usuarios = Usuario.query.filter(Usuario.fecha_registro >= hace_7_dias).count()
 
-    # Próximos a vencer (lógica simplificada para el dashboard)
+    # ── Próximos a vencer (pendiente de implementar) ──────────
     proximos_vencer = []
 
     return render_template(
         "admin/dashboard.html",
+        # Tarjetas KPI
         total_usuarios=total_usuarios,
         superadmins=superadmins,
         usuarios_aprobados=usuarios_aprobados,
@@ -71,7 +111,13 @@ def dashboard():
         total_permisos=total_permisos,
         nuevos_usuarios=nuevos_usuarios,
         proximos_vencer=proximos_vencer,
-        lista_colegios=lista_colegios
+        lista_colegios=lista_colegios,
+        # Datos para gráficos
+        colegios_aprobados=colegios_aprobados,
+        colegios_en_prueba=colegios_en_prueba,
+        colegios_bloqueados=colegios_bloqueados,
+        usuarios_por_rol=usuarios_por_rol,
+        top_colegios=top_colegios,
     )
 
 
@@ -116,7 +162,7 @@ def aprobar_colegio(colegio_id):
     colegio.activo = True
     colegio.fecha_expiracion = None  # Ya no tiene fecha de vencimiento
 
-    # 🔧 CORRECCIÓN: Limpiar fecha_expiracion de TODOS los usuarios del colegio
+    # Limpiar fecha_expiracion de TODOS los usuarios del colegio
     usuarios_del_colegio = Usuario.query.filter_by(colegio_id=colegio.id).all()
     for usuario in usuarios_del_colegio:
         usuario.fecha_expiracion = None
@@ -169,13 +215,12 @@ def modificar_dias_prueba(colegio_id):
 
     dias = int(request.form.get('dias_prueba', 15))
 
-    from datetime import datetime, timedelta
     nueva_fecha = datetime.utcnow() + timedelta(days=dias)
 
     colegio.fecha_expiracion = nueva_fecha
     colegio.en_prueba = True
 
-    # 🔧 CORRECCIÓN: Actualizar también la fecha de TODOS los usuarios
+    # Actualizar también la fecha de TODOS los usuarios
     Usuario.query.filter_by(colegio_id=colegio.id).update({
         'fecha_expiracion': nueva_fecha,
         'is_approved': False,
@@ -187,6 +232,8 @@ def modificar_dias_prueba(colegio_id):
     flash(f"Período de prueba modificado a {dias} días. "
           f"Nueva fecha: {nueva_fecha.strftime('%d/%m/%Y')}", "info")
     return redirect(url_for('admin.detalle_colegio', colegio_id=colegio.id))
+
+
 # ════════════════════════════════════════════════════════════════
 # HELPER INTERNO
 # ════════════════════════════════════════════════════════════════
@@ -206,13 +253,10 @@ def _calcular_estado_colegio(colegio):
 
     return {'estado': 'Aprobado', 'badge_class': 'success', 'dias_restantes': None}
 
-# ════════════════════════════════════════════════════════════════
-# [TEMPORAL] CREAR ADMIN COLEGIO INDEPENDIENTES
-# ═══════════════════════════════════════════════════════════════
 
 # ════════════════════════════════════════════════════════════════
 # [TEMPORAL] CREAR ADMIN COLEGIO INDEPENDIENTES
-# ═══════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════
 
 @admin_bp.route("/crear-admin-independientes")
 @login_required
@@ -241,8 +285,8 @@ def crear_admin_independientes():
             nombre='Admin Independientes',
             email='admin.independientes@sistprof.com',
             password_hash=generate_password_hash(password_inicial),
-            rol='admin_colegio',  # 🔧 Corregido: 'admin_colegio' coincide con el ENUM
-            colegio_id=46,  # Colegio Estudiantes Independientes
+            rol='admin_colegio',
+            colegio_id=46,
             is_active=True,
             is_approved=True
         )

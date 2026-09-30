@@ -1,225 +1,303 @@
-<aside id="sidebar" class="sidebar">
-    <ul class="sidebar-nav" id="sidebar-nav">
+{% extends "admin/admin_base.html" %}
 
-        <!-- Dashboard Principal -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.dashboard') }}">
-                <i class="bi bi-grid"></i>
-                <span>Dashboard</span>
-            </a>
-        </li>
+{% block admin_page_title %}Panel de Administración{% endblock %}
 
-        <!-- NUEVO: Estructura Institucional (Submenú Desplegable) -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint in ['admin.sedes', 'admin.jornadas_todas', 'admin.grupos_todos'] %}{% else %}collapsed{% endif %}"
-               data-bs-target="#estructura-nav"
-               data-bs-toggle="collapse"
-               href="#">
-                <i class="bi bi-building"></i>
-                <span>Estructura Institucional</span>
-                <i class="bi bi-chevron-down ms-auto"></i>
-            </a>
-            <ul id="estructura-nav"
-                class="nav-content collapse {% if request.endpoint in ['admin.sedes', 'admin.jornadas_todas', 'admin.grupos_todos'] %}show{% endif %}"
-                data-bs-parent="#sidebar-nav">
-                <li>
-                    <a href="{{ url_for('admin.sedes') }}"
-                       class="{% if request.endpoint == 'admin.sedes' %}active{% endif %}">
-                        <i class="bi bi-geo-alt"></i><span>Sedes</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.jornadas_todas') }}"
-                       class="{% if request.endpoint == 'admin.jornadas_todas' %}active{% endif %}">
-                        <i class="bi bi-clock"></i><span>Jornadas</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.grupos_todos') }}"
-                       class="{% if request.endpoint == 'admin.grupos_todos' %}active{% endif %}">
-                        <i class="bi bi-people"></i><span>Grupos</span>
-                    </a>
-                </li>
-            </ul>
-        </li>
+{% block admin_content %}
 
-        <!-- Plan de Estudios -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.plan_estudios' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.plan_estudios') }}">
-                <i class="bi bi-journal-bookmark"></i>
-                <span>Plan de Estudios</span>
-            </a>
-        </li>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TARJETAS KPI                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Colegios</p>
+                        <h3 class="mb-0">{{ total_colegios }}</h3>
+                    </div>
+                    <i class="bi bi-building fs-2 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Materias -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.materias' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.materias') }}">
-                <i class="bi bi-book"></i>
-                <span>Materias</span>
-            </a>
-        </li>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Usuarios Totales</p>
+                        <h3 class="mb-0">{{ total_usuarios }}</h3>
+                    </div>
+                    <i class="bi bi-people fs-2 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Docentes -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.docentes' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.docentes') }}">
-                <i class="bi bi-person-badge"></i>
-                <span>Docentes</span>
-            </a>
-        </li>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Usuarios Aprobados</p>
+                        <h3 class="mb-0">{{ usuarios_aprobados }}</h3>
+                    </div>
+                    <i class="bi bi-check-circle fs-2 text-info"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Carga Académica -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.carga_academica' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.carga_academica') }}">
-                <i class="bi bi-journal-plus"></i>
-                <span>Carga Académica</span>
-            </a>
-        </li>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Pendientes</p>
+                        <h3 class="mb-0">{{ usuarios_pendientes }}</h3>
+                    </div>
+                    <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <!-- Coordinadores -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.coordinadores' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.coordinadores') }}">
-                <i class="bi bi-person-workspace"></i>
-                <span>Coordinadores</span>
-            </a>
-        </li>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- GRÁFICOS                                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="row g-4 mb-4">
+    <!-- Gráfico 1: Dona - Colegios por estado -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Colegios por Estado</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 260px;">
+                    <canvas id="graficoColegiosEstado"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Estudiantes -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.estudiantes' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.estudiantes') }}">
-                <i class="bi bi-mortarboard"></i>
-                <span>Estudiantes</span>
-            </a>
-        </li>
+    <!-- Gráfico 2: Barras - Usuarios por rol -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Usuarios por Rol</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 260px;">
+                    <canvas id="graficoUsuariosRol"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <!-- Acudientes -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.acudientes' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.acudientes') }}">
-                <i class="bi bi-person-hearts"></i>
-                <span>Acudientes</span>
-            </a>
-        </li>
+<!-- Gráfico 3: Barras horizontales - Top 5 colegios con más usuarios -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="bi bi-trophy"></i> Top 5 Colegios con Más Usuarios</h5>
+            </div>
+            <div class="card-body">
+                {% if top_colegios %}
+                <div style="position: relative; height: 240px;">
+                    <canvas id="graficoTopColegios"></canvas>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aún no hay usuarios asignados a colegios.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 
-        <!-- Áreas -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.areas' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.areas') }}">
-                <i class="bi bi-journals"></i>
-                <span>Áreas</span>
-            </a>
-        </li>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TABLA: ÚLTIMOS COLEGIOS                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-building"></i> Últimos Colegios Registrados</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if lista_colegios %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Código</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in lista_colegios %}
+                    <tr>
+                        <td>{{ item.colegio.id }}</td>
+                        <td>{{ item.colegio.nombre }}</td>
+                        <td><code>{{ item.colegio.codigo_acceso }}</code></td>
+                        <td>
+                            <span class="badge bg-{{ item.badge_class }}">
+                                {{ item.estado }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.detalle_colegio', colegio_id=item.colegio.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mb-0 mt-2">No hay colegios registrados todavía.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
 
-        <!-- Permisos -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.permisos' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.permisos') }}">
-                <i class="bi bi-file-earmark-check"></i>
-                <span>Permisos</span>
-            </a>
-        </li>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- CHART.JS + SCRIPT DE GRÁFICOS                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
-        <!-- Observador -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.observador' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.observador') }}">
-                <i class="bi bi-eye"></i>
-                <span>Observador</span>
-            </a>
-        </li>
+    // ── Gráfico 1: Dona - Colegios por estado ─────────────────
+    const ctxColegios = document.getElementById('graficoColegiosEstado');
+    if (ctxColegios) {
+        new Chart(ctxColegios, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aprobados', 'En Prueba', 'Bloqueados'],
+                datasets: [{
+                    data: [
+                        {{ colegios_aprobados }},
+                        {{ colegios_en_prueba }},
+                        {{ colegios_bloqueados }}
+                    ],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.85)',
+                        'rgba(255, 193, 7, 0.85)',
+                        'rgba(220, 53, 69, 0.85)'
+                    ],
+                    borderColor: [
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(220, 53, 69, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 16, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+    }
 
-        <!-- Citaciones -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.citaciones' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.citaciones') }}">
-                <i class="bi bi-calendar-event"></i>
-                <span>Citaciones</span>
-            </a>
-        </li>
+    // ── Gráfico 2: Barras verticales - Usuarios por rol ───────
+    const ctxRoles = document.getElementById('graficoUsuariosRol');
+    if (ctxRoles) {
+        new Chart(ctxRoles, {
+            type: 'bar',
+            data: {
+                labels: ['Superadmin', 'Admin Colegio', 'Docente', 'Estudiante', 'Acudiente', 'Coordinador'],
+                datasets: [{
+                    label: 'Usuarios',
+                    data: [
+                        {{ usuarios_por_rol.get('superadmin', 0) }},
+                        {{ usuarios_por_rol.get('admin_colegio', 0) }},
+                        {{ usuarios_por_rol.get('docente', 0) }},
+                        {{ usuarios_por_rol.get('estudiante', 0) }},
+                        {{ usuarios_por_rol.get('acudiente', 0) }},
+                        {{ usuarios_por_rol.get('coordinador', 0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.85)',
+                        'rgba(111, 66, 193, 0.85)',
+                        'rgba(25, 135, 84, 0.85)',
+                        'rgba(13, 202, 240, 0.85)',
+                        'rgba(255, 193, 7, 0.85)',
+                        'rgba(220, 53, 69, 0.85)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
 
-        <!-- Convivencia -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.convivencia' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.convivencia') }}">
-                <i class="bi bi-shield-check"></i>
-                <span>Convivencia</span>
-            </a>
-        </li>
+    // ── Gráfico 3: Barras horizontales - Top 5 colegios ───────
+    const ctxTop = document.getElementById('graficoTopColegios');
+    if (ctxTop) {
+        new Chart(ctxTop, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for c in top_colegios %}'{{ c.nombre }}'{% if not loop.last %},{% endif %}{% endfor %}
+                ],
+                datasets: [{
+                    label: 'Usuarios',
+                    data: [
+                        {% for c in top_colegios %}{{ c.total }}{% if not loop.last %},{% endif %}{% endfor %}
+                    ],
+                    backgroundColor: 'rgba(13, 110, 253, 0.75)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
 
-        <!-- Seguimiento Académico -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.seguimiento_academico' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.seguimiento_academico') }}">
-                <i class="bi bi-graph-up-arrow"></i>
-                <span>Seguimiento Académico</span>
-            </a>
-        </li>
+});
+</script>
 
-        <!-- PIAR -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.piar' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.piar') }}">
-                <i class="bi bi-heart-pulse"></i>
-                <span>PIAR</span>
-            </a>
-        </li>
-
-        <!-- Configuración (Submenú Desplegable) -->
-        <li class="nav-item">
-            <a class="nav-link collapsed"
-               data-bs-target="#configuracion-nav"
-               data-bs-toggle="collapse"
-               href="#">
-                <i class="bi bi-gear"></i>
-                <span>Configuración</span>
-                <i class="bi bi-chevron-down ms-auto"></i>
-            </a>
-            <ul id="configuracion-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li>
-                    <a href="{{ url_for('admin.configurar_periodos') }}">
-                        <i class="bi bi-circle"></i><span>Configurar Periodos</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.habilitar_competencias') }}">
-                        <i class="bi bi-circle"></i><span>Habilitar Edición Competencias</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.disciplina') }}">
-                        <i class="bi bi-circle"></i><span>Disciplina</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.escalamiento') }}">
-                        <i class="bi bi-circle"></i><span>Escalamiento</span>
-                    </a>
-                </li>
-            </ul>
-        </li>
-
-        <!-- Mi Cuenta -->
-        <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'admin.mi_cuenta' %}active{% else %}collapsed{% endif %}"
-               href="{{ url_for('admin.mi_cuenta') }}">
-                <i class="bi bi-person"></i>
-                <span>Mi Cuenta</span>
-            </a>
-        </li>
-
-        <!-- Cerrar Sesión -->
-        <li class="nav-item mt-3">
-            <a class="btn btn-danger w-100 text-start ps-3" href="{{ url_for('auth.logout') }}">
-                <i class="bi bi-box-arrow-right me-2"></i>
-                <span>Cerrar Sesión</span>
-            </a>
-        </li>
-
-    </ul>
-</aside>
+{% endblock %}
