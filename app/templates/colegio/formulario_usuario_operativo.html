@@ -1,0 +1,274 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}{{ titulo }} | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}">Usuarios Operativos</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ titulo }}</li>
+                </ol>
+            </nav>
+
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-gradient-primary text-white rounded-top-4 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-person-badge fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="mb-0 fw-bold">{{ titulo }}</h3>
+                            <p class="mb-0 opacity-75">
+                                {% if usuario %}
+                                    Actualice la información del usuario
+                                {% else %}
+                                    Registre una nueva secretaria o portero
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-5">
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="rol" value="{{ rol_default }}">
+
+                        <div class="alert alert-info rounded-3 mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+                                <div>
+                                    Rol asignado:
+                                    <strong>
+                                        {% if rol_default == 'secretaria' %}
+                                            Secretaria
+                                        {% else %}
+                                            Portero
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+                                <input type="text"
+                                       name="nombre"
+                                       class="form-control form-control-lg"
+                                       value="{{ usuario.nombre if usuario else '' }}"
+                                       placeholder="Ej: María"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Apellido <span class="text-danger">*</span></label>
+                                <input type="text"
+                                       name="apellido"
+                                       class="form-control form-control-lg"
+                                       value="{{ usuario.apellido if usuario and usuario.apellido else '' }}"
+                                       placeholder="Ej: Rodríguez"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Documento <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       name="documento"
+                                       id="documento"
+                                       class="form-control form-control-lg"
+                                       placeholder="Ej: 1234567890"
+                                       {% if not usuario %}required{% endif %}>
+                                {% if not usuario %}
+                                <div class="form-text">
+                                    <i class="bi bi-key-fill"></i> Será la contraseña inicial.
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Correo electrónico <span class="text-danger">*</span>
+                                </label>
+                                <input type="email"
+                                       name="email"
+                                       class="form-control form-control-lg"
+                                       value="{{ usuario.email if usuario else '' }}"
+                                       placeholder="Ej: usuario@colegio.edu.co"
+                                       required>
+                                <div class="form-text">
+                                    <i class="bi bi-person-badge"></i> Será el usuario de acceso.
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if not usuario %}
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Contraseña <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password"
+                                           name="password"
+                                           id="password"
+                                           class="form-control form-control-lg"
+                                           placeholder="Se autocompleta con el documento"
+                                           minlength="6">
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            id="togglePassword"
+                                            title="Mostrar/ocultar">
+                                        <i class="bi bi-eye" id="iconToggle"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Se autocompleta con el documento. Puede cambiarla después.
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Sede <span class="text-danger">*</span></label>
+                                <select name="sede_id" class="form-select form-select-lg" required>
+                                    <option value="">Seleccione una sede</option>
+                                    {% for sede in sedes %}
+                                    <option value="{{ sede.id }}"
+                                            {% if usuario and usuario.sede_id == sede.id %}selected{% endif %}>
+                                        {{ sede.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Teléfono</label>
+                                <input type="tel"
+                                       name="telefono"
+                                       class="form-control form-control-lg"
+                                       placeholder="Opcional"
+                                       value="">
+                            </div>
+                        </div>
+
+                        {% if usuario %}
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Estado</label>
+                                <div class="form-check form-switch mt-3">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="activo"
+                                           id="activo"
+                                           {% if usuario.is_active %}checked{% endif %}>
+                                    <label class="form-check-label ms-2" for="activo">
+                                        {% if usuario.is_active %}
+                                            <span class="badge bg-success">Activo</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Cambiar contraseña</label>
+                                <div class="form-check form-switch mt-3">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="cambiar_password"
+                                           id="cambiar_password">
+                                    <label class="form-check-label ms-2" for="cambiar_password">
+                                        Resetear con nuevo documento
+                                    </label>
+                                </div>
+                                <input type="text"
+                                       name="nuevo_documento"
+                                       class="form-control form-control-lg mt-2"
+                                       placeholder="Nuevo documento (opcional)"
+                                       style="display:none;"
+                                       id="nuevo_documento_input">
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                            <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
+                               class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill">
+                                <i class="bi bi-save me-2"></i>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const cambiarPw = document.getElementById('cambiar_password');
+    const nuevoDoc = document.getElementById('nuevo_documento_input');
+    if (cambiarPw && nuevoDoc) {
+        cambiarPw.addEventListener('change', function() {
+            nuevoDoc.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+
+    const documentoInput = document.getElementById('documento');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const iconToggle = document.getElementById('iconToggle');
+
+    if (documentoInput && passwordInput) {
+        documentoInput.addEventListener('input', function() {
+            passwordInput.value = this.value;
+        });
+    }
+
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            if (iconToggle) {
+                iconToggle.classList.toggle('bi-eye');
+                iconToggle.classList.toggle('bi-eye-slash');
+            }
+        });
+    }
+</script>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+
+{% endblock %}

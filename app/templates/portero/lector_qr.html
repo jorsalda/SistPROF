@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lector QR - Portería SistPROF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colegio.css') }}">
+    <style>
+        .input-qr {
+            font-size: 2rem;
+            text-align: center;
+            letter-spacing: 2px;
+            padding: 20px;
+        }
+        .alerta-resultado {
+            font-size: 1.4rem;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+        .alerta-resultado.ok { display: block; background: #d4edda; color: #155724; border: 2px solid #28a745; }
+        .alerta-resultado.error { display: block; background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+        .btn-grande {
+            font-size: 1.3rem;
+            padding: 16px 32px;
+        }
+    </style>
+</head>
+<body>
+<div class="colegio-container">
+
+    <aside class="colegio-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="bi bi-door-open"></i> Portería</h2>
+            <p>Panel de Control</p>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="{{ url_for('portero.dashboard') }}"
+                   class="menu-link {% if request.endpoint == 'portero.dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{{ url_for('portero.lector') }}"
+                   class="menu-link {% if request.endpoint == 'portero.lector' %}active{% endif %}">
+                    <i class="bi bi-qr-code-scan"></i> Lector QR
+                </a>
+            </li>
+        </ul>
+
+        <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+        </button>
+    </aside>
+
+    <main class="colegio-content">
+        <header class="colegio-header">
+            <h1>Lector QR — Registro de Entradas y Salidas</h1>
+            <div class="user-info">
+                <i class="bi bi-person-circle"></i>
+                {{ current_user.email }}
+            </div>
+        </header>
+
+        <div class="colegio-main-content">
+
+            <div class="row g-4">
+
+                <!-- COLUMNA IZQUIERDA: LECTOR + BÚSQUEDA -->
+                <div class="col-lg-6">
+
+                    <!-- LECTOR QR -->
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0"><i class="bi bi-qr-code-scan"></i> Escanear Código QR</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">
+                                Escaneá el QR con el lector USB o pegá el código y presioná Enter.
+                            </p>
+                            <input type="text"
+                                   id="inputQR"
+                                   class="form-control input-qr"
+                                   placeholder="Esperando escaneo..."
+                                   autofocus
+                                   autocomplete="off">
+                        </div>
+                    </div>
+
+                    <!-- BÚSQUEDA MANUAL -->
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0"><i class="bi bi-search"></i> Búsqueda Manual</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">
+                                Buscá por nombre, apellido o documento. Después elegí Ingreso o Salida.
+                            </p>
+                            <input type="text"
+                                   id="inputBusqueda"
+                                   class="form-control form-control-lg mb-3"
+                                   placeholder="Escribí al menos 2 letras..."
+                                   autocomplete="off">
+                            <div id="resultadosBusqueda" class="list-group"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA DERECHA: RESULTADO + REGISTROS DEL DÍA -->
+                <div class="col-lg-6">
+
+                    <!-- RESULTADO DE LA OPERACIÓN -->
+                    <div id="alertaResultado" class="alerta-resultado"></div>
+
+                    <!-- ÚLTIMOS REGISTROS -->
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Últimos Registros de Hoy</h5>
+                            <span class="badge bg-primary">{{ total_registros_hoy }}</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Hora</th>
+                                            <th>Estudiante</th>
+                                            <th>Tipo</th>
+                                            <th>Método</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaRegistros">
+                                        {% if registros %}
+                                            {% for r in registros %}
+                                            <tr>
+                                                <td>{{ r.hora }}</td>
+                                                <td>
+                                                    <strong>{{ r.estudiante }}</strong>
+                                                    {% if r.documento != '—' %}
+                                                    <br><small class="text-muted">{{ r.documento }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if r.tipo_evento == 'INGRESO' %}
+                                                        <span class="badge bg-success">INGRESO</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark">SALIDA</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td><small>{{ r.metodo }}</small></td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted p-4">
+                                                    No hay registros hoy todavía.
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const inputQR = document.getElementById('inputQR');
+    const inputBusqueda = document.getElementById('inputBusqueda');
+    const resultadosBusqueda = document.getElementById('resultadosBusqueda');
+    const alertaResultado = document.getElementById('alertaResultado');
+    const tablaRegistros = document.getElementById('tablaRegistros');
+
+    // ─────────────────────────────────────────────────────────
+    // MOSTRAR RESULTADO (mensaje grande de éxito o error)
+    // ─────────────────────────────────────────────────────────
+    function mostrarResultado(ok, mensaje) {
+        alertaResultado.className = 'alerta-resultado ' + (ok ? 'ok' : 'error');
+        alertaResultado.innerHTML = mensaje;
+        setTimeout(() => {
+            alertaResultado.className = 'alerta-resultado';
+        }, 5000);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // REGISTRAR (común para QR y búsqueda manual)
+    // ─────────────────────────────────────────────────────────
+    async function registrar(identificador, tipo_evento, metodo) {
+        try {
+            const resp = await fetch('/portero/registrar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ identificador, tipo_evento, metodo })
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                mostrarResultado(false, '<i class="bi bi-x-circle"></i> ' + (data.error || 'Error al registrar'));
+                return;
+            }
+
+            const icono = tipo_evento === 'INGRESO' ? 'box-arrow-in-right' : 'box-arrow-right';
+            mostrarResultado(true,
+                '<i class="bi bi-' + icono + '"></i> <strong>' + tipo_evento + '</strong> registrado: ' +
+                data.estudiante.nombre + ' — ' + data.hora
+            );
+
+            // Refrescar la tabla
+            recargarTabla();
+        } catch (err) {
+            console.error(err);
+            mostrarResultado(false, '<i class="bi bi-x-circle"></i> Error de conexión');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // RECARGAR TABLA DE REGISTROS (sin recargar la página)
+    // ─────────────────────────────────────────────────────────
+    async function recargarTabla() {
+        // Recarga la página para simplicidad — alternativa: fetch a un endpoint
+        setTimeout(() => window.location.reload(), 1500);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // ESCANEO POR QR: al presionar Enter, se registra
+    // ─────────────────────────────────────────────────────────
+    inputQR.addEventListener('keydown', async function (e) {
+        if (e.key === 'Enter') {
+            const identificador = inputQR.value.trim();
+            if (!identificador) return;
+
+            // Preguntar qué hacer (podés cambiarlo a botones fijos si preferís)
+            const tipo = confirm('¿Registrar INGRESO?\n\nAceptar = INGRESO\nCancelar = SALIDA');
+            const tipo_evento = tipo ? 'INGRESO' : 'SALIDA';
+
+            await registrar(identificador, tipo_evento, 'QR');
+            inputQR.value = '';
+            inputQR.focus();
+        }
+    });
+
+    // ─────────────────────────────────────────────────────────
+    // BÚSQUEDA MANUAL: al escribir, buscar estudiantes
+    // ─────────────────────────────────────────────────────────
+    let timeoutBusqueda = null;
+    inputBusqueda.addEventListener('input', function () {
+        clearTimeout(timeoutBusqueda);
+        const q = inputBusqueda.value.trim();
+
+        if (q.length < 2) {
+            resultadosBusqueda.innerHTML = '';
+            return;
+        }
+
+        timeoutBusqueda = setTimeout(async () => {
+            try {
+                const resp = await fetch('/portero/buscar?q=' + encodeURIComponent(q), {
+                    credentials: 'same-origin'
+                });
+                const estudiantes = await resp.json();
+
+                resultadosBusqueda.innerHTML = '';
+
+                if (estudiantes.length === 0) {
+                    resultadosBusqueda.innerHTML = '<div class="list-group-item text-muted">Sin resultados</div>';
+                    return;
+                }
+
+                estudiantes.forEach(est => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <div>
+                            <strong>${est.nombre}</strong><br>
+                            <small class="text-muted">${est.documento || '—'}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-success me-1 btn-ingreso" data-id="${est.id}">
+                                <i class="bi bi-box-arrow-in-right"></i> INGRESO
+                            </button>
+                            <button class="btn btn-sm btn-warning btn-salida" data-id="${est.id}">
+                                <i class="bi bi-box-arrow-right"></i> SALIDA
+                            </button>
+                        </div>
+                    `;
+                    resultadosBusqueda.appendChild(item);
+                });
+
+                // Escuchar los clicks de los botones
+                resultadosBusqueda.querySelectorAll('.btn-ingreso').forEach(b => {
+                    b.addEventListener('click', () => registrar(b.dataset.id, 'INGRESO', 'MANUAL'));
+                });
+                resultadosBusqueda.querySelectorAll('.btn-salida').forEach(b => {
+                    b.addEventListener('click', () => registrar(b.dataset.id, 'SALIDA', 'MANUAL'));
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }, 300);
+    });
+
+});
+</script>
+
+</body>
+</html>

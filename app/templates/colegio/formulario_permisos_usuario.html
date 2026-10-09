@@ -1,0 +1,77 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Permisos de {{ usuario.nombre or usuario.email }}{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>
+            <i class="bi bi-shield-lock"></i>
+            Permisos de {{ usuario.nombre or usuario.email }}
+        </h3>
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
+           class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Marque los permisos que desea otorgar a esta secretaria.
+        Los cambios se guardan al hacer clic en "Guardar".
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% for grupo, permisos in catalogo_por_grupo.items() %}
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{{ grupo }}</h5>
+            </div>
+            <div class="card-body">
+                {% for p in permisos %}
+                <div class="form-check mb-3">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="{{ p.clave }}"
+                           id="permiso_{{ p.clave }}"
+                           {% if permisos_actuales.get(p.clave, false) %}checked{% endif %}>
+                    <label class="form-check-label" for="permiso_{{ p.clave }}">
+                        <strong>{{ p.titulo }}</strong>
+                        <br>
+                        <small class="text-muted">{{ p.descripcion }}</small>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar
+            </button>
+            <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
+               class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}

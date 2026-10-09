@@ -6,6 +6,7 @@ from sqlalchemy import func
 
 from app.models.coordinador import Coordinador
 from app.extensions import db
+from app.utils.permisos import requiere_permiso
 from app.models.colegio import Colegio
 from app.models.docente import Docente
 from app.models.permiso import Permiso
@@ -315,10 +316,21 @@ def lista_grupos(sede_id, jornada_id):
         grupos=grupos
     )
 
-
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo_grupo(sede_id, jornada_id):
+    """
+    Crea un nuevo grupo. En GET usa sede_id y jornada_id de la URL como
+    valores por defecto. En POST lee sede_id y jornada_id del formulario
+    para permitir crear el grupo en cualquier sede/jornada del colegio.
+    """
+
+    # ── Cargar todas las sedes del colegio (para el <select>) ─────────
+    sedes = Sede.query.filter_by(
+        colegio_id=current_user.colegio_id
+    ).order_by(Sede.nombre).all()
+
+    # ── Sede y jornada por defecto (para GET, o para re-render en error) ──
     sede = Sede.query.filter_by(
         id=sede_id,
         colegio_id=current_user.colegio_id
@@ -330,18 +342,44 @@ def nuevo_grupo(sede_id, jornada_id):
         colegio_id=current_user.colegio_id
     ).first_or_404()
 
-    docentes = Docente.query.filter_by(
-        colegio_id=current_user.colegio_id,
-        sede_id=sede.id,
-        activo=True
-    ).order_by(Docente.nombre).all()
-
     if request.method == "POST":
+        # ── Leer sede y jornada del formulario (pueden haber cambiado) ──
+        sede_id_form = request.form.get("sede_id", type=int) or sede.id
+        jornada_id_form = request.form.get("jornada_id", type=int) or jornada.id
+
+        # Validar que la sede y jornada del form pertenezcan al colegio
+        sede = Sede.query.filter_by(
+            id=sede_id_form,
+            colegio_id=current_user.colegio_id
+        ).first()
+        if not sede:
+            flash("La sede seleccionada no es válida.", "danger")
+            return redirect(url_for("colegio.lista_grupos",
+                                    sede_id=sede_id, jornada_id=jornada_id))
+
+        jornada = Jornada.query.filter_by(
+            id=jornada_id_form,
+            sede_id=sede.id,
+            colegio_id=current_user.colegio_id
+        ).first()
+        if not jornada:
+            flash("La jornada seleccionada no es válida.", "danger")
+            return redirect(url_for("colegio.lista_grupos",
+                                    sede_id=sede.id, jornada_id=jornada_id))
+
+        # ── Docentes filtrados por la sede seleccionada en el form ──
+        docentes = Docente.query.filter_by(
+            colegio_id=current_user.colegio_id,
+            sede_id=sede.id,
+            activo=True
+        ).order_by(Docente.nombre).all()
+
         grado = request.form.get("grado")
         nombre = request.form.get("nombre")
         director_docente_id = request.form.get("director_docente_id") or None
         anio_lectivo = datetime.now().year
 
+        # ── Validar duplicado ─────────────────────────────────────────
         grupo_duplicado = Grupo.query.filter_by(
             colegio_id=current_user.colegio_id,
             sede_id=sede.id,
@@ -353,9 +391,13 @@ def nuevo_grupo(sede_id, jornada_id):
 
         if grupo_duplicado:
             flash(f"El grupo {grado}{nombre} ya existe en esta jornada.", "danger")
-            return render_template("colegio/formulario_grupo.html", sede=sede, jornada=jornada, docentes=docentes,
-                                   grupo=None)
+            return render_template(
+                "colegio/formulario_grupo.html",
+                sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
+                grupo=None
+            )
 
+        # ── Validar que el docente no sea director de otro grupo ─────
         if director_docente_id:
             grupo_existente = Grupo.query.filter(
                 Grupo.director_docente_id == director_docente_id,
@@ -365,9 +407,13 @@ def nuevo_grupo(sede_id, jornada_id):
 
             if grupo_existente:
                 flash(f"El docente ya dirige el grupo {grupo_existente.grado}{grupo_existente.nombre}", "danger")
-                return render_template("colegio/formulario_grupo.html", sede=sede, jornada=jornada, docentes=docentes,
-                                       grupo=None)
+                return render_template(
+                    "colegio/formulario_grupo.html",
+                    sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
+                    grupo=None
+                )
 
+        # ── Crear el grupo ────────────────────────────────────────────
         grupo = Grupo(
             grado=grado,
             nombre=nombre,
@@ -383,9 +429,21 @@ def nuevo_grupo(sede_id, jornada_id):
         db.session.add(grupo)
         db.session.commit()
         flash("Grupo creado correctamente", "success")
-        return redirect(url_for("colegio.lista_grupos", sede_id=sede.id, jornada_id=jornada.id))
+        return redirect(url_for("colegio.lista_grupos",
+                                sede_id=sede.id, jornada_id=jornada.id))
 
-    return render_template("colegio/formulario_grupo.html", sede=sede, jornada=jornada, docentes=docentes, grupo=None)
+    # ── GET: docentes de la sede por defecto ──────────────────────────
+    docentes = Docente.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        sede_id=sede.id,
+        activo=True
+    ).order_by(Docente.nombre).all()
+
+    return render_template(
+        "colegio/formulario_grupo.html",
+        sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
+        grupo=None
+    )
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/editar",
@@ -520,6 +578,7 @@ def redistribuir_estudiantes(sede_id, jornada_id, grupo_origen_id, grupo_destino
 # ==========================================================
 @colegio_bp.route("/docentes")
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def lista_docentes():
     sede_id = request.args.get("sede_id")
     docentes_query = Docente.query.filter_by(colegio_id=current_user.colegio_id)
@@ -527,15 +586,21 @@ def lista_docentes():
         docentes_query = docentes_query.filter_by(sede_id=sede_id)
     docentes = docentes_query.order_by(Docente.nombre).all()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
-    return render_template("colegio/docentes.html", docentes=docentes, sedes=sedes, sede_id=sede_id)
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+
+    return render_template(
+        "colegio/docentes.html",
+        docentes=docentes,
+        sedes=sedes,
+        sede_id=sede_id,
+        layout=layout
+    )
 
 @colegio_bp.route("/docentes/nuevo", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def nuevo_docente():
-    if not current_user.es_admin_colegio:
-        abort(403)
-
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
 
     if request.method == "POST":
@@ -602,6 +667,7 @@ def nuevo_docente():
 
 @colegio_bp.route("/docentes/editar/<int:id>", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def editar_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
@@ -667,6 +733,7 @@ def editar_docente(id):
 
 @colegio_bp.route("/docentes/<int:id>/cambiar-estado")
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def cambiar_estado_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -684,6 +751,7 @@ def cambiar_estado_docente(id):
 
 @colegio_bp.route("/docentes/<int:id>/cambiar-password", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def cambiar_password_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == "POST":
@@ -721,6 +789,7 @@ def cambiar_password_docente(id):
 
 @colegio_bp.route("/docentes/eliminar/<int:id>", methods=["POST"])
 @login_required
+@requiere_permiso('secretaria.ver_docentes')
 def eliminar_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     tiene_permisos = Permiso.query.filter_by(docente_id=id).first()
@@ -801,6 +870,7 @@ def eliminar_permiso(id):
 # ==========================================================
 @colegio_bp.route('/coordinadores')
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def lista_coordinadores():
     sede_id = request.args.get('sede_id', type=int)
     consulta = Coordinador.query.filter_by(colegio_id=current_user.colegio_id)
@@ -814,6 +884,7 @@ def lista_coordinadores():
 
 @colegio_bp.route("/nuevo-coordinador", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def nuevo_coordinador():
     if request.method == "POST":
         try:
@@ -889,6 +960,7 @@ def nuevo_coordinador():
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/editar', methods=['GET', 'POST'])
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def editar_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
@@ -928,6 +1000,7 @@ def editar_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/cambiar-estado')
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def cambiar_estado_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -944,6 +1017,7 @@ def cambiar_estado_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/cambiar-password', methods=['GET', 'POST'])
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def cambiar_password_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == 'POST':
@@ -964,9 +1038,8 @@ def cambiar_password_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/eliminar')
 @login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def eliminar_coordinador(coordinador_id):
-    if not current_user.es_admin_colegio:
-        abort(403)
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     try:
         usuario = coordinador.usuario
@@ -1050,24 +1123,31 @@ def guardar_configuracion_escalamiento():
 # ==========================================================
 @colegio_bp.route("/estudiantes")
 @login_required
+@requiere_permiso('secretaria.ver_estudiantes')
 def lista_estudiantes():
     return redirect(url_for('estudiante.listar'))
 
 
 @colegio_bp.route("/acudientes")
 @login_required
+@requiere_permiso('secretaria.ver_acudientes')
 def lista_acudientes():
     from app.models.acudiente import Acudiente
     acudientes = Acudiente.query.filter_by(colegio_id=current_user.colegio_id).order_by(Acudiente.nombre).all()
-    return render_template("acudientes/acudientes.html", acudientes=acudientes)
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+
+    return render_template(
+        "acudientes/acudientes.html",
+        acudientes=acudientes,
+        layout=layout
+    )
 
 @colegio_bp.route("/acudientes/nuevo", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_acudientes')
 def nuevo_acudiente():
     from app.models.acudiente import Acudiente
-    if not current_user.es_admin_colegio:
-        abort(403)
     if request.method == "POST":
         try:
             nombre = request.form.get("nombre", "").strip()
@@ -1108,6 +1188,7 @@ def nuevo_acudiente():
 
 @colegio_bp.route("/acudientes/<int:id>/editar", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.ver_acudientes')
 def editar_acudiente(id):
     from app.models.acudiente import Acudiente
     acudiente = Acudiente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -1153,6 +1234,7 @@ def editar_acudiente(id):
 
 @colegio_bp.route("/acudientes/<int:id>/eliminar", methods=["POST"])
 @login_required
+@requiere_permiso('secretaria.ver_acudientes')
 def eliminar_acudiente(id):
     from app.models.acudiente import Acudiente
     acudiente = Acudiente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -2107,3 +2189,313 @@ def toggle_edicion_periodo():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+
+
+# ════════════════════════════════════════════════════════════════
+# API: DOCENTES POR SEDE (para fetch dinámico en formularios)
+# ════════════════════════════════════════════════════════════════
+
+@colegio_bp.route('/api/sedes/<int:sede_id>/docentes', methods=['GET'])
+@login_required
+def api_docentes_por_sede(sede_id):
+    """
+    Endpoint AJAX para obtener docentes activos de una sede específica.
+    Retorna JSON compatible con el fetch del frontend.
+    """
+    # Validación de seguridad: verificar que la sede pertenezca al colegio del usuario
+    sede = Sede.query.filter_by(
+        id=sede_id,
+        colegio_id=current_user.colegio_id
+    ).first_or_404()
+
+    # Consulta optimizada: solo docentes activos de esa sede
+    docentes = Docente.query.filter_by(
+        sede_id=sede_id,
+        colegio_id=current_user.colegio_id,
+        activo=True
+    ).order_by(Docente.nombre).all()
+
+    # Serialización limpia para JSON
+    data = [
+        {'id': d.id, 'nombre': f"{d.nombre or ''} {(d.apellido or '')}".strip()}
+        for d in docentes
+    ]
+
+    return jsonify(data)
+
+# ════════════════════════════════════════════════════════════════
+# USUARIOS OPERATIVOS: SECRETARIAS Y PORTEROS
+# ════════════════════════════════════════════════════════════════
+
+from app.services.colegio_usuarios_service import (
+    crear_usuario_operativo,
+    editar_usuario_operativo,
+    listar_usuarios_operativos,
+    ROLES_PERMITIDOS,
+)
+
+
+@colegio_bp.route("/usuarios-operativos")
+@login_required
+@requiere_permiso('secretaria.ver_porteros')
+def lista_usuarios_operativos_ruta():
+    rol_filtro = request.args.get("rol")
+    if rol_filtro not in ROLES_PERMITIDOS:
+        rol_filtro = None
+
+    usuarios = listar_usuarios_operativos(
+        colegio_id=current_user.colegio_id,
+        rol=rol_filtro,
+    )
+
+    total_secretarias = Usuario.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        rol="secretaria",
+        is_active=True,
+    ).count()
+
+    total_porteros = Usuario.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        rol="portero",
+        is_active=True,
+    ).count()
+
+    return render_template(
+        "colegio/usuarios_operativos.html",
+        usuarios=usuarios,
+        rol_filtro=rol_filtro,
+        total_secretarias=total_secretarias,
+        total_porteros=total_porteros,
+        limite_sin_costo=3,
+    )
+
+
+@colegio_bp.route("/usuarios-operativos/nuevo", methods=["GET", "POST"])
+@login_required
+def nuevo_usuario_operativo_ruta():
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    sedes = Sede.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True,
+    ).order_by(Sede.nombre).all()
+
+    rol_default = request.args.get("rol", "secretaria")
+    if rol_default not in ROLES_PERMITIDOS:
+        rol_default = "secretaria"
+
+    if request.method == "POST":
+        rol = request.form.get("rol", "").strip()
+        nombre = request.form.get("nombre", "").strip()
+        apellido = request.form.get("apellido", "").strip()
+        email = request.form.get("email", "").strip()
+        documento = request.form.get("documento", "").strip()
+        password = request.form.get("password", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+        sede_id = request.form.get("sede_id", type=int)
+        confirmar_costo = request.form.get("confirmar_costo") == "1"
+
+        if not password:
+            password = documento
+
+        if len(password) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres", "danger")
+            return redirect(url_for("colegio.nuevo_usuario_operativo_ruta", rol=rol))
+
+        ok, mensaje, usuario = crear_usuario_operativo(
+            colegio_id=current_user.colegio_id,
+            rol=rol,
+            nombre=nombre,
+            apellido=apellido,
+            email=email,
+            documento=documento,
+            sede_id=sede_id,
+            telefono=telefono,
+            confirmar_costo=confirmar_costo,
+            password_override=password,
+        )
+
+        if not ok and mensaje.startswith("CONFIRMAR_COSTO:"):
+            _, actuales, limite = mensaje.split(":")
+            return render_template(
+                "colegio/confirmar_costo_usuario.html",
+                rol=rol,
+                nombre=nombre,
+                apellido=apellido,
+                email=email,
+                documento=documento,
+                telefono=telefono,
+                sede_id=sede_id,
+                actuales=int(actuales),
+                limite=int(limite),
+            )
+
+        if ok:
+            flash(mensaje, "success")
+            return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+        flash(mensaje, "danger")
+        return redirect(url_for("colegio.nuevo_usuario_operativo_ruta", rol=rol))
+
+    return render_template(
+        "colegio/formulario_usuario_operativo.html",
+        usuario=None,
+        titulo="Nuevo Usuario Operativo",
+        rol_default=rol_default,
+        sedes=sedes,
+    )
+
+@colegio_bp.route("/usuarios-operativos/<int:usuario_id>/cambiar-estado", methods=["POST"])
+@login_required
+def cambiar_estado_usuario_operativo_ruta(usuario_id):
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    usuario = Usuario.query.filter_by(
+        id=usuario_id,
+        colegio_id=current_user.colegio_id,
+    ).first_or_404()
+
+    if usuario.rol not in ROLES_PERMITIDOS:
+        flash("Este usuario no es secretaria ni portero", "danger")
+        return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+    try:
+        usuario.is_active = not usuario.is_active
+        db.session.commit()
+        estado = "activado" if usuario.is_active else "desactivado"
+        flash(f"Usuario {estado} correctamente", "success" if usuario.is_active else "warning")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error: {str(e)}", "danger")
+
+    return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+@colegio_bp.route("/usuarios-operativos/<int:usuario_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_usuario_operativo_ruta(usuario_id):
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    usuario = Usuario.query.filter_by(
+        id=usuario_id,
+        colegio_id=current_user.colegio_id,
+    ).first_or_404()
+
+    if usuario.rol not in ROLES_PERMITIDOS:
+        flash("Este usuario no es secretaria ni portero", "danger")
+        return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+    sedes = Sede.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        activo=True,
+    ).order_by(Sede.nombre).all()
+
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        apellido = request.form.get("apellido", "").strip()
+        email = request.form.get("email", "").strip()
+        sede_id = request.form.get("sede_id", type=int)
+        activo = request.form.get("activo") == "on"
+        cambiar_password = request.form.get("cambiar_password") == "on"
+        nuevo_documento = request.form.get("nuevo_documento", "").strip()
+
+        ok, mensaje, _ = editar_usuario_operativo(
+            colegio_id=current_user.colegio_id,
+            usuario_id=usuario.id,
+            nombre=nombre,
+            apellido=apellido,
+            email=email,
+            sede_id=sede_id,
+            activo=activo,
+            cambiar_password=cambiar_password,
+            nuevo_documento=nuevo_documento if cambiar_password else None,
+        )
+
+        if ok:
+            flash(mensaje, "success")
+            return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+        flash(mensaje, "danger")
+        return redirect(url_for("colegio.editar_usuario_operativo_ruta", usuario_id=usuario.id))
+
+    return render_template(
+        "colegio/formulario_usuario_operativo.html",
+        usuario=usuario,
+        titulo="Editar Usuario Operativo",
+        rol_default=usuario.rol,
+        sedes=sedes,
+    )
+
+
+# ════════════════════════════════════════════════════════════════
+# PERMISOS FINOS DE USUARIO (solo admin del colegio)
+# ════════════════════════════════════════════════════════════════
+
+from app.utils.permisos_catalogo import CATALOGO, catalogo_por_grupo
+from app.models.permiso_usuario import PermisoUsuario
+
+
+@colegio_bp.route("/usuarios-operativos/<int:usuario_id>/permisos", methods=["GET", "POST"])
+@login_required
+def editar_permisos_usuario_ruta(usuario_id):
+    """Ver y editar los permisos finos de un usuario operativo.
+    Solo el admin del colegio puede acceder.
+    Aplica a secretarias (no a porteros).
+    """
+    if not current_user.es_admin_colegio:
+        abort(403)
+
+    usuario = Usuario.query.filter_by(
+        id=usuario_id,
+        colegio_id=current_user.colegio_id,
+    ).first_or_404()
+
+    # Solo secretarias por ahora (porteros no tienen permisos configurables)
+    if usuario.rol != "secretaria":
+        flash("Solo las secretarias tienen permisos configurables.", "warning")
+        return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
+    if request.method == "POST":
+        # Recorrer el catalogo: si el checkbox viene marcado, valor=True; si no, False.
+        for clave in CATALOGO.keys():
+            valor = request.form.get(clave) == "on"
+
+            permiso = PermisoUsuario.query.filter_by(
+                usuario_id=usuario.id,
+                clave=clave,
+            ).first()
+
+            if permiso is None:
+                # Crear la fila solo si el valor es True (evitar basura de False)
+                if valor:
+                    nuevo = PermisoUsuario(
+                        usuario_id=usuario.id,
+                        clave=clave,
+                        valor=True,
+                        creado_por=current_user.id,
+                    )
+                    db.session.add(nuevo)
+            else:
+                permiso.valor = valor
+                permiso.creado_por = current_user.id
+
+        db.session.commit()
+        flash(f"Permisos de {usuario.nombre or usuario.email} actualizados.", "success")
+        return redirect(url_for("colegio.editar_permisos_usuario_ruta", usuario_id=usuario.id))
+
+    # GET: cargar permisos actuales como dict
+    permisos_actuales = {
+        p.clave: bool(p.valor)
+        for p in PermisoUsuario.query.filter_by(usuario_id=usuario.id).all()
+    }
+
+    return render_template(
+        "colegio/formulario_permisos_usuario.html",
+        usuario=usuario,
+        catalogo_por_grupo=catalogo_por_grupo(),
+        permisos_actuales=permisos_actuales,
+    )

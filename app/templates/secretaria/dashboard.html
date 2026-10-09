@@ -1,0 +1,71 @@
+{% extends "secretaria/secretaria_base.html" %}
+
+{% block colegio_page_title %}Panel de Secretaría{% endblock %}
+
+{% block colegio_content %}
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Docentes</p>
+                        <h3 class="mb-0">{{ total_docentes }}</h3>
+                    </div>
+                    <i class="bi bi-people fs-2 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Estudiantes</p>
+                        <h3 class="mb-0">{{ total_estudiantes }}</h3>
+                    </div>
+                    <i class="bi bi-mortarboard fs-2 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Acudientes</p>
+                        <h3 class="mb-0">{{ total_acudientes }}</h3>
+                    </div>
+                    <i class="bi bi-person-heart fs-2 text-info"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1 small">Coordinadores</p>
+                        <h3 class="mb-0">{{ total_coordinadores }}</h3>
+                    </div>
+                    <i class="bi bi-person-workspace fs-2 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Bienvenida, <strong>{{ current_user.nombre }}</strong>.
+    Desde aquí podés gestionar docentes, estudiantes, acudientes y coordinadores del colegio.
+</div>
+
+{% endblock %}

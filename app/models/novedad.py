@@ -6,7 +6,7 @@ from enum import Enum as PyEnum
 class TipoNovedad(PyEnum):
     DISCIPLINA = "DISCIPLINA"
     ACADEMICO = "ACADEMICO"
-    LLEGADA_TARDE = "LLegada_Tarde"
+    LLEGADA_TARDE = "LLEGADA_TARDE"
 
 
 class TipoGravedad(PyEnum):

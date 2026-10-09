@@ -1310,3 +1310,4 @@ def citaciones():
     if current_user.rol != 'docente':
         abort(403)
     return render_template("docentes/citaciones.html")
+

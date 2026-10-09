@@ -1,0 +1,181 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block title %}Usuarios Operativos | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-people-fill text-primary me-2"></i>
+                Usuarios Operativos
+            </h2>
+            <p class="text-muted mb-0">
+                Gestiona las secretarias y porteros de tu colegio
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='secretaria') }}"
+               class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Nueva Secretaria
+            </a>
+            <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='portero') }}"
+               class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle me-2"></i>Nuevo Portero
+            </a>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Tarjetas resumen -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Secretarias activas</div>
+                        <div class="fs-3 fw-bold">{{ total_secretarias }}</div>
+                        {% if total_secretarias >= limite_sin_costo %}
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Supera el límite sin costo ({{ limite_sin_costo }})
+                            </small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-person-badge fs-1 text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Porteros activos</div>
+                        <div class="fs-3 fw-bold">{{ total_porteros }}</div>
+                        {% if total_porteros >= limite_sin_costo %}
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Supera el límite sin costo ({{ limite_sin_costo }})
+                            </small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-shield-lock fs-1 text-success opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="mb-3">
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
+           class="btn btn-sm {{ 'btn-primary' if not rol_filtro else 'btn-outline-secondary' }}">
+            Todos
+        </a>
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta', rol='secretaria') }}"
+           class="btn btn-sm {{ 'btn-primary' if rol_filtro == 'secretaria' else 'btn-outline-secondary' }}">
+            Solo Secretarias
+        </a>
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta', rol='portero') }}"
+           class="btn btn-sm {{ 'btn-primary' if rol_filtro == 'portero' else 'btn-outline-secondary' }}">
+            Solo Porteros
+        </a>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if usuarios %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Nombre</th>
+                            <th>Rol</th>
+                            <th>Email</th>
+                            <th>Sede</th>
+                            <th>Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in usuarios %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-semibold">{{ u.nombre }}</div>
+                            </td>
+                            <td>
+                                {% if u.rol == 'secretaria' %}
+                                    <span class="badge bg-primary">Secretaria</span>
+                                {% else %}
+                                    <span class="badge bg-success">Portero</span>
+                                {% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ u.email }}</small></td>
+                            <td>
+                                {% if u.sede %}
+                                    {{ u.sede.nombre }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="{{ url_for('colegio.editar_usuario_operativo_ruta', usuario_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if u.rol == 'secretaria' %}
+                                <a href="{{ url_for('colegio.editar_permisos_usuario_ruta', usuario_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-info" title="Permisos">
+                                    <i class="bi bi-shield-lock"></i>
+                                </a>
+                                {% endif %}
+                                <form method="post"
+                                      action="{{ url_for('colegio.cambiar_estado_usuario_operativo_ruta', usuario_id=u.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-{{ 'warning' if u.is_active else 'success' }}"
+                                            title="{{ 'Desactivar' if u.is_active else 'Activar' }}">
+                                        <i class="bi bi-{{ 'pause' if u.is_active else 'play' }}"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2 mb-0">No hay usuarios operativos registrados aún.</p>
+                <p class="small">Crea la primera secretaria o portero con los botones de arriba.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

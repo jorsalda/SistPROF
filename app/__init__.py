@@ -78,13 +78,15 @@ def create_app():
         from .routes.colegio_routes import colegio_bp
         from .routes.coordinador_routes import coordinador_bp
         from .routes.docente_routes import docente_bp
-
+        from app.routes.secretaria_routes import secretaria_bp
+        from app.routes.portero_routes import portero_bp
         # ✅ IMPORTACIÓN CRÍTICA: Debe coincidir con estudiantes_routes.py
         from .routes.estudiantes_routes import estudiante_bp
 
         from .routes.examen_routes import examen_bp
         from .routes.membresia_routes import membresia_bp
         from .routes.permiso_routes import permiso_bp
+        from app.routes.portero_routes import portero_bp
     except ImportError as e:
         logger.error(f"❌ ERROR CRÍTICO AL IMPORTAR BLUEPRINTS: {e}")
         raise
@@ -101,13 +103,15 @@ def create_app():
     app.register_blueprint(acudiente_bp)
     app.register_blueprint(api_acudiente_bp)
     app.register_blueprint(membresia_bp)
-
+    app.register_blueprint(secretaria_bp)
+    app.register_blueprint(portero_bp)
     # -------------------------------------------------------------------------
     # 5. CSRF
     # -------------------------------------------------------------------------
     csrf = CSRFProtect(app)
     csrf.exempt(api_examen_bp)
     csrf.exempt(api_acudiente_bp)
+    csrf.exempt(portero_bp)
 
     # -------------------------------------------------------------------------
     # 6. MANEJADORES DE ERROR
@@ -141,5 +145,24 @@ def create_app():
         atexit.register(lambda: scheduler.shutdown())
     except Exception as e:
         logger.error(f"⚠️ Scheduler no iniciado: {str(e)}")
+
+    # -------------------------------------------------------------------------
+    # 8. CONTEXT PROCESSOR — Helpers de permisos disponibles en templates
+    # -------------------------------------------------------------------------
+    from app.utils.permisos import tiene_permiso, tiene_alguno
+    from flask_login import current_user
+
+    @app.context_processor
+    def inject_permisos():
+        def tiene_permiso_template(clave):
+            return tiene_permiso(current_user, clave)
+
+        def tiene_alguno_template(claves):
+            return tiene_alguno(current_user, claves)
+
+        return {
+            'tiene_permiso': tiene_permiso_template,
+            'tiene_alguno': tiene_alguno_template,
+        }
 
     return app

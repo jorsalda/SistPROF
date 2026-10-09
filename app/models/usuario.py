@@ -29,6 +29,11 @@ class Usuario(db.Model, UserMixin):
         nullable=True
     )
 
+    apellido = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
     failed_attempts = db.Column(
         db.Integer,
         default=0,
@@ -56,7 +61,6 @@ class Usuario(db.Model, UserMixin):
         lazy=True
     )
 
-    # ✅ Sede del usuario
     sede_id = db.Column(
         db.Integer,
         db.ForeignKey('sedes.id'),
@@ -77,6 +81,8 @@ class Usuario(db.Model, UserMixin):
             'superadmin',
             'admin_colegio',
             'coordinador',
+            'secretaria',
+            'portero',
             'docente',
             'estudiante',
             'acudiente',
@@ -110,6 +116,14 @@ class Usuario(db.Model, UserMixin):
     @property
     def es_coordinador(self):
         return self.rol == 'coordinador'
+
+    @property
+    def es_secretaria(self):
+        return self.rol == 'secretaria'
+
+    @property
+    def es_portero(self):
+        return self.rol == 'portero'
 
     @property
     def es_docente(self):
@@ -165,19 +179,15 @@ class Usuario(db.Model, UserMixin):
             (bool, mensaje)
         """
 
-        # Usuario desactivado
         if not self.is_active:
             return False, "Usuario desactivado por el administrador"
 
-        # Superadmin siempre accede
         if self.is_superadmin:
             return True, "Superadmin"
 
-        # Usuario aprobado
         if self.is_approved:
             return True, "Aprobado"
 
-        # Control por fecha explícita
         if self.fecha_expiracion:
 
             if datetime.utcnow() <= self.fecha_expiracion:
@@ -190,7 +200,6 @@ class Usuario(db.Model, UserMixin):
 
             return False, "Prueba vencida"
 
-        # Compatibilidad por días de prueba
         dias_prueba = (
             self.dias_prueba
             if self.dias_prueba
@@ -268,9 +277,5 @@ class Usuario(db.Model, UserMixin):
 @event.listens_for(Usuario, 'before_insert')
 @event.listens_for(Usuario, 'before_update')
 def validar_superadmin(mapper, connection, target):
-    """
-    Los superadmins NUNCA deben tener fecha de expiración.
-    Esto se ejecuta automáticamente antes de crear/actualizar un usuario.
-    """
     if target.rol == 'superadmin':
         target.fecha_expiracion = None

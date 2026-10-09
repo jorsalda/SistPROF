@@ -5,6 +5,18 @@ from flask import current_app
 
 from alembic import context
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# ──────────────────────────────────────────────────────────────
+# Arrancar la app Flask para tener contexto antes de Alembic.
+# Sin esto, current_app falla con "Working outside of application context".
+# ──────────────────────────────────────────────────────────────
+from app import create_app
+flask_app = create_app()
+flask_app.app_context().push()
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -111,5 +123,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
-

@@ -23,9 +23,11 @@ class Pregunta(db.Model):
     docente_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     examen_id = db.Column(db.Integer, db.ForeignKey('examenes.id'), nullable=True)
 
-    # ✅ AGREGAR ESTAS DOS LÍNEAS (Faltaban)
     url_contexto = db.Column(db.String(300), nullable=True)
     tipo_contexto = db.Column(db.String(20), nullable=True)
+
+    # Contexto en formato JSONB (conserva datos historicos)
+    contexto = db.Column(JSONB, nullable=True)
 
     # ✅ NUEVO: Vínculo con el indicador de logro para calificación por competencia
     indicador_logro_id = db.Column(
@@ -58,10 +60,9 @@ class Pregunta(db.Model):
             'materia_id': self.materia_id,
             'docente_id': self.docente_id,
             'examen_id': self.examen_id,
-            # ✅ Incluir contexto en el diccionario
             'url_contexto': self.url_contexto,
             'tipo_contexto': self.tipo_contexto,
-            # ✅ AGREGADO: ID del indicador
+            'contexto': self.contexto,
             'indicador_logro_id': self.indicador_logro_id
         }
 

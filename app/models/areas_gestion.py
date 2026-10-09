@@ -21,7 +21,7 @@ class AreaGestion(db.Model):
 
     # Relación 1:N con Competencias
     competencias = db.relationship(
-        "CompetenciaDocente",
+        "Competencia",
         back_populates="area_gestion",
         lazy=True,
         cascade="all, delete-orphan"

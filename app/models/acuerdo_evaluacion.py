@@ -1,4 +1,3 @@
-
 # app/models/acuerdo_evaluacion.py
 
 from datetime import datetime
@@ -25,8 +24,8 @@ class AcuerdoEvaluacion(db.Model):
     anio = db.Column(db.Integer, nullable=False)
 
     estado = db.Column(
-        db.Enum("BORRADOR", "CERRADO", name="estado_acuerdo"),
-        default="BORRADOR",
+        db.Enum("pendiente", "aprobado", "rechazado", name="estado_acuerdo"),
+        default="pendiente",
         nullable=False
     )
 
@@ -56,4 +55,3 @@ class AcuerdoEvaluacion(db.Model):
 
     def __repr__(self):
         return f"<AcuerdoEvaluacion {self.id}>"
-

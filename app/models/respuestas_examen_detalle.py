@@ -1,4 +1,3 @@
-
 from app.extensions import db
 
 
@@ -43,6 +42,12 @@ class RespuestaExamenDetalle(db.Model):
         nullable=True
     )
 
+    indicador_logro_id = db.Column(
+        db.Integer,
+        db.ForeignKey("indicadores_logro.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     resultado = db.relationship(
         "ResultadoExamen",
         back_populates="detalles"
@@ -50,4 +55,3 @@ class RespuestaExamenDetalle(db.Model):
 
     def __repr__(self):
         return f'<Detalle P{self.numero_pregunta} - Correcta: {self.es_correcta}>'
-

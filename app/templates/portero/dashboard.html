@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Portería - SistPROF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colegio.css') }}">
+</head>
+<body>
+<div class="colegio-container">
+
+    <aside class="colegio-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="bi bi-door-open"></i> Portería</h2>
+            <p>Panel de Control</p>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="{{ url_for('portero.dashboard') }}"
+                   class="menu-link {% if request.endpoint == 'portero.dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+                     <li class="menu-item">
+             <a href="{{ url_for('portero.lector') }}"
+                class="menu-link {% if request.endpoint == 'portero.lector' %}active{% endif %}">
+                 <i class="bi bi-qr-code-scan"></i> Lector QR
+             </a>
+         </li>
+        </ul>
+
+        <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+        </button>
+    </aside>
+
+    <main class="colegio-content">
+        <header class="colegio-header">
+            <h1>Panel de Portería</h1>
+            <div class="user-info">
+                <i class="bi bi-person-circle"></i>
+                {{ current_user.email }}
+            </div>
+        </header>
+
+        <div class="colegio-main-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="text-muted mb-1 small">Estudiantes Registrados</p>
+                                    <h3 class="mb-0">{{ total_estudiantes }}</h3>
+                                </div>
+                                <i class="bi bi-mortarboard fs-2 text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Bienvenido, <strong>{{ current_user.nombre }}</strong>.
+                Desde aquí podrás registrar ingresos y salidas de estudiantes mediante el lector QR.
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

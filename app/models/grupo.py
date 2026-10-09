@@ -5,6 +5,18 @@ from datetime import datetime
 class Grupo(db.Model):
     __tablename__ = "grupos"
 
+    __table_args__ = (
+        db.UniqueConstraint(
+            "colegio_id",
+            "sede_id",
+            "jornada_id",
+            "anio_lectivo",
+            "grado",
+            "nombre",
+            name="grupo_unico"
+        ),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(10), nullable=False)  # "A", "B", "C"
     grado = db.Column(db.String(20), nullable=False)  # "6", "7", "10", "11"
@@ -84,6 +96,8 @@ class Grupo(db.Model):
         lazy=True,
         cascade="all, delete-orphan"
     )
+
+
 class GrupoAreas(db.Model):
     """Tabla intermedia: Grupo ↔ Área"""
 
@@ -139,8 +153,6 @@ class GrupoAreas(db.Model):
         backref="asignaciones_areas_grupo"
     )
 
-
-
     def __repr__(self):
         return f"<GrupoAreas Grupo={self.grupo_id} Area={self.area_id}>"
 
@@ -195,6 +207,7 @@ class DirectoresGrupo(db.Model):
             f"<DirectoresGrupo Grupo={self.grupo_id} "
             f"Docente={self.docente_id}>"
         )
+
 
 class FusionGrupo(db.Model):
     """

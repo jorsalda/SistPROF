@@ -69,11 +69,71 @@
                         {% endif %}
                     {% endwith %}
 
-                    <form method="POST">
+                    <form method="POST" id="formGrupo">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- SECCIÓN 1: Información del Grupo -->
+                        <!-- SECCIÓN 0: Ubicación (Sede + Jornada) -->
                         <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom">
+                            <i class="bi bi-geo-alt me-2"></i>Ubicación
+                        </h5>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Sede <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-building text-muted"></i>
+                                    </span>
+                                    <select name="sede_id"
+                                            id="selectSede"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required>
+                                        {% for s in sedes %}
+                                            <option value="{{ s.id }}"
+                                                    {% if s.id == sede.id %}selected{% endif %}>
+                                                {{ s.nombre }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Elija la sede donde se creará el grupo
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Jornada <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-clock text-muted"></i>
+                                    </span>
+                                    <select name="jornada_id"
+                                            id="selectJornada"
+                                            class="form-select border-start-0 ps-0 form-control-lg"
+                                            required>
+                                        {% for s in sedes %}
+                                            {% for j in s.jornadas %}
+                                                <option value="{{ j.id }}"
+                                                        data-sede="{{ s.id }}"
+                                                        {% if j.id == jornada.id %}selected{% endif %}>
+                                                    {{ j.nombre }}
+                                                </option>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Se filtrará automáticamente según la sede
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 1: Información del Grupo -->
+                        <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
                             <i class="bi bi-book me-2"></i>Información del Grupo
                         </h5>
 
@@ -154,7 +214,9 @@
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-person-badge text-muted"></i>
                                     </span>
+                                    <!-- CORRECCIÓN: Se agregó id="selectDirector" aquí -->
                                     <select name="director_docente_id"
+                                            id="selectDirector"
                                             class="form-select border-start-0 ps-0 form-control-lg">
                                         <option value="">Sin asignar</option>
                                         {% for docente in docentes %}
@@ -166,37 +228,7 @@
                                     </select>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Opcional - Puede asignarse después
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Información de Contexto -->
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-6">
-                                <div class="alert alert-light border rounded-3 mb-0">
-                                    <div class="d-flex align-items-start">
-                                        <div class="flex-shrink-0">
-                                            <i class="bi bi-building text-primary fs-5"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <strong class="d-block mb-1">Sede</strong>
-                                            <span class="text-muted">{{ sede.nombre }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="alert alert-light border rounded-3 mb-0">
-                                    <div class="d-flex align-items-start">
-                                        <div class="flex-shrink-0">
-                                            <i class="bi bi-clock text-primary fs-5"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <strong class="d-block mb-1">Jornada</strong>
-                                            <span class="text-muted">{{ jornada.nombre }}</span>
-                                        </div>
-                                    </div>
+                                    <i class="bi bi-info-circle"></i> Opcional - Los docentes mostrados son de la sede seleccionada al cargar la página
                                 </div>
                             </div>
                         </div>
@@ -261,5 +293,82 @@
         font-size: 1rem;
     }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectSede = document.getElementById('selectSede');
+    const selectJornada = document.getElementById('selectJornada');
+    const selectDirector = document.getElementById('selectDirector');
+
+    if (!selectSede || !selectJornada || !selectDirector) return;
+
+    // ── Guardar todas las opciones originales de jornada ──────────
+    const todasLasJornadas = Array.from(selectJornada.options);
+
+    function filtrarJornadas() {
+        const sedeId = selectSede.value;
+        const valorActual = selectJornada.value;
+
+        selectJornada.innerHTML = '';
+
+        const jornadasFiltradas = todasLasJornadas.filter(opt => opt.dataset.sede === sedeId);
+        jornadasFiltradas.forEach(opt => selectJornada.appendChild(opt));
+
+        const existeValor = jornadasFiltradas.some(opt => opt.value === valorActual);
+        if (existeValor) {
+            selectJornada.value = valorActual;
+        } else if (jornadasFiltradas.length > 0) {
+            selectJornada.value = jornadasFiltradas[0].value;
+        }
+    }
+
+    // ── Cargar docentes por sede vía fetch ────────────────────────
+    async function cargarDocentesPorSede(sedeId) {
+        const directorPrevio = selectDirector.value;
+
+        selectDirector.innerHTML = '<option value="">Cargando docentes...</option>';
+        selectDirector.disabled = true;
+
+        try {
+            const resp = await fetch(`/dashboard/api/sedes/${sedeId}/docentes`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            });
+
+            if (!resp.ok) throw new Error('Error al cargar docentes');
+
+            const docentes = await resp.json();
+
+            selectDirector.innerHTML = '<option value="">Sin asignar</option>';
+            docentes.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.nombre;
+                selectDirector.appendChild(opt);
+            });
+
+            if (directorPrevio && docentes.some(d => String(d.id) === String(directorPrevio))) {
+                selectDirector.value = directorPrevio;
+            }
+        } catch (err) {
+            console.error(err);
+            selectDirector.innerHTML = '<option value="">Error al cargar docentes</option>';
+        } finally {
+            selectDirector.disabled = false;
+        }
+    }
+
+    // ── Eventos ──────────────────────────────────────────────────
+    selectSede.addEventListener('change', function () {
+        filtrarJornadas();
+        cargarDocentesPorSede(selectSede.value);
+    });
+
+    // Al cargar la página: filtrar jornadas y cargar docentes de la sede inicial
+    filtrarJornadas();
+    cargarDocentesPorSede(selectSede.value);
+});
+</script>
 
 {% endblock %}

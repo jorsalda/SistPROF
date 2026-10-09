@@ -31,7 +31,7 @@ from .configuracion_periodo import ConfiguracionPeriodo
 from .areas_gestion import AreaGestion
 
 from .competencia_contribucion import competencia_contribucion
-from .CompetenciaDocente import CompetenciaDocente
+from .competencia import Competencia
 from .CompetenciaEstudiante import CompetenciaEstudiante
 from .contribucion import Contribucion
 from .indicador_logro import IndicadorLogro
@@ -79,6 +79,7 @@ from .ajuste_razonable import AjusteRazonable
 # Permisos y tokens
 from .permiso import Permiso
 from .token_activacion import TokenActivacion
+from .permiso_usuario import PermisoUsuario
 
 # Notificaciones
 from .notification_log import NotificationLog
@@ -95,7 +96,7 @@ __all__ = [
     'PlanEstudios', 'Periodo', 'PeriodoAcademico',
     'ConfiguracionPeriodo',  # ✅ NUEVO
     'AreaGestion',
-    'competencia_contribucion', 'CompetenciaDocente',
+    'competencia_contribucion', 'Competencia',
     'CompetenciaEstudiante', 'Contribucion', 'IndicadorLogro',
     'Examen', 'Pregunta', 'TipoExamen', 'ResultadoExamen',
     'RespuestaExamenDetalle', 'EvaluacionFinal', 'EvaluacionCriterio',
@@ -108,7 +109,7 @@ __all__ = [
     'ConfiguracionDisciplinaria', 'ConfiguracionEscalamiento',
     'Alerta', 'Seguimiento',
     'PIAR', 'AjusteRazonable',
-    'Permiso', 'TokenActivacion',
+    'Permiso', 'TokenActivacion', 'PermisoUsuario',
     'NotificationLog',
     'DocenteAreas'
 ]

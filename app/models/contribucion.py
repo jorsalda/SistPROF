@@ -29,9 +29,9 @@ class Contribucion(db.Model):
         backref="contribuciones"
     )
 
-    # Relación N:M con CompetenciaDocente
+    # Relación N:M con Competencia
     competencias = db.relationship(
-        "CompetenciaDocente",
+        "Competencia",
         secondary=competencia_contribucion,
         back_populates="contribuciones",
         lazy=True

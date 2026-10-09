@@ -20,6 +20,11 @@ class Materia(db.Model):
         nullable=True
     )
 
+    estado = db.Column(
+        db.Boolean,
+        default=True
+    )
+
     # ================= RELACIONES =================
 
     # Competencias de la materia

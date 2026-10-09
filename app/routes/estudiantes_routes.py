@@ -245,6 +245,9 @@ def listar():
     ).distinct().order_by(Estudiante.grado).all()
     grados_lista = [g[0] for g in grados_unicos if g[0]]
 
+    # Layout dinamico: secretaria ve con su sidebar, admin con el suyo
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+
     return render_template(
         "estudiantes/listado.html",
         estudiantes=estudiantes,
@@ -253,7 +256,8 @@ def listar():
         grados_lista=grados_lista,
         current_sede_id=sede_id,
         current_grado=grado,
-        current_grupo_id=grupo_id
+        current_grupo_id=grupo_id,
+        layout=layout
     )
 
 

@@ -30,6 +30,12 @@ def index():
         if current_user.rol == 'superadmin':
             return redirect(url_for('admin.dashboard'))
 
+        # SECRETARIA
+        elif current_user.rol == 'secretaria':
+            return redirect(url_for('secretaria.dashboard'))
+        # PORTERO
+        elif current_user.rol == 'portero':
+            return redirect(url_for('portero.dashboard'))
         # ADMIN COLEGIO
         elif current_user.rol == 'admin_colegio':
             return redirect(url_for('colegio.dashboard'))
@@ -71,6 +77,12 @@ def login():
             if resultado.rol == 'superadmin':
                 return redirect(url_for('admin.dashboard'))
 
+            # SECRETARIA
+            elif resultado.rol == 'secretaria':
+                return redirect(url_for('secretaria.dashboard'))
+            # PORTERO
+            elif resultado.rol == 'portero':
+                return redirect(url_for('portero.dashboard'))
             # ADMIN COLEGIO
             elif resultado.rol == 'admin_colegio':
                 return redirect(url_for('colegio.dashboard'))

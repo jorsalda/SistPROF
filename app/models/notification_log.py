@@ -1,10 +1,18 @@
 from app.extensions import db
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class NotificationLog(db.Model):
     __tablename__ = "notification_logs"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index(
+            'idx_notification_logs_estado_tipo',
+            'estado', 'tipo',
+            postgresql_where=db.text("estado <> 'enviado'")
+        ),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
 
@@ -23,8 +31,7 @@ class NotificationLog(db.Model):
     # Tipo de notificación
     tipo = db.Column(
         db.String(50),
-        nullable=False,
-        index=True
+        nullable=False
     )
 
     # Destinatario y contenido
@@ -39,15 +46,14 @@ class NotificationLog(db.Model):
     estado = db.Column(
         db.String(20),
         nullable=False,
-        default='pendiente',
-        index=True
+        default='pendiente'
     )
 
     # Mensaje de error si falla
     error_msg = db.Column(db.Text, nullable=True)
 
-    # Payload JSON para datos adicionales
-    payload_json = db.Column(db.JSON, nullable=True)
+    # Payload JSONB para datos adicionales (permite indexacion y busquedas)
+    payload_json = db.Column(JSONB, nullable=True)
 
     # Timestamps
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)

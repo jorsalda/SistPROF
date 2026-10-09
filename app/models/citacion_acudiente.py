@@ -24,6 +24,12 @@ class CitacionAcudiente(db.Model):
         default=datetime.utcnow
     )
 
+    # ✅ NUEVA: el tipo de origen de la citación (TIPO_3, PIAR_TIPO2, PIAR_TIPO3)
+    tipo_origen = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
     estudiante_id = db.Column(
         db.Integer,
         db.ForeignKey("estudiantes.id", ondelete="CASCADE"),
