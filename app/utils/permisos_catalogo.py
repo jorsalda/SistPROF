@@ -1,18 +1,57 @@
 """Catalogo de claves de permisos finos.
 
 Cada clave representa un permiso configurable por el admin del colegio.
-Las claves estan agrupadas por area funcional.
+Las claves estan agrupadas por area funcional y entidad.
 """
 
 # ─────────────────────────────────────────────────────────────
-# SECRETARIA — Acceso a modulos del sidebar
+# SECRETARIA — Docentes
 # ─────────────────────────────────────────────────────────────
 
 SECRETARIA_VER_DOCENTES = 'secretaria.ver_docentes'
+SECRETARIA_CREAR_DOCENTES = 'secretaria.crear_docentes'
+SECRETARIA_EDITAR_DOCENTES = 'secretaria.editar_docentes'
+SECRETARIA_ELIMINAR_DOCENTES = 'secretaria.eliminar_docentes'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Estudiantes
+# ─────────────────────────────────────────────────────────────
+
 SECRETARIA_VER_ESTUDIANTES = 'secretaria.ver_estudiantes'
+SECRETARIA_CREAR_ESTUDIANTES = 'secretaria.crear_estudiantes'
+SECRETARIA_EDITAR_ESTUDIANTES = 'secretaria.editar_estudiantes'
+SECRETARIA_ELIMINAR_ESTUDIANTES = 'secretaria.eliminar_estudiantes'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Acudientes
+# ─────────────────────────────────────────────────────────────
+
 SECRETARIA_VER_ACUDIENTES = 'secretaria.ver_acudientes'
+SECRETARIA_CREAR_ACUDIENTES = 'secretaria.crear_acudientes'
+SECRETARIA_EDITAR_ACUDIENTES = 'secretaria.editar_acudientes'
+SECRETARIA_ELIMINAR_ACUDIENTES = 'secretaria.eliminar_acudientes'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Coordinadores
+# ─────────────────────────────────────────────────────────────
+
 SECRETARIA_VER_COORDINADORES = 'secretaria.ver_coordinadores'
+SECRETARIA_CREAR_COORDINADORES = 'secretaria.crear_coordinadores'
+SECRETARIA_EDITAR_COORDINADORES = 'secretaria.editar_coordinadores'
+SECRETARIA_ELIMINAR_COORDINADORES = 'secretaria.eliminar_coordinadores'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Porteros
+# ─────────────────────────────────────────────────────────────
+
 SECRETARIA_VER_PORTEROS = 'secretaria.ver_porteros'
+SECRETARIA_CREAR_PORTEROS = 'secretaria.crear_porteros'
+SECRETARIA_EDITAR_PORTEROS = 'secretaria.editar_porteros'
+SECRETARIA_ELIMINAR_PORTEROS = 'secretaria.eliminar_porteros'
 
 
 # ─────────────────────────────────────────────────────────────
@@ -20,30 +59,114 @@ SECRETARIA_VER_PORTEROS = 'secretaria.ver_porteros'
 # ─────────────────────────────────────────────────────────────
 
 CATALOGO = {
+    # Docentes
     SECRETARIA_VER_DOCENTES: {
         'titulo': 'Ver Docentes',
-        'descripcion': 'Acceso al listado y gestion de docentes.',
-        'grupo': 'Secretaria',
+        'descripcion': 'Acceso al listado de docentes.',
+        'grupo': 'Secretaría · Docentes',
     },
+    SECRETARIA_CREAR_DOCENTES: {
+        'titulo': 'Crear Docentes',
+        'descripcion': 'Permite crear nuevos docentes.',
+        'grupo': 'Secretaría · Docentes',
+    },
+    SECRETARIA_EDITAR_DOCENTES: {
+        'titulo': 'Editar Docentes',
+        'descripcion': 'Permite editar docentes existentes.',
+        'grupo': 'Secretaría · Docentes',
+    },
+    SECRETARIA_ELIMINAR_DOCENTES: {
+        'titulo': 'Eliminar Docentes',
+        'descripcion': 'Permite eliminar docentes.',
+        'grupo': 'Secretaría · Docentes',
+    },
+
+    # Estudiantes
     SECRETARIA_VER_ESTUDIANTES: {
         'titulo': 'Ver Estudiantes',
-        'descripcion': 'Acceso al listado y gestion de estudiantes.',
-        'grupo': 'Secretaria',
+        'descripcion': 'Acceso al listado de estudiantes.',
+        'grupo': 'Secretaría · Estudiantes',
     },
+    SECRETARIA_CREAR_ESTUDIANTES: {
+        'titulo': 'Crear Estudiantes',
+        'descripcion': 'Permite crear nuevos estudiantes.',
+        'grupo': 'Secretaría · Estudiantes',
+    },
+    SECRETARIA_EDITAR_ESTUDIANTES: {
+        'titulo': 'Editar Estudiantes',
+        'descripcion': 'Permite editar estudiantes existentes.',
+        'grupo': 'Secretaría · Estudiantes',
+    },
+    SECRETARIA_ELIMINAR_ESTUDIANTES: {
+        'titulo': 'Eliminar Estudiantes',
+        'descripcion': 'Permite eliminar estudiantes.',
+        'grupo': 'Secretaría · Estudiantes',
+    },
+
+    # Acudientes
     SECRETARIA_VER_ACUDIENTES: {
         'titulo': 'Ver Acudientes',
-        'descripcion': 'Acceso al listado y gestion de acudientes.',
-        'grupo': 'Secretaria',
+        'descripcion': 'Acceso al listado de acudientes.',
+        'grupo': 'Secretaría · Acudientes',
     },
+    SECRETARIA_CREAR_ACUDIENTES: {
+        'titulo': 'Crear Acudientes',
+        'descripcion': 'Permite crear nuevos acudientes.',
+        'grupo': 'Secretaría · Acudientes',
+    },
+    SECRETARIA_EDITAR_ACUDIENTES: {
+        'titulo': 'Editar Acudientes',
+        'descripcion': 'Permite editar acudientes existentes.',
+        'grupo': 'Secretaría · Acudientes',
+    },
+    SECRETARIA_ELIMINAR_ACUDIENTES: {
+        'titulo': 'Eliminar Acudientes',
+        'descripcion': 'Permite eliminar acudientes.',
+        'grupo': 'Secretaría · Acudientes',
+    },
+
+    # Coordinadores
     SECRETARIA_VER_COORDINADORES: {
         'titulo': 'Ver Coordinadores',
-        'descripcion': 'Acceso al listado y gestion de coordinadores.',
-        'grupo': 'Secretaria',
+        'descripcion': 'Acceso al listado de coordinadores.',
+        'grupo': 'Secretaría · Coordinadores',
     },
+    SECRETARIA_CREAR_COORDINADORES: {
+        'titulo': 'Crear Coordinadores',
+        'descripcion': 'Permite crear nuevos coordinadores.',
+        'grupo': 'Secretaría · Coordinadores',
+    },
+    SECRETARIA_EDITAR_COORDINADORES: {
+        'titulo': 'Editar Coordinadores',
+        'descripcion': 'Permite editar coordinadores existentes.',
+        'grupo': 'Secretaría · Coordinadores',
+    },
+    SECRETARIA_ELIMINAR_COORDINADORES: {
+        'titulo': 'Eliminar Coordinadores',
+        'descripcion': 'Permite eliminar coordinadores.',
+        'grupo': 'Secretaría · Coordinadores',
+    },
+
+    # Porteros
     SECRETARIA_VER_PORTEROS: {
         'titulo': 'Ver Porteros',
-        'descripcion': 'Acceso al listado y gestion de porteros.',
-        'grupo': 'Secretaria',
+        'descripcion': 'Acceso al listado de porteros.',
+        'grupo': 'Secretaría · Porteros',
+    },
+    SECRETARIA_CREAR_PORTEROS: {
+        'titulo': 'Crear Porteros',
+        'descripcion': 'Permite crear nuevos porteros.',
+        'grupo': 'Secretaría · Porteros',
+    },
+    SECRETARIA_EDITAR_PORTEROS: {
+        'titulo': 'Editar Porteros',
+        'descripcion': 'Permite editar porteros existentes.',
+        'grupo': 'Secretaría · Porteros',
+    },
+    SECRETARIA_ELIMINAR_PORTEROS: {
+        'titulo': 'Eliminar Porteros',
+        'descripcion': 'Permite eliminar porteros.',
+        'grupo': 'Secretaría · Porteros',
     },
 }
 
@@ -60,7 +183,7 @@ def clave_existe(clave):
 
 def catalogo_por_grupo():
     """Devuelve el catalogo agrupado por 'grupo'.
-    
+
     Util para la UI del admin.
     """
     agrupado = {}
