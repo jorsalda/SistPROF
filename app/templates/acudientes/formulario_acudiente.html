@@ -112,7 +112,7 @@
                                            id="documento"
                                            class="form-control border-start-0 ps-0 form-control-lg"
                                            placeholder="Ej: 1234567890"
-                                           value="{{ acudiente.documento if acudiente and hasattr(acudiente, 'documento') else '' }}"
+                                           value="{{ acudiente.documento if acudiente and acudiente.documento else '' }}"
                                            required
                                            oninput="autocompletarContrasena()">
                                 </div>
