@@ -13,6 +13,7 @@ Lista de Docentes
         Lista de Docentes
     </h2>
 
+    {% if tiene_permiso('secretaria.crear_docentes') %}
     <a href="{{ url_for('colegio.nuevo_docente') }}"
        class="btn btn-primary">
 
@@ -20,6 +21,7 @@ Lista de Docentes
         Nuevo Docente
 
     </a>
+    {% endif %}
 
 </div>
 
@@ -142,6 +144,7 @@ Lista de Docentes
 
                 </p>
 
+                {% if tiene_permiso('secretaria.crear_docentes') %}
                 <a href="{{ url_for('colegio.nuevo_docente') }}"
                    class="btn btn-primary">
 
@@ -149,6 +152,7 @@ Lista de Docentes
                     Registrar Primer Docente
 
                 </a>
+                {% endif %}
 
             </div>
 
@@ -163,6 +167,7 @@ Lista de Docentes
                         <tr>
 
                             <th>Nombre</th>
+                            <th>Apellido</th>
                             <th>Documento</th>
                             <th>Teléfono</th>
                             <th>Email</th>
@@ -182,6 +187,13 @@ Lista de Docentes
 
                             <td>
                                 {{ docente.nombre }}
+                            </td>
+
+                            <td>
+                                {{ docente.apellido or "—" }}
+                            </td>
+
+                            <td>
                             </td>
 
                             <td>
@@ -238,6 +250,7 @@ Lista de Docentes
 
                                 </a>
 
+                                {% if tiene_permiso('secretaria.editar_docentes') %}
                                 <a href="{{ url_for('colegio.editar_docente', id=docente.id) }}"
                                    class="btn btn-sm btn-outline-primary me-1"
                                    title="Editar">
@@ -245,7 +258,9 @@ Lista de Docentes
                                     <i class="bi bi-pencil"></i>
 
                                 </a>
+                                {% endif %}
 
+                                {% if tiene_permiso('secretaria.eliminar_docentes') %}
                                 <form action="{{ url_for('colegio.eliminar_docente', id=docente.id) }}"
                                       method="POST"
                                       class="d-inline">
@@ -259,6 +274,7 @@ Lista de Docentes
                                     </button>
 
                                 </form>
+                                {% endif %}
 
                             </td>
 

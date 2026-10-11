@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy import or_
 import secrets
+from app.utils.permisos import requiere_permiso
 from datetime import datetime
 
 from app.extensions import db
@@ -207,6 +208,7 @@ def mis_calificaciones():
 # LISTAR ESTUDIANTES
 # =========================================================
 @estudiante_bp.route("/")
+@requiere_permiso('secretaria.ver_estudiantes')
 @login_required
 def listar():
     search = request.args.get('search', '').strip()
@@ -280,6 +282,7 @@ def api_jornadas_por_sede(sede_id):
 # NUEVO ESTUDIANTE
 # =========================================================
 @estudiante_bp.route("/nuevo", methods=["GET", "POST"])
+@requiere_permiso('secretaria.crear_estudiantes')
 @login_required
 def nuevo():
     if request.method == "POST":
@@ -401,6 +404,7 @@ def nuevo():
 # EDITAR ESTUDIANTE
 # =========================================================
 @estudiante_bp.route("/editar/<int:id>", methods=["GET", "POST"])
+@requiere_permiso('secretaria.editar_estudiantes')
 @login_required
 def editar(id):
     estudiante = Estudiante.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -478,6 +482,7 @@ def editar(id):
 # ELIMINAR ESTUDIANTE
 # =========================================================
 @estudiante_bp.route("/eliminar/<int:id>", methods=["POST"])
+@requiere_permiso('secretaria.eliminar_estudiantes')
 @login_required
 def eliminar(id):
     estudiante = Estudiante.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -505,6 +510,7 @@ def eliminar(id):
 # VER DETALLE
 # =========================================================
 @estudiante_bp.route("/ver/<int:id>")
+@requiere_permiso('secretaria.ver_estudiantes')
 @login_required
 def ver(id):
     estudiante = Estudiante.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -528,6 +534,7 @@ def ver(id):
 # CAMBIAR ESTADO
 # =========================================================
 @estudiante_bp.route("/cambiar-estado/<int:id>", methods=["POST"])
+@requiere_permiso('secretaria.editar_estudiantes')
 @login_required
 def cambiar_estado(id):
     estudiante = Estudiante.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()

@@ -12,6 +12,7 @@ Lista de Acudientes
         Lista de Acudientes
     </h2>
 
+    {% if tiene_permiso('secretaria.crear_acudientes') %}
     <a href="{{ url_for('colegio.nuevo_acudiente') }}"
        class="btn btn-primary">
 
@@ -19,6 +20,7 @@ Lista de Acudientes
         Nuevo Acudiente
 
     </a>
+    {% endif %}
 
 </div>
 
@@ -65,6 +67,7 @@ Lista de Acudientes
 
                 </p>
 
+                {% if tiene_permiso('secretaria.crear_acudientes') %}
                 <a href="{{ url_for('colegio.nuevo_acudiente') }}"
                    class="btn btn-primary">
 
@@ -72,6 +75,7 @@ Lista de Acudientes
                     Registrar Primer Acudiente
 
                 </a>
+                {% endif %}
 
             </div>
 
@@ -143,6 +147,7 @@ Lista de Acudientes
 
                             <td>
 
+                                {% if tiene_permiso('secretaria.editar_acudientes') %}
                                 <a href="{{ url_for('colegio.editar_acudiente', id=acudiente.id) }}"
                                    class="btn btn-sm btn-outline-primary me-1"
                                    title="Editar">
@@ -150,7 +155,9 @@ Lista de Acudientes
                                     <i class="bi bi-pencil"></i>
 
                                 </a>
+                                {% endif %}
 
+                                {% if tiene_permiso('secretaria.eliminar_acudientes') %}
                                 <form action="{{ url_for('colegio.eliminar_acudiente', id=acudiente.id) }}"
                                       method="POST"
                                       class="d-inline">
@@ -164,6 +171,7 @@ Lista de Acudientes
                                     </button>
 
                                 </form>
+                                {% endif %}
 
                             </td>
 

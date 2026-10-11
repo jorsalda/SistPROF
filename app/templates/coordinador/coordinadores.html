@@ -6,11 +6,13 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Lista de Coordinadores</h1>
+        {% if tiene_permiso('secretaria.crear_coordinadores') %}
         <a href="{{ url_for('colegio.nuevo_coordinador') }}"
            class="btn btn-primary">
             <i class="bi bi-person-plus"></i>
             Nuevo Coordinador
         </a>
+        {% endif %}
     </div>
 
     <!-- Filtro por sede -->
@@ -75,8 +77,8 @@
                             {% endif %}
                         </td>
 
-                        <!-- ✅ CORREGIDO: Todos usan 'coordinador_id' como exige Python -->
                         <td>
+                            {% if tiene_permiso('secretaria.editar_coordinadores') %}
                             <a href="{{ url_for('colegio.editar_coordinador', coordinador_id=coordinador.id) }}"
                                class="btn btn-sm btn-outline-primary" title="Editar">
                                 <i class="bi bi-pencil"></i>
@@ -101,13 +103,16 @@
                                title="Cambiar contraseña">
                                 <i class="bi bi-key"></i>
                             </a>
+                            {% endif %}
 
+                            {% if tiene_permiso('secretaria.eliminar_coordinadores') %}
                             <a href="{{ url_for('colegio.eliminar_coordinador', coordinador_id=coordinador.id) }}"
                                class="btn btn-sm btn-outline-danger"
                                onclick="return confirm('¿Está seguro de eliminar este coordinador?')"
                                title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </a>
+                            {% endif %}
                         </td>
 
                     </tr>

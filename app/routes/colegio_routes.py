@@ -6,7 +6,16 @@ from sqlalchemy import func
 
 from app.models.coordinador import Coordinador
 from app.extensions import db
-from app.utils.permisos import requiere_permiso
+from app.utils.permisos import requiere_permiso, tiene_permiso
+from app.utils.permisos_catalogo import (
+    SECRETARIA_CREAR_DOCENTES,
+    SECRETARIA_EDITAR_DOCENTES,
+    SECRETARIA_ELIMINAR_DOCENTES,
+    SECRETARIA_CREAR_COORDINADORES,
+    SECRETARIA_EDITAR_COORDINADORES,
+    SECRETARIA_ELIMINAR_COORDINADORES,
+)
+
 from app.models.colegio import Colegio
 from app.models.docente import Docente
 from app.models.permiso import Permiso
@@ -19,6 +28,8 @@ from app.models.grupo_materia import GrupoMateria
 from app.models.materia import Materia
 from app.models.clase import Clase, DiaSemana
 from app.models.areas_gestion import AreaGestion
+
+
 
 colegio_bp = Blueprint(
     "colegio",
@@ -599,16 +610,18 @@ def lista_docentes():
 
 @colegio_bp.route("/docentes/nuevo", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_docentes')
+@requiere_permiso(SECRETARIA_CREAR_DOCENTES)
 def nuevo_docente():
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
 
     if request.method == "POST":
         try:
             nombre = request.form.get("nombre", "").strip()
+            apellido = request.form.get("apellido", "").strip()
             documento = request.form.get("documento", "").strip()
             telefono = request.form.get("telefono", "").strip()
             email = request.form.get("email", "").strip()
+            direccion = request.form.get("direccion", "").strip()
             password = request.form.get("password", "").strip()
             sede_id = request.form.get("sede_id")
 
@@ -645,9 +658,11 @@ def nuevo_docente():
             docente = Docente(
                 usuario_id=usuario.id,
                 nombre=nombre,
+                apellido=apellido if apellido else None,
                 documento=documento if documento else None,
                 telefono=telefono if telefono else None,
                 email=email if email else None,
+                direccion=direccion if direccion else None,
                 sede_id=sede_id,
                 colegio_id=current_user.colegio_id,
                 activo=True
@@ -667,7 +682,7 @@ def nuevo_docente():
 
 @colegio_bp.route("/docentes/editar/<int:id>", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_docentes')
+@requiere_permiso(SECRETARIA_EDITAR_DOCENTES)
 def editar_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
@@ -675,9 +690,11 @@ def editar_docente(id):
     if request.method == "POST":
         try:
             nombre = request.form.get("nombre", "").strip()
+            apellido = request.form.get("apellido", "").strip()
             documento = request.form.get("documento", "").strip()
             telefono = request.form.get("telefono", "").strip()
             email = request.form.get("email", "").strip()
+            direccion = request.form.get("direccion", "").strip()
             sede_id = request.form.get("sede_id")
             activo = (request.form.get("activo") == "on")
 
@@ -697,6 +714,10 @@ def editar_docente(id):
                 docente.usuario.nombre = nombre
                 docente.usuario.email = email
                 docente.usuario.sede_id = sede_id
+
+                # Si el documento cambió, actualizar la contraseña al nuevo documento
+                if documento and documento != docente.documento:
+                    docente.usuario.password_hash = generate_password_hash(documento)
             else:
                 usuario = Usuario(
                     nombre=nombre,
@@ -713,9 +734,11 @@ def editar_docente(id):
                 docente.usuario_id = usuario.id
 
             docente.nombre = nombre
+            docente.apellido = apellido if apellido else None
             docente.documento = documento if documento else None
             docente.telefono = telefono if telefono else None
             docente.email = email if email else None
+            docente.direccion = direccion if direccion else None
             docente.sede_id = sede_id
             docente.activo = activo
 
@@ -733,7 +756,7 @@ def editar_docente(id):
 
 @colegio_bp.route("/docentes/<int:id>/cambiar-estado")
 @login_required
-@requiere_permiso('secretaria.ver_docentes')
+@requiere_permiso(SECRETARIA_EDITAR_DOCENTES)
 def cambiar_estado_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -751,7 +774,7 @@ def cambiar_estado_docente(id):
 
 @colegio_bp.route("/docentes/<int:id>/cambiar-password", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_docentes')
+@requiere_permiso(SECRETARIA_EDITAR_DOCENTES)
 def cambiar_password_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == "POST":
@@ -789,7 +812,7 @@ def cambiar_password_docente(id):
 
 @colegio_bp.route("/docentes/eliminar/<int:id>", methods=["POST"])
 @login_required
-@requiere_permiso('secretaria.ver_docentes')
+@requiere_permiso(SECRETARIA_ELIMINAR_DOCENTES)
 def eliminar_docente(id):
     docente = Docente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
     tiene_permisos = Permiso.query.filter_by(docente_id=id).first()
@@ -884,7 +907,7 @@ def lista_coordinadores():
 
 @colegio_bp.route("/nuevo-coordinador", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_coordinadores')
+@requiere_permiso(SECRETARIA_CREAR_COORDINADORES)
 def nuevo_coordinador():
     if request.method == "POST":
         try:
@@ -960,7 +983,7 @@ def nuevo_coordinador():
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/editar', methods=['GET', 'POST'])
 @login_required
-@requiere_permiso('secretaria.ver_coordinadores')
+@requiere_permiso(SECRETARIA_EDITAR_COORDINADORES)
 def editar_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
@@ -1000,7 +1023,7 @@ def editar_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/cambiar-estado')
 @login_required
-@requiere_permiso('secretaria.ver_coordinadores')
+@requiere_permiso(SECRETARIA_EDITAR_COORDINADORES)
 def cambiar_estado_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -1017,7 +1040,7 @@ def cambiar_estado_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/cambiar-password', methods=['GET', 'POST'])
 @login_required
-@requiere_permiso('secretaria.ver_coordinadores')
+@requiere_permiso(SECRETARIA_EDITAR_COORDINADORES)
 def cambiar_password_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == 'POST':
@@ -1038,7 +1061,7 @@ def cambiar_password_coordinador(coordinador_id):
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/eliminar')
 @login_required
-@requiere_permiso('secretaria.ver_coordinadores')
+@requiere_permiso(SECRETARIA_ELIMINAR_COORDINADORES)
 def eliminar_coordinador(coordinador_id):
     coordinador = Coordinador.query.filter_by(id=coordinador_id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -1145,7 +1168,7 @@ def lista_acudientes():
 
 @colegio_bp.route("/acudientes/nuevo", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_acudientes')
+@requiere_permiso('secretaria.crear_acudientes')
 def nuevo_acudiente():
     from app.models.acudiente import Acudiente
     if request.method == "POST":
@@ -1188,7 +1211,7 @@ def nuevo_acudiente():
 
 @colegio_bp.route("/acudientes/<int:id>/editar", methods=["GET", "POST"])
 @login_required
-@requiere_permiso('secretaria.ver_acudientes')
+@requiere_permiso('secretaria.editar_acudientes')
 def editar_acudiente(id):
     from app.models.acudiente import Acudiente
     acudiente = Acudiente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -1234,7 +1257,7 @@ def editar_acudiente(id):
 
 @colegio_bp.route("/acudientes/<int:id>/eliminar", methods=["POST"])
 @login_required
-@requiere_permiso('secretaria.ver_acudientes')
+@requiere_permiso('secretaria.eliminar_acudientes')
 def eliminar_acudiente(id):
     from app.models.acudiente import Acudiente
     acudiente = Acudiente.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
@@ -2275,8 +2298,12 @@ def lista_usuarios_operativos_ruta():
 @colegio_bp.route("/usuarios-operativos/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo_usuario_operativo_ruta():
+    rol_solicitado = request.form.get("rol", "").strip() or request.args.get("rol", "secretaria").strip()
+    if rol_solicitado not in ROLES_PERMITIDOS:
+        rol_solicitado = "secretaria"
     if not current_user.es_admin_colegio:
-        abort(403)
+        if rol_solicitado != "portero" or not tiene_permiso(current_user, "secretaria.crear_porteros"):
+            abort(403)
 
     sedes = Sede.query.filter_by(
         colegio_id=current_user.colegio_id,
@@ -2351,8 +2378,10 @@ def nuevo_usuario_operativo_ruta():
 @colegio_bp.route("/usuarios-operativos/<int:usuario_id>/cambiar-estado", methods=["POST"])
 @login_required
 def cambiar_estado_usuario_operativo_ruta(usuario_id):
+    usuario_objetivo = Usuario.query.filter_by(id=usuario_id, colegio_id=current_user.colegio_id).first_or_404()
     if not current_user.es_admin_colegio:
-        abort(403)
+        if usuario_objetivo.rol != "portero" or not tiene_permiso(current_user, "secretaria.editar_porteros"):
+            abort(403)
 
     usuario = Usuario.query.filter_by(
         id=usuario_id,
@@ -2377,8 +2406,10 @@ def cambiar_estado_usuario_operativo_ruta(usuario_id):
 @colegio_bp.route("/usuarios-operativos/<int:usuario_id>/editar", methods=["GET", "POST"])
 @login_required
 def editar_usuario_operativo_ruta(usuario_id):
+    usuario_objetivo = Usuario.query.filter_by(id=usuario_id, colegio_id=current_user.colegio_id).first_or_404()
     if not current_user.es_admin_colegio:
-        abort(403)
+        if usuario_objetivo.rol != "portero" or not tiene_permiso(current_user, "secretaria.editar_porteros"):
+            abort(403)
 
     usuario = Usuario.query.filter_by(
         id=usuario_id,
