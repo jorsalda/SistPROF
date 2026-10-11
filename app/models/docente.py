@@ -13,6 +13,7 @@ class Docente(db.Model):
     documento = db.Column(db.String(20), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(120), nullable=True)
+    direccion = db.Column(db.String(200), nullable=True)  # ✅ NUEVO
     activo = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.now)
 

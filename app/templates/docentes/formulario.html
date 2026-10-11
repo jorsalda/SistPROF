@@ -61,9 +61,7 @@
                     <form method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- ============================================ -->
-                        <!-- FILA 1: Nombre y Apellido                    -->
-                        <!-- ============================================ -->
+                        <!-- FILA 1: Nombre y Apellido -->
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
@@ -102,9 +100,7 @@
                             </div>
                         </div>
 
-                        <!-- ============================================ -->
-                        <!-- FILA 2: Documento y Email                    -->
-                        <!-- ============================================ -->
+                        <!-- FILA 2: Documento y Email -->
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
@@ -122,11 +118,9 @@
                                            placeholder="Ej: 1234567890"
                                            {% if not docente %}required{% endif %}>
                                 </div>
-                                {% if not docente %}
                                 <div class="form-text text-muted mt-1">
                                     <i class="bi bi-key-fill"></i> Este documento será la <strong>contraseña inicial</strong>
                                 </div>
-                                {% endif %}
                             </div>
 
                             <div class="col-md-6">
@@ -153,11 +147,8 @@
                             </div>
                         </div>
 
-                        <!-- ============================================ -->
-                        <!-- FILA 3: Contraseña y Sede                    -->
-                        <!-- ============================================ -->
+                        <!-- FILA 3: Contraseña y Sede -->
                         <div class="row g-4 mb-4">
-                            {% if not docente %}
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Contraseña <span class="text-danger">*</span>
@@ -185,7 +176,6 @@
                                     Se autocompleta con el documento de identidad. Puede cambiarla después.
                                 </div>
                             </div>
-                            {% endif %}
 
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
@@ -208,9 +198,7 @@
                             </div>
                         </div>
 
-                        <!-- ============================================ -->
-                        <!-- FILA 4: Teléfono                             -->
-                        <!-- ============================================ -->
+                        <!-- FILA 4: Teléfono y Dirección -->
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
@@ -228,11 +216,27 @@
                                            placeholder="Ej: 300 123 4567">
                                 </div>
                             </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Dirección
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           name="direccion"
+                                           id="direccion"
+                                           class="form-control border-start-0 ps-0 form-control-lg"
+                                           value="{{ docente.direccion if docente and docente.direccion else '' }}"
+                                           placeholder="Ej: Cra 45 #12-34, Barrio Centro"
+                                           maxlength="200">
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- ============================================ -->
-                        <!-- FILA 5: Estado (solo para edición)           -->
-                        <!-- ============================================ -->
+                        <!-- FILA 5: Estado (solo para edición) -->
                         {% if docente %}
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
@@ -262,9 +266,7 @@
                         </div>
                         {% endif %}
 
-                        <!-- ============================================ -->
-                        <!-- Información Adicional                        -->
-                        <!-- ============================================ -->
+                        <!-- Información Adicional -->
                         <div class="alert alert-info rounded-3 mb-4">
                             <div class="d-flex">
                                 <div class="flex-shrink-0">
@@ -287,9 +289,7 @@
                             </div>
                         </div>
 
-                        <!-- ============================================ -->
-                        <!-- Botones de Acción                            -->
-                        <!-- ============================================ -->
+                        <!-- Botones de Acción -->
                         <div class="d-flex gap-3 justify-content-end pt-3 border-top">
                             <a href="{{ url_for('colegio.lista_docentes') }}"
                                class="btn btn-outline-secondary px-4 py-2 rounded-pill">
@@ -308,9 +308,7 @@
     </div>
 </div>
 
-<!-- ============================================ -->
-<!-- JAVASCRIPT: Autocompletar contraseña         -->
-<!-- ============================================ -->
+<!-- JAVASCRIPT: Autocompletar contraseña -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const documentoInput = document.getElementById('documento');
@@ -318,13 +316,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const togglePassword = document.getElementById('togglePassword');
     const iconToggle = document.getElementById('iconToggle');
 
-    // 🔑 Autocompletar contraseña con el documento
     if (documentoInput && passwordInput) {
         documentoInput.addEventListener('input', function() {
-            // Copiar el valor del documento al campo contraseña
             passwordInput.value = this.value;
 
-            // Validar longitud mínima
             if (this.value.length >= 6) {
                 passwordInput.setCustomValidity('');
             } else if (this.value.length > 0) {
@@ -332,13 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Mostrar/ocultar contraseña
         if (togglePassword) {
             togglePassword.addEventListener('click', function() {
                 const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                 passwordInput.setAttribute('type', type);
 
-                // Cambiar icono
                 if (iconToggle) {
                     iconToggle.classList.toggle('bi-eye');
                     iconToggle.classList.toggle('bi-eye-slash');
