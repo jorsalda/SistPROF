@@ -6,11 +6,11 @@ class EvaluacionEstudiante(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # ✅ COLUMNA CALIFICACIÓN
+    # ✅ COLUMNA CALIFICACIÓN (opcional: puede ser NULL si solo se usa cualitativo)
     calificacion = db.Column(
         "calificacion",
         db.Float,
-        nullable=False
+        nullable=True
     )
 
     # ✅ NUEVO: Nivel de desempeño cualitativo
