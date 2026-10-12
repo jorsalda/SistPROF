@@ -65,3 +65,6 @@ webassets-cache/
 htmlcov/
 # archivos  de pyacharm
 .idea/
+# Backups de BD (nunca subir a Git, contienen datos reales)
+backups/
+*.sql
