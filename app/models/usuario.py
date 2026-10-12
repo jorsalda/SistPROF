@@ -86,6 +86,8 @@ class Usuario(db.Model, UserMixin):
             'docente',
             'estudiante',
             'acudiente',
+            'profesional_piar',
+            'psicologo',
             name='rol_usuario'
         ),
         nullable=False
