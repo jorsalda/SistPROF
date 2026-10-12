@@ -7,6 +7,11 @@ class TipoNovedad(PyEnum):
     DISCIPLINA = "DISCIPLINA"
     ACADEMICO = "ACADEMICO"
     LLEGADA_TARDE = "LLEGADA_TARDE"
+    SALUD = "SALUD"
+    SEGUIMIENTO = "SEGUIMIENTO"
+    APOYO = "APOYO"
+    CALAMIDAD = "CALAMIDAD"
+    OTRO = "OTRO"
 
 
 class TipoGravedad(PyEnum):
