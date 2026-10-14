@@ -44,6 +44,14 @@ def index():
         elif current_user.rol == 'coordinador':
             return redirect(url_for('coordinador.dashboard'))
 
+        # PROFESIONAL PIAR
+        elif current_user.rol == 'profesional_piar':
+            return redirect(url_for('piar.dashboard'))
+
+        # PSICOLOGO
+        elif current_user.rol == 'psicologo':
+            return redirect(url_for('psicologo.dashboard'))
+
         # DOCENTE
         elif current_user.rol == 'docente':
             return redirect(url_for('docente.dashboard'))
@@ -90,6 +98,14 @@ def login():
             # COORDINADOR
             elif resultado.rol == 'coordinador':
                 return redirect(url_for('coordinador.dashboard'))
+
+            # PROFESIONAL PIAR
+            elif resultado.rol == 'profesional_piar':
+                return redirect(url_for('piar.dashboard'))
+
+            # PSICOLOGO
+            elif resultado.rol == 'psicologo':
+                return redirect(url_for('psicologo.dashboard'))
 
             # DOCENTE
             elif resultado.rol == 'docente':

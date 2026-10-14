@@ -55,6 +55,26 @@ SECRETARIA_ELIMINAR_PORTEROS = 'secretaria.eliminar_porteros'
 
 
 # ─────────────────────────────────────────────────────────────
+# SECRETARIA — Profesionales PIAR
+# ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_PROFESIONAL_PIAR = 'secretaria.ver_profesional_piar'
+SECRETARIA_CREAR_PROFESIONAL_PIAR = 'secretaria.crear_profesional_piar'
+SECRETARIA_EDITAR_PROFESIONAL_PIAR = 'secretaria.editar_profesional_piar'
+SECRETARIA_ELIMINAR_PROFESIONAL_PIAR = 'secretaria.eliminar_profesional_piar'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Psicólogos
+# ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_PSICOLOGOS = 'secretaria.ver_psicologos'
+SECRETARIA_CREAR_PSICOLOGOS = 'secretaria.crear_psicologos'
+SECRETARIA_EDITAR_PSICOLOGOS = 'secretaria.editar_psicologos'
+SECRETARIA_ELIMINAR_PSICOLOGOS = 'secretaria.eliminar_psicologos'
+
+
+# ─────────────────────────────────────────────────────────────
 # CATALOGO COMPLETO (para UI y validaciones)
 # ─────────────────────────────────────────────────────────────
 
@@ -167,6 +187,50 @@ CATALOGO = {
         'titulo': 'Eliminar Porteros',
         'descripcion': 'Permite eliminar porteros.',
         'grupo': 'Secretaría · Porteros',
+    },
+
+    # Profesionales PIAR
+    SECRETARIA_VER_PROFESIONAL_PIAR: {
+        'titulo': 'Ver Profesionales PIAR',
+        'descripcion': 'Acceso al listado de profesionales PIAR.',
+        'grupo': 'Secretaría · Profesionales PIAR',
+    },
+    SECRETARIA_CREAR_PROFESIONAL_PIAR: {
+        'titulo': 'Crear Profesionales PIAR',
+        'descripcion': 'Permite crear nuevos profesionales PIAR.',
+        'grupo': 'Secretaría · Profesionales PIAR',
+    },
+    SECRETARIA_EDITAR_PROFESIONAL_PIAR: {
+        'titulo': 'Editar Profesionales PIAR',
+        'descripcion': 'Permite editar profesionales PIAR existentes.',
+        'grupo': 'Secretaría · Profesionales PIAR',
+    },
+    SECRETARIA_ELIMINAR_PROFESIONAL_PIAR: {
+        'titulo': 'Eliminar Profesionales PIAR',
+        'descripcion': 'Permite eliminar profesionales PIAR.',
+        'grupo': 'Secretaría · Profesionales PIAR',
+    },
+
+    # Psicólogos
+    SECRETARIA_VER_PSICOLOGOS: {
+        'titulo': 'Ver Psicólogos',
+        'descripcion': 'Acceso al listado de psicólogos.',
+        'grupo': 'Secretaría · Psicólogos',
+    },
+    SECRETARIA_CREAR_PSICOLOGOS: {
+        'titulo': 'Crear Psicólogos',
+        'descripcion': 'Permite crear nuevos psicólogos.',
+        'grupo': 'Secretaría · Psicólogos',
+    },
+    SECRETARIA_EDITAR_PSICOLOGOS: {
+        'titulo': 'Editar Psicólogos',
+        'descripcion': 'Permite editar psicólogos existentes.',
+        'grupo': 'Secretaría · Psicólogos',
+    },
+    SECRETARIA_ELIMINAR_PSICOLOGOS: {
+        'titulo': 'Eliminar Psicólogos',
+        'descripcion': 'Permite eliminar psicólogos.',
+        'grupo': 'Secretaría · Psicólogos',
     },
 }
 

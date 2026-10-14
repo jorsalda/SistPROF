@@ -2,6 +2,8 @@
 Servicio para gestionar usuarios operativos del colegio:
 - secretaria
 - portero
+- profesional_piar
+- psicologo
 
 Reglas:
 - Solo el admin_colegio los crea.
@@ -20,11 +22,20 @@ from app.models.usuario import Usuario
 from app.models.sede import Sede
 
 
-ROLES_PERMITIDOS = ['secretaria', 'portero']
+ROLES_PERMITIDOS = ['secretaria', 'portero', 'profesional_piar', 'psicologo']
 
 LIMITE_SIN_COSTO = {
     'secretaria': 3,
     'portero': 3,
+    'profesional_piar': 3,
+    'psicologo': 3,
+}
+
+NOMBRES_ROL = {
+    'secretaria': 'Secretaria',
+    'portero': 'Portero',
+    'profesional_piar': 'Profesional PIAR',
+    'psicologo': 'Psicólogo',
 }
 
 
@@ -61,7 +72,7 @@ def crear_usuario_operativo(
     password_override=None,
 ):
     """
-    Crea secretaria o portero.
+    Crea un usuario operativo (secretaria, portero, profesional_piar o psicologo).
     Retorna (ok, mensaje, usuario_o_None).
     """
 
@@ -119,7 +130,8 @@ def crear_usuario_operativo(
         )
         db.session.add(usuario)
         db.session.commit()
-        return True, f"{rol.capitalize()} '{nombre} {apellido}' creada correctamente", usuario
+        nombre_rol = NOMBRES_ROL.get(rol, rol)
+        return True, f"{nombre_rol} '{nombre} {apellido}' creado correctamente", usuario
 
     except Exception as e:
         db.session.rollback()
@@ -146,7 +158,7 @@ def editar_usuario_operativo(
         return False, "Usuario no encontrado", None
 
     if usuario.rol not in ROLES_PERMITIDOS:
-        return False, "Este usuario no es secretaria ni portero", None
+        return False, "Este usuario no es un usuario operativo válido", None
 
     if not nombre or not nombre.strip():
         return False, "El nombre es obligatorio", None

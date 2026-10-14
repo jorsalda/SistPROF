@@ -32,7 +32,7 @@
                                 {% if usuario %}
                                     Actualice la información del usuario
                                 {% else %}
-                                    Registre una nueva secretaria o portero
+                                    Registre un nuevo usuario operativo
                                 {% endif %}
                             </p>
                         </div>
@@ -64,8 +64,14 @@
                                     <strong>
                                         {% if rol_default == 'secretaria' %}
                                             Secretaria
-                                        {% else %}
+                                        {% elif rol_default == 'portero' %}
                                             Portero
+                                        {% elif rol_default == 'profesional_piar' %}
+                                            Profesional PIAR
+                                        {% elif rol_default == 'psicologo' %}
+                                            Psicólogo
+                                        {% else %}
+                                            {{ rol_default }}
                                         {% endif %}
                                     </strong>
                                 </div>

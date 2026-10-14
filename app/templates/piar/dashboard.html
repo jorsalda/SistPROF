@@ -1,0 +1,66 @@
+{% extends "piar/piar_base.html" %}
+
+{% block colegio_page_title %}Panel del Profesional PIAR{% endblock %}
+{% block title %}Dashboard PIAR | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-clipboard2-pulse text-primary me-2"></i>
+            Panel del Profesional PIAR
+        </h2>
+        <p class="text-muted mb-0">
+            Bienvenido, {{ current_user.nombre }}. Este es tu espacio de trabajo.
+        </p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-journal-text fs-3 text-primary me-3"></i>
+                        <h5 class="mb-0">Novedades</h5>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Próximamente podrás registrar novedades de los estudiantes.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-people fs-3 text-success me-3"></i>
+                        <h5 class="mb-0">Estudiantes PIAR</h5>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Aquí verás los estudiantes con PIAR asignados a tu cargo.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-clipboard-check fs-3 text-info me-3"></i>
+                        <h5 class="mb-0">Ajustes razonables</h5>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Espacio para gestionar ajustes razonables por materia.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

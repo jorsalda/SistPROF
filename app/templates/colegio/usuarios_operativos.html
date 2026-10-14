@@ -14,11 +14,11 @@
                 Usuarios Operativos
             </h2>
             <p class="text-muted mb-0">
-                Gestiona las secretarias y porteros de tu colegio
+                Gestiona secretarias, porteros, profesionales PIAR y psicólogos de tu colegio
             </p>
         </div>
-        <div class="d-flex gap-2">
-            {% if current_user.es_admin_colegio %}
+        <div class="d-flex gap-2 flex-wrap">
+            {% if current_user.es_admin_colegio or tiene_permiso('secretaria.crear_docentes') %}
             <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='secretaria') }}"
                class="btn btn-primary">
                 <i class="bi bi-plus-circle me-2"></i>Nueva Secretaria
@@ -28,6 +28,18 @@
             <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='portero') }}"
                class="btn btn-outline-primary">
                 <i class="bi bi-plus-circle me-2"></i>Nuevo Portero
+            </a>
+            {% endif %}
+            {% if current_user.es_admin_colegio or tiene_permiso('secretaria.crear_profesional_piar') %}
+            <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='profesional_piar') }}"
+               class="btn btn-outline-success">
+                <i class="bi bi-plus-circle me-2"></i>Nuevo Profesional PIAR
+            </a>
+            {% endif %}
+            {% if current_user.es_admin_colegio or tiene_permiso('secretaria.crear_psicologos') %}
+            <a href="{{ url_for('colegio.nuevo_usuario_operativo_ruta', rol='psicologo') }}"
+               class="btn btn-outline-info">
+                <i class="bi bi-plus-circle me-2"></i>Nuevo Psicólogo
             </a>
             {% endif %}
         </div>
@@ -47,7 +59,7 @@
 
     <!-- Tarjetas resumen -->
     <div class="row g-3 mb-4">
-        <div class="col-md-6">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -64,7 +76,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -81,10 +93,44 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Profesionales PIAR activos</div>
+                        <div class="fs-3 fw-bold">{{ total_profesional_piar }}</div>
+                        {% if total_profesional_piar >= limite_sin_costo %}
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Supera el límite sin costo ({{ limite_sin_costo }})
+                            </small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-clipboard2-pulse fs-1 text-success opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Psicólogos activos</div>
+                        <div class="fs-3 fw-bold">{{ total_psicologos }}</div>
+                        {% if total_psicologos >= limite_sin_costo %}
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Supera el límite sin costo ({{ limite_sin_costo }})
+                            </small>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-heart-pulse fs-1 text-info opacity-50"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Filtros -->
-    <div class="mb-3">
+    <div class="mb-3 d-flex gap-2 flex-wrap">
         <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
            class="btn btn-sm {{ 'btn-primary' if not rol_filtro else 'btn-outline-secondary' }}">
             Todos
@@ -96,6 +142,14 @@
         <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta', rol='portero') }}"
            class="btn btn-sm {{ 'btn-primary' if rol_filtro == 'portero' else 'btn-outline-secondary' }}">
             Solo Porteros
+        </a>
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta', rol='profesional_piar') }}"
+           class="btn btn-sm {{ 'btn-primary' if rol_filtro == 'profesional_piar' else 'btn-outline-secondary' }}">
+            Solo Profesionales PIAR
+        </a>
+        <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta', rol='psicologo') }}"
+           class="btn btn-sm {{ 'btn-primary' if rol_filtro == 'psicologo' else 'btn-outline-secondary' }}">
+            Solo Psicólogos
         </a>
     </div>
 
@@ -119,13 +173,19 @@
                         {% for u in usuarios %}
                         <tr>
                             <td class="ps-3">
-                                <div class="fw-semibold">{{ u.nombre }}</div>
+                                <div class="fw-semibold">{{ u.nombre }} {{ u.apellido or '' }}</div>
                             </td>
                             <td>
                                 {% if u.rol == 'secretaria' %}
                                     <span class="badge bg-primary">Secretaria</span>
-                                {% else %}
+                                {% elif u.rol == 'portero' %}
                                     <span class="badge bg-success">Portero</span>
+                                {% elif u.rol == 'profesional_piar' %}
+                                    <span class="badge bg-info text-dark">Profesional PIAR</span>
+                                {% elif u.rol == 'psicologo' %}
+                                    <span class="badge bg-warning text-dark">Psicólogo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ u.rol }}</span>
                                 {% endif %}
                             </td>
                             <td><small class="text-muted">{{ u.email }}</small></td>
@@ -144,46 +204,37 @@
                                 {% endif %}
                             </td>
                             <td class="text-end pe-3">
-                                {# ── Porrero: admin o editar_porteros ── #}
-                                {% if u.rol == 'portero' %}
-                                    {% if current_user.es_admin_colegio or tiene_permiso('secretaria.editar_porteros') %}
-                                    <a href="{{ url_for('colegio.editar_usuario_operativo_ruta', usuario_id=u.id) }}"
-                                       class="btn btn-sm btn-outline-primary" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form method="post"
-                                          action="{{ url_for('colegio.cambiar_estado_usuario_operativo_ruta', usuario_id=u.id) }}"
-                                          class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit"
-                                                class="btn btn-sm btn-outline-{{ 'warning' if u.is_active else 'success' }}"
-                                                title="{{ 'Desactivar' if u.is_active else 'Activar' }}">
-                                            <i class="bi bi-{{ 'pause' if u.is_active else 'play' }}"></i>
-                                        </button>
-                                    </form>
-                                    {% endif %}
-                                {% else %}
-                                    {# ── Secretaria: solo admin ── #}
-                                    {% if current_user.es_admin_colegio %}
-                                    <a href="{{ url_for('colegio.editar_usuario_operativo_ruta', usuario_id=u.id) }}"
-                                       class="btn btn-sm btn-outline-primary" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a href="{{ url_for('colegio.editar_permisos_usuario_ruta', usuario_id=u.id) }}"
-                                       class="btn btn-sm btn-outline-info" title="Permisos">
-                                        <i class="bi bi-shield-lock"></i>
-                                    </a>
-                                    <form method="post"
-                                          action="{{ url_for('colegio.cambiar_estado_usuario_operativo_ruta', usuario_id=u.id) }}"
-                                          class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit"
-                                                class="btn btn-sm btn-outline-{{ 'warning' if u.is_active else 'success' }}"
-                                                title="{{ 'Desactivar' if u.is_active else 'Activar' }}">
-                                            <i class="bi bi-{{ 'pause' if u.is_active else 'play' }}"></i>
-                                        </button>
-                                    </form>
-                                    {% endif %}
+                                {% set puede_editar = current_user.es_admin_colegio
+                                    or (u.rol == 'secretaria' and tiene_permiso('secretaria.editar_docentes'))
+                                    or (u.rol == 'portero' and tiene_permiso('secretaria.editar_porteros'))
+                                    or (u.rol == 'profesional_piar' and tiene_permiso('secretaria.editar_profesional_piar'))
+                                    or (u.rol == 'psicologo' and tiene_permiso('secretaria.editar_psicologos')) %}
+
+                                {% if puede_editar %}
+                                <a href="{{ url_for('colegio.editar_usuario_operativo_ruta', usuario_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+
+                                {% if u.rol == 'secretaria' and current_user.es_admin_colegio %}
+                                <a href="{{ url_for('colegio.editar_permisos_usuario_ruta', usuario_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-info" title="Permisos">
+                                    <i class="bi bi-shield-lock"></i>
+                                </a>
+                                {% endif %}
+
+                                {% if puede_editar %}
+                                <form method="post"
+                                      action="{{ url_for('colegio.cambiar_estado_usuario_operativo_ruta', usuario_id=u.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-{{ 'warning' if u.is_active else 'success' }}"
+                                            title="{{ 'Desactivar' if u.is_active else 'Activar' }}">
+                                        <i class="bi bi-{{ 'pause' if u.is_active else 'play' }}"></i>
+                                    </button>
+                                </form>
                                 {% endif %}
                             </td>
                         </tr>
@@ -195,7 +246,7 @@
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-inbox fs-1"></i>
                 <p class="mt-2 mb-0">No hay usuarios operativos registrados aún.</p>
-                <p class="small">Crea la primera secretaria o portero con los botones de arriba.</p>
+                <p class="small">Crea el primero con los botones de arriba.</p>
             </div>
             {% endif %}
         </div>

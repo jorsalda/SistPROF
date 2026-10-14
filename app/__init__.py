@@ -78,8 +78,12 @@ def create_app():
         from .routes.colegio_routes import colegio_bp
         from .routes.coordinador_routes import coordinador_bp
         from .routes.docente_routes import docente_bp
+
         from app.routes.secretaria_routes import secretaria_bp
         from app.routes.portero_routes import portero_bp
+        from app.routes.piar_routes import piar_bp
+        from app.routes.psicologo_routes import psicologo_bp
+
         # ✅ IMPORTACIÓN CRÍTICA: Debe coincidir con estudiantes_routes.py
         from .routes.estudiantes_routes import estudiante_bp
 
@@ -105,6 +109,8 @@ def create_app():
     app.register_blueprint(membresia_bp)
     app.register_blueprint(secretaria_bp)
     app.register_blueprint(portero_bp)
+    app.register_blueprint(piar_bp)
+    app.register_blueprint(psicologo_bp)
     # -------------------------------------------------------------------------
     # 5. CSRF
     # -------------------------------------------------------------------------

@@ -14,8 +14,11 @@ from app.utils.permisos_catalogo import (
     SECRETARIA_CREAR_COORDINADORES,
     SECRETARIA_EDITAR_COORDINADORES,
     SECRETARIA_ELIMINAR_COORDINADORES,
+    SECRETARIA_CREAR_PROFESIONAL_PIAR,
+    SECRETARIA_EDITAR_PROFESIONAL_PIAR,
+    SECRETARIA_CREAR_PSICOLOGOS,
+    SECRETARIA_EDITAR_PSICOLOGOS,
 )
-
 from app.models.colegio import Colegio
 from app.models.docente import Docente
 from app.models.permiso import Permiso
@@ -2262,8 +2265,17 @@ from app.services.colegio_usuarios_service import (
 
 @colegio_bp.route("/usuarios-operativos")
 @login_required
-@requiere_permiso('secretaria.ver_porteros')
 def lista_usuarios_operativos_ruta():
+    # El admin siempre pasa. La secretaria necesita al menos un permiso de "ver".
+    if not current_user.es_admin_colegio:
+        permisos_ver = [
+            "secretaria.ver_porteros",
+            "secretaria.ver_profesional_piar",
+            "secretaria.ver_psicologos",
+        ]
+        if not any(tiene_permiso(current_user, p) for p in permisos_ver):
+            abort(403)
+
     rol_filtro = request.args.get("rol")
     if rol_filtro not in ROLES_PERMITIDOS:
         rol_filtro = None
@@ -2285,12 +2297,26 @@ def lista_usuarios_operativos_ruta():
         is_active=True,
     ).count()
 
+    total_profesional_piar = Usuario.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        rol="profesional_piar",
+        is_active=True,
+    ).count()
+
+    total_psicologos = Usuario.query.filter_by(
+        colegio_id=current_user.colegio_id,
+        rol="psicologo",
+        is_active=True,
+    ).count()
+
     return render_template(
         "colegio/usuarios_operativos.html",
         usuarios=usuarios,
         rol_filtro=rol_filtro,
         total_secretarias=total_secretarias,
         total_porteros=total_porteros,
+        total_profesional_piar=total_profesional_piar,
+        total_psicologos=total_psicologos,
         limite_sin_costo=3,
     )
 
@@ -2301,8 +2327,17 @@ def nuevo_usuario_operativo_ruta():
     rol_solicitado = request.form.get("rol", "").strip() or request.args.get("rol", "secretaria").strip()
     if rol_solicitado not in ROLES_PERMITIDOS:
         rol_solicitado = "secretaria"
+
+    # El admin siempre pasa. La secretaria necesita el permiso "crear_<rol>".
     if not current_user.es_admin_colegio:
-        if rol_solicitado != "portero" or not tiene_permiso(current_user, "secretaria.crear_porteros"):
+        mapa_permisos_crear = {
+            "secretaria": "secretaria.crear_docentes",  # placeholder, la secretaria no se crea a sí misma
+            "portero": "secretaria.crear_porteros",
+            "profesional_piar": "secretaria.crear_profesional_piar",
+            "psicologo": "secretaria.crear_psicologos",
+        }
+        permiso_requerido = mapa_permisos_crear.get(rol_solicitado)
+        if not permiso_requerido or not tiene_permiso(current_user, permiso_requerido):
             abort(403)
 
     sedes = Sede.query.filter_by(
@@ -2379,8 +2414,16 @@ def nuevo_usuario_operativo_ruta():
 @login_required
 def cambiar_estado_usuario_operativo_ruta(usuario_id):
     usuario_objetivo = Usuario.query.filter_by(id=usuario_id, colegio_id=current_user.colegio_id).first_or_404()
+
+    # El admin siempre pasa. La secretaria necesita el permiso "editar_<rol>".
     if not current_user.es_admin_colegio:
-        if usuario_objetivo.rol != "portero" or not tiene_permiso(current_user, "secretaria.editar_porteros"):
+        mapa_permisos_editar = {
+            "portero": "secretaria.editar_porteros",
+            "profesional_piar": "secretaria.editar_profesional_piar",
+            "psicologo": "secretaria.editar_psicologos",
+        }
+        permiso_requerido = mapa_permisos_editar.get(usuario_objetivo.rol)
+        if not permiso_requerido or not tiene_permiso(current_user, permiso_requerido):
             abort(403)
 
     usuario = Usuario.query.filter_by(
@@ -2389,7 +2432,7 @@ def cambiar_estado_usuario_operativo_ruta(usuario_id):
     ).first_or_404()
 
     if usuario.rol not in ROLES_PERMITIDOS:
-        flash("Este usuario no es secretaria ni portero", "danger")
+        flash("Este usuario no es un usuario operativo válido", "danger")
         return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
 
     try:
@@ -2407,8 +2450,16 @@ def cambiar_estado_usuario_operativo_ruta(usuario_id):
 @login_required
 def editar_usuario_operativo_ruta(usuario_id):
     usuario_objetivo = Usuario.query.filter_by(id=usuario_id, colegio_id=current_user.colegio_id).first_or_404()
+
+    # El admin siempre pasa. La secretaria necesita el permiso "editar_<rol>".
     if not current_user.es_admin_colegio:
-        if usuario_objetivo.rol != "portero" or not tiene_permiso(current_user, "secretaria.editar_porteros"):
+        mapa_permisos_editar = {
+            "portero": "secretaria.editar_porteros",
+            "profesional_piar": "secretaria.editar_profesional_piar",
+            "psicologo": "secretaria.editar_psicologos",
+        }
+        permiso_requerido = mapa_permisos_editar.get(usuario_objetivo.rol)
+        if not permiso_requerido or not tiene_permiso(current_user, permiso_requerido):
             abort(403)
 
     usuario = Usuario.query.filter_by(
@@ -2417,7 +2468,7 @@ def editar_usuario_operativo_ruta(usuario_id):
     ).first_or_404()
 
     if usuario.rol not in ROLES_PERMITIDOS:
-        flash("Este usuario no es secretaria ni portero", "danger")
+        flash("Este usuario no es un usuario operativo válido", "danger")
         return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
 
     sedes = Sede.query.filter_by(
