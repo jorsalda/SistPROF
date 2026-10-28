@@ -139,6 +139,14 @@ class Usuario(db.Model, UserMixin):
     def es_acudiente(self):
         return self.rol == 'acudiente'
 
+    @property
+    def es_profesional_piar(self):
+        return self.rol == 'profesional_piar'
+
+    @property
+    def es_psicologo(self):
+        return self.rol == 'psicologo'
+
     # --------------------
     # Fechas y prueba
     # --------------------

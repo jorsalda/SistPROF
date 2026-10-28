@@ -1,0 +1,90 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Nuevo PIAR{% endblock %}
+{% block title %}Crear PIAR | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Encabezado y botón de volver -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-plus-circle text-primary me-2"></i>
+                Crear Nuevo PIAR
+            </h2>
+            <p class="text-muted mb-0">Registra el diagnóstico inicial para el estudiante.</p>
+        </div>
+        <a href="{{ url_for('piar.lista') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al listado
+        </a>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+
+            <form method="POST" action="{{ url_for('piar.nuevo') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="estudiante_id" class="form-label fw-bold">Estudiante <span class="text-danger">*</span></label>
+                        <select class="form-select" id="estudiante_id" name="estudiante_id" required>
+                            <option value="">Seleccione un estudiante...</option>
+                            {% for est in estudiantes %}
+                                <option value="{{ est.id }}">{{ est.apellido }}, {{ est.nombre }} ({{ est.grado }}{{ est.grupo or '' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="materia_id" class="form-label fw-bold">Materia <span class="text-danger">*</span></label>
+                        <select class="form-select" id="materia_id" name="materia_id" required>
+                            <option value="">Seleccione una materia...</option>
+                            {% for mat in materias %}
+                                <option value="{{ mat.id }}">{{ mat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="fecha_inicio" class="form-label fw-bold">Fecha de Inicio</label>
+                        <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ date.today() if date else '' }}">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-clipboard-pulse me-2"></i>Diagnóstico y Contexto (Decreto 1421)</h5>
+
+                <div class="mb-3">
+                    <label for="diagnostico" class="form-label fw-bold">Diagnóstico Base <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="diagnostico" name="diagnostico" rows="3" required placeholder="Describa el diagnóstico médico o pedagógico del estudiante..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="contexto_familiar" class="form-label fw-bold">Contexto Familiar</label>
+                    <textarea class="form-control" id="contexto_familiar" name="contexto_familiar" rows="2" placeholder="Describa el entorno familiar relevante (opcional)..."></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label for="entidades_apoyo" class="form-label fw-bold">Entidades que Acompañan</label>
+                    <textarea class="form-control" id="entidades_apoyo" name="entidades_apoyo" rows="2" placeholder="EPS, terapias, fundaciones (opcional)..."></textarea>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('piar.lista') }}" class="btn btn-light border">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i> Guardar PIAR
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

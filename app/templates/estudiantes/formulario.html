@@ -142,7 +142,6 @@
                                 </div>
                             </div>
 
-                            <!-- CAMPO DE CONTRASEÑA AGREGADO DE FORMA LIMPIA -->
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -239,6 +238,37 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 👇 SECCIÓN 4: DIAGNÓSTICO Y CONTEXTO PIAR -->
+                        {% if current_user.rol in ['psicologo', 'profesional_piar', 'admin_colegio', 'coordinador', 'secretaria'] %}
+                        <h5 class="fw-bold text-primary mb-3 pb-2 border-bottom mt-4">
+                            <i class="bi bi-clipboard2-pulse me-2"></i>Diagnóstico y Contexto PIAR
+                        </h5>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Diagnósticos del Estudiante</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-file-medical text-muted"></i></span>
+                                    <textarea name="diagnosticos" class="form-control border-start-0 ps-0" rows="4" placeholder="Escriba un diagnóstico por línea (Ej: TDAH, Dislexia, etc.)">{% if edit_mode and estudiante.diagnosticos %}{% for diag in estudiante.diagnosticos %}{{ diag.descripcion }}{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}</textarea>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i> Escriba cada diagnóstico en una línea separada.
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Requiere PIAR</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="requiere_piar" id="requiere_piar"
+                                           {% if edit_mode and estudiante.requiere_piar %}checked{% endif %}>
+                                    <label class="form-check-label" for="requiere_piar">
+                                        Marcar si el estudiante requiere ajustes razonables
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <!-- Información Adicional -->
                         <div class="alert alert-info rounded-3 mb-4">
@@ -388,22 +418,17 @@
         if (documentoInput && passwordInput) {
             let ultimaContraseñaAutocompletada = passwordInput.value;
 
-            // Autocompletar contraseña cada vez que cambia el documento
             documentoInput.addEventListener('input', function() {
-                // Si la contraseña actual es igual a la última autocompletada,
-                // significa que el usuario NO la ha modificado manualmente
                 if (passwordInput.value === ultimaContraseñaAutocompletada || passwordInput.value === '') {
                     passwordInput.value = this.value;
                     ultimaContraseñaAutocompletada = this.value;
                 }
             });
 
-            // Si el usuario escribe manualmente en contraseña, actualizar el rastreador
             passwordInput.addEventListener('input', function() {
                 ultimaContraseñaAutocompletada = this.value;
             });
 
-            // Mostrar/Ocultar contraseña
             if (togglePassword) {
                 togglePassword.addEventListener('click', function() {
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';

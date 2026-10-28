@@ -15,10 +15,6 @@ class Materia(db.Model):
         nullable=False
     )
 
-    nivel_educativo = db.Column(
-        db.String(50),
-        nullable=True
-    )
 
     estado = db.Column(
         db.Boolean,

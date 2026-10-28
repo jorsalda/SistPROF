@@ -19,9 +19,14 @@ Dashboard Estudiante
             Resumen de mi progreso académico
         </p>
     </div>
-    <div class="badge bg-light text-dark fs-6 p-2">
-        <i class="bi bi-calendar-event"></i>
-        {{ hoy.strftime('%d/%m/%Y') }}
+         <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('estudiante.mi_detalle') }}" class="btn btn-primary">
+            <i class="bi bi-eye me-1"></i> Mi Detalle
+        </a>
+        <div class="badge bg-light text-dark fs-6 p-2">
+            <i class="bi bi-calendar-event"></i>
+            {{ hoy.strftime('%d/%m/%Y') }}
+        </div>
     </div>
 </div>
 
@@ -73,7 +78,7 @@ Dashboard Estudiante
                     <div>
                         <h6 class="text-muted">Mi Grupo</h6>
                         <h5 class="fw-bold">
-                            {{ estudiante.grupo.nombre if estudiante.grupo else 'No asignado' }}
+                            {{ estudiante.grupo_rel.nombre if estudiante.grupo_rel else 'No asignado' }}
                         </h5>
                     </div>
                     <i class="bi bi-people-fill fs-1 text-info"></i>
@@ -95,7 +100,7 @@ Dashboard Estudiante
         <div class="row">
             <div class="col-md-6 mb-3">
                 <strong>Nombre:</strong><br>
-                {{ estudiante.nombre }}
+                {{ estudiante.nombre }} {{ estudiante.apellido }}
             </div>
             <div class="col-md-6 mb-3">
                 <strong>Grado:</strong><br>
@@ -103,7 +108,7 @@ Dashboard Estudiante
             </div>
             <div class="col-md-6 mb-3">
                 <strong>Grupo:</strong><br>
-                {{ estudiante.grupo.nombre if estudiante.grupo else 'No asignado' }}
+                {{ estudiante.grupo_rel.nombre if estudiante.grupo_rel else 'No asignado' }}
             </div>
             <div class="col-md-6 mb-3">
                 <strong>Correo:</strong><br>
@@ -148,13 +153,13 @@ Dashboard Estudiante
                 {% if ultimos_resultados %}
                     {% for resultado in ultimos_resultados %}
                     <tr>
-                        <td>{{ resultado['examen_nombre'] }}</td>
-                        <td>{{ resultado['nota_numerica']|default('-', true) }}</td>
-                        <td>{{ resultado['porcentaje']|default(0, true) }}%</td>
-                        <td>{{ resultado['literal']|default('-', true) }}</td>
+                        <td>{{ resultado.examen_nombre if resultado.examen_nombre else 'Examen' }}</td>
+                        <td>{{ resultado.nota_numerica if resultado.nota_numerica is not none else '-' }}</td>
+                        <td>{{ resultado.porcentaje if resultado.porcentaje is not none else 0 }}%</td>
+                        <td>{{ resultado.literal if resultado.literal else '-' }}</td>
                         <td>
-                            {% if resultado['fecha'] %}
-                                {{ resultado['fecha'].strftime('%d/%m/%Y') }}
+                            {% if resultado.fecha_finalizacion %}
+                                {{ resultado.fecha_finalizacion.strftime('%d/%m/%Y') }}
                             {% else %}
                                 -
                             {% endif %}
@@ -168,7 +173,7 @@ Dashboard Estudiante
                             <p class="text-muted mt-3">
                                 No has presentado ningún examen aún.
                             </p>
-                            <a href="{{ url_for('examen.render_examen_estudiante') }}" class="btn btn-primary">
+                            <a href="{{ url_for('estudiante.examenes_disponibles') }}" class="btn btn-primary">
                                 <i class="bi bi-play-fill me-1"></i> Ver Exámenes Disponibles
                             </a>
                         </td>

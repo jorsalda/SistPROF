@@ -155,6 +155,12 @@
                     Seguimiento Académico
                 </a>
             </li>
+                        <!-- PIAR -->
+            <li class="menu-item">
+                <a href="{{ url_for('piar.lista') }}" class="menu-link {% if request.endpoint in ['piar.lista', 'piar.detalle', 'piar.nuevo', 'piar.ajustes'] %}active{% endif %}">
+                    <i class="bi bi-file-earmark-medical"></i> Módulo PIAR
+                </a>
+            </li>
 
             <!-- Mi Cuenta -->
             <li class="menu-item">

@@ -1,0 +1,126 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Ajustes Razonables{% endblock %}
+{% block title %}Ajustes Razonables | SistPROF{% endblock %}
+
+{% block colegio_content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-tools text-warning me-2"></i>
+                Ajustes Razonables
+            </h2>
+            <p class="text-muted mb-0">Listado de estudiantes con ajustes registrados en sus PIAR.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-list-check me-2"></i>Ajustes por Estudiante</span>
+            <small class="fw-normal opacity-75">{{ agrupados|length }} PIAR con ajustes</small>
+        </div>
+        <div class="card-body p-0">
+
+            {% if agrupados %}
+            <div class="accordion accordion-flush" id="accordionAjustes">
+
+                {% for grupo in agrupados %}
+                <div class="accordion-item border-bottom">
+
+                    <!-- CABECERA DEL ACORDEÓN -->
+                    <div class="accordion-header p-0" id="heading{{ grupo.piar.id }}">
+                        <div class="d-flex align-items-center w-100 py-2 px-3 bg-light hover-bg transition"
+                             style="cursor: pointer; min-width: 0;"
+                             data-bs-toggle="collapse"
+                             data-bs-target="#collapseAjuste{{ grupo.piar.id }}"
+                             aria-expanded="false"
+                             aria-controls="collapseAjuste{{ grupo.piar.id }}">
+
+                            <i class="bi bi-chevron-right me-2 text-muted small toggle-icon flex-shrink-0"></i>
+
+                            <span class="fw-bold fs-6 me-3 flex-shrink-0 text-dark">
+                                {{ grupo.piar.estudiante.nombre }} {{ grupo.piar.estudiante.apellido }}
+                            </span>
+
+                            <span class="badge bg-secondary me-3 d-none d-md-block flex-shrink-0">
+                                {{ grupo.piar.materia.nombre if grupo.piar.materia else 'General' }}
+                            </span>
+
+                            <span class="flex-grow-1 text-secondary small text-truncate me-3" style="min-width: 0;">
+                                {{ grupo.piar.diagnostico }}
+                            </span>
+
+                            <span class="badge bg-info ms-auto flex-shrink-0">
+                                {{ grupo.ajustes|length }} Ajuste(s)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- CUERPO: LISTA DE AJUSTES -->
+                    <div id="collapseAjuste{{ grupo.piar.id }}"
+                         class="accordion-collapse collapse"
+                         aria-labelledby="heading{{ grupo.piar.id }}"
+                         data-bs-parent="#accordionAjustes">
+                        <div class="accordion-body bg-white p-0">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light small text-muted">
+                                    <tr>
+                                        <th style="width: 30%;">Descripción del Ajuste</th>
+                                        <th style="width: 25%;">Docente</th>
+                                        <th style="width: 15%;">Estado</th>
+                                        <th class="text-end pe-4" style="width: 15%;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ajuste in grupo.ajustes %}
+                                    <tr>
+                                        <td class="small fw-bold">{{ ajuste.descripcion }}</td>
+                                        <td class="small">{{ ajuste.docente.nombre if ajuste.docente else 'N/A' }}</td>
+                                        <td>
+                                            {% if ajuste.aplicado %}
+                                                <span class="badge bg-success">Aplicado</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Pendiente</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <a href="{{ url_for('piar.detalle', piar_id=grupo.piar.id) }}" class="btn btn-sm btn-outline-primary" title="Ver PIAR completo">
+                                                <i class="bi bi-eye"></i> Ver PIAR
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
+                <h5>No hay ajustes razonables registrados</h5>
+                <p class="mb-0">Aún no se han creado ajustes en ningún PIAR.</p>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+
+<style>
+.toggle-icon { transition: transform 0.2s ease; }
+.accordion-item .collapsed .toggle-icon,
+.accordion-item [aria-expanded="false"] .toggle-icon { transform: rotate(0deg); }
+.accordion-item [aria-expanded="true"] .toggle-icon { transform: rotate(90deg); }
+.hover-bg:hover { background-color: #e9ecef !important; }
+.transition { transition: background-color 0.15s ease; }
+</style>
+
+{% endblock %}

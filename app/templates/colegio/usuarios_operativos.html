@@ -217,7 +217,8 @@
                                 </a>
                                 {% endif %}
 
-                                {% if u.rol == 'secretaria' and current_user.es_admin_colegio %}
+                                <!-- 👇 CORRECCIÓN: Permitimos a psicólogos y profesionales PIAR tener el botón de permisos -->
+                                {% if u.rol in ['secretaria', 'psicologo', 'profesional_piar'] and current_user.es_admin_colegio %}
                                 <a href="{{ url_for('colegio.editar_permisos_usuario_ruta', usuario_id=u.id) }}"
                                    class="btn btn-sm btn-outline-info" title="Permisos">
                                     <i class="bi bi-shield-lock"></i>

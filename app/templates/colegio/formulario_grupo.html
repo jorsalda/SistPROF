@@ -137,8 +137,8 @@
                             <i class="bi bi-book me-2"></i>Información del Grupo
                         </h5>
 
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-4">
+<div class="row g-4 mb-4">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Grado <span class="text-danger">*</span>
                                 </label>
@@ -146,19 +146,29 @@
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-layers text-muted"></i>
                                     </span>
-                                    <input type="text"
-                                           name="grado"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: 6, 11, Primaria"
-                                           value="{{ grupo.grado if grupo else '' }}"
-                                           required>
+                                    <select name="grado" id="selectGrado" class="form-select border-start-0 ps-0 form-control-lg" required>
+                                        <option value="" disabled selected>Seleccione un grado</option>
+                                        <option value="Pre-jardín" {% if grupo and grupo.grado == 'Pre-jardín' %}selected{% endif %}>Pre-jardín</option>
+                                        <option value="Jardín" {% if grupo and grupo.grado == 'Jardín' %}selected{% endif %}>Jardín</option>
+                                        <option value="Transición" {% if grupo and grupo.grado == 'Transición' %}selected{% endif %}>Transición</option>
+                                        <option value="Preescolar" {% if grupo and grupo.grado == 'Preescolar' %}selected{% endif %}>Preescolar</option>
+                                        <option value="1°" {% if grupo and grupo.grado == '1°' %}selected{% endif %}>1°</option>
+                                        <option value="2°" {% if grupo and grupo.grado == '2°' %}selected{% endif %}>2°</option>
+                                        <option value="3°" {% if grupo and grupo.grado == '3°' %}selected{% endif %}>3°</option>
+                                        <option value="4°" {% if grupo and grupo.grado == '4°' %}selected{% endif %}>4°</option>
+                                        <option value="5°" {% if grupo and grupo.grado == '5°' %}selected{% endif %}>5°</option>
+                                        <option value="6°" {% if grupo and grupo.grado == '6°' %}selected{% endif %}>6°</option>
+                                        <option value="7°" {% if grupo and grupo.grado == '7°' %}selected{% endif %}>7°</option>
+                                        <option value="8°" {% if grupo and grupo.grado == '8°' %}selected{% endif %}>8°</option>
+                                        <option value="9°" {% if grupo and grupo.grado == '9°' %}selected{% endif %}>9°</option>
+                                        <option value="10°" {% if grupo and grupo.grado == '10°' %}selected{% endif %}>10°</option>
+                                        <option value="11°" {% if grupo and grupo.grado == '11°' %}selected{% endif %}>11°</option>
+                                    </select>
                                 </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Ej: 6, 7, 8, 10, 11, Primaria, Secundaria
-                                </div>
+                                <div class="form-text text-muted mt-1"><i class="bi bi-info-circle"></i> Seleccione el grado académico estandarizado</div>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     Nombre/Letra <span class="text-danger">*</span>
                                 </label>
@@ -166,41 +176,52 @@
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-fonts text-muted"></i>
                                     </span>
-                                    <input type="text"
-                                           name="nombre"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: A, B, 01, 02"
-                                           value="{{ grupo.nombre if grupo else '' }}"
-                                           required>
+                                    <select name="nombre" id="selectNombre" class="form-select border-start-0 ps-0 form-control-lg" required>
+                                        <option value="A" {% if grupo and grupo.nombre == 'A' %}selected{% endif %}>A</option>
+                                        <option value="B" {% if grupo and grupo.nombre == 'B' %}selected{% endif %}>B</option>
+                                        <option value="C" {% if grupo and grupo.nombre == 'C' %}selected{% endif %}>C</option>
+                                        <option value="D" {% if grupo and grupo.nombre == 'D' %}selected{% endif %}>D</option>
+                                        <option value="E" {% if grupo and grupo.nombre == 'E' %}selected{% endif %}>E</option>
+                                        <option value="F" {% if grupo and grupo.nombre == 'F' %}selected{% endif %}>F</option>
+                                        <option value="G" {% if grupo and grupo.nombre == 'G' %}selected{% endif %}>G</option>
+                                        <option value="H" {% if grupo and grupo.nombre == 'H' %}selected{% endif %}>H</option>
+                                        <option value="I" {% if grupo and grupo.nombre == 'I' %}selected{% endif %}>I</option>
+                                        <option value="J" {% if grupo and grupo.nombre == 'J' %}selected{% endif %}>J</option>
+                                        <option value="K" {% if grupo and grupo.nombre == 'K' %}selected{% endif %}>K</option>
+                                        <option value="L" {% if grupo and grupo.nombre == 'L' %}selected{% endif %}>L</option>
+                                        <option value="M" {% if grupo and grupo.nombre == 'M' %}selected{% endif %}>M</option>
+                                        <option value="N" {% if grupo and grupo.nombre == 'N' %}selected{% endif %}>N</option>
+                                        <option value="O" {% if grupo and grupo.nombre == 'O' %}selected{% endif %}>O</option>
+                                        <option value="P" {% if grupo and grupo.nombre == 'P' %}selected{% endif %}>P</option>
+                                        <option value="Q" {% if grupo and grupo.nombre == 'Q' %}selected{% endif %}>Q</option>
+                                        <option value="R" {% if grupo and grupo.nombre == 'R' %}selected{% endif %}>R</option>
+                                        <option value="1" {% if grupo and grupo.nombre == '1' %}selected{% endif %}>1</option>
+                                        <option value="2" {% if grupo and grupo.nombre == '2' %}selected{% endif %}>2</option>
+                                        <option value="3" {% if grupo and grupo.nombre == '3' %}selected{% endif %}>3</option>
+                                        <option value="4" {% if grupo and grupo.nombre == '4' %}selected{% endif %}>4</option>
+                                        <option value="5" {% if grupo and grupo.nombre == '5' %}selected{% endif %}>5</option>
+                                        <option value="6" {% if grupo and grupo.nombre == '6' %}selected{% endif %}>6</option>
+                                        <option value="7" {% if grupo and grupo.nombre == '7' %}selected{% endif %}>7</option>
+                                        <option value="8" {% if grupo and grupo.nombre == '8' %}selected{% endif %}>8</option>
+                                        <option value="9" {% if grupo and grupo.nombre == '9' %}selected{% endif %}>9</option>
+                                        <option value="10" {% if grupo and grupo.nombre == '10' %}selected{% endif %}>10</option>
+                                        <option value="11" {% if grupo and grupo.nombre == '11' %}selected{% endif %}>11</option>
+                                        <option value="12" {% if grupo and grupo.nombre == '12' %}selected{% endif %}>12</option>
+                                        <option value="13" {% if grupo and grupo.nombre == '13' %}selected{% endif %}>13</option>
+                                        <option value="14" {% if grupo and grupo.nombre == '14' %}selected{% endif %}>14</option>
+                                        <option value="15" {% if grupo and grupo.nombre == '15' %}selected{% endif %}>15</option>
+                                        <option value="16" {% if grupo and grupo.nombre == '16' %}selected{% endif %}>16</option>
+                                        <option value="17" {% if grupo and grupo.nombre == '17' %}selected{% endif %}>17</option>
+                                        <option value="18" {% if grupo and grupo.nombre == '18' %}selected{% endif %}>18</option>
+                                        <option value="19" {% if grupo and grupo.nombre == '19' %}selected{% endif %}>19</option>
+                                        <option value="20" {% if grupo and grupo.nombre == '20' %}selected{% endif %}>20</option>
+</select>
                                 </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Ej: A, B, C, 01, 02
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">
-                                    Capacidad Máxima
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="bi bi-people text-muted"></i>
-                                    </span>
-                                    <input type="number"
-                                           name="capacidad_maxima"
-                                           class="form-control border-start-0 ps-0 form-control-lg"
-                                           placeholder="Ej: 40"
-                                           value="{{ grupo.capacidad_maxima if grupo else '40' }}"
-                                           min="1"
-                                           max="100">
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="bi bi-info-circle"></i> Máximo estudiantes permitidos
-                                </div>
+                                <div class="form-text text-muted mt-1"><i class="bi bi-info-circle"></i> Identificador del grupo (Ej: A, B, 1... 20)</div>
                             </div>
                         </div>
 
-                        <!-- SECCIÓN 2: Director de Grupo -->
+<!-- SECCIÓN 2: Director de Grupo -->
                         <h5 class="fw-bold text-primary mb-4 pb-2 border-bottom mt-5">
                             <i class="bi bi-person-check me-2"></i>Director de Grupo
                         </h5>

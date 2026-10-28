@@ -70,6 +70,19 @@ class Estudiante(db.Model):
         nullable=False
     )
 
+    # 👇 NUEVOS CAMPOS PARA MATRÍCULA Y PSICOLOGÍA
+    diagnostico_base = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    requiere_piar = db.Column(
+        db.Boolean,
+        server_default=db.text('false'),
+        nullable=False,
+        default=False
+    )
+
     # =====================================================
     # ACUDIENTE PRINCIPAL
     # =====================================================
@@ -258,4 +271,3 @@ class Estudiante(db.Model):
             f"{self.apellido}, {self.nombre} "
             f"- {self.grado}{self.grupo or ''}>"
         )
-

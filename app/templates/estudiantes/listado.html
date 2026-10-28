@@ -217,6 +217,23 @@
                                 {% endif %}
                                 {% endif %}
 
+                                <!-- BOTÓN DE DIAGNÓSTICO -->
+                                {% if current_user.rol in ['psicologo', 'profesional_piar', 'admin_colegio', 'coordinador', 'secretaria'] %}
+                                    {% if estudiante.id in ids_con_diagnostico %}
+                                        <a href="{{ url_for('estudiante.editar', id=estudiante.id) }}#diag"
+                                           class="btn btn-sm btn-success"
+                                           title="Ver / Editar Diagnósticos">
+                                            <i class="bi bi-clipboard2-pulse"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('estudiante.editar', id=estudiante.id) }}#diag"
+                                           class="btn btn-sm btn-outline-secondary"
+                                           title="Registrar Diagnóstico">
+                                            <i class="bi bi-clipboard2-pulse"></i>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+
                                 {% if tiene_permiso('secretaria.eliminar_estudiantes') %}
                                 <button onclick="eliminarEstudiante({{ estudiante.id }})"
                                         class="btn btn-sm btn-outline-danger"

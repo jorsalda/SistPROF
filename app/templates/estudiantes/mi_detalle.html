@@ -1,0 +1,90 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Mi Perfil | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}Mi Perfil{% endblock %}
+
+{% block estudiante_content %}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-person-badge text-primary me-2"></i>
+                Mi Perfil
+            </h2>
+            <p class="text-muted mb-0">Información personal y académica</p>
+        </div>
+        <a href="{{ url_for('estudiante.dashboard_estudiante') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Columna Izquierda: Datos Personales -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle text-primary me-2"></i>Datos Personales</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Nombre:</strong> {{ estudiante.nombre }} {{ estudiante.apellido }}</p>
+                    <p><strong>Documento:</strong> {{ estudiante.tipo_documento }} {{ estudiante.documento }}</p>
+                    <p><strong>Dirección:</strong> {{ estudiante.direccion or 'No registrada' }}</p>
+                    <p class="mb-0"><strong>Teléfono:</strong> {{ estudiante.telefono or 'No registrado' }}</p>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-book text-primary me-2"></i>Información Académica</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Grado:</strong> {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre if estudiante.grupo_rel else '' }}</p>
+                    <p><strong>Sede:</strong> {{ estudiante.sede.nombre if estudiante.sede else 'N/A' }}</p>
+                    <p class="mb-0"><strong>Jornada:</strong> {{ estudiante.jornada.nombre if estudiante.jornada else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Acudiente y Diagnósticos -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-people text-primary me-2"></i>Acudiente Principal</h5>
+                </div>
+                <div class="card-body">
+                    {% if estudiante.acudiente_principal %}
+                        <p><strong>Nombre:</strong> {{ estudiante.acudiente_principal.nombre }}</p>
+                        <p><strong>Parentesco:</strong> {{ estudiante.acudiente_principal.parentesco or 'N/A' }}</p>
+                        <p class="mb-0"><strong>Teléfono:</strong> {{ estudiante.acudiente_principal.telefono }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay acudiente registrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clipboard2-pulse text-danger me-2"></i>Mis Diagnósticos</h5>
+                </div>
+                <div class="card-body">
+                    {% if diagnosticos %}
+                        <ul class="list-group list-group-flush">
+                            {% for diag in diagnosticos %}
+                            <li class="list-group-item px-0">
+                                <i class="bi bi-file-medical text-muted me-2"></i>
+                                {{ diag.descripcion }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">No tienes diagnósticos registrados actualmente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

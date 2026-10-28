@@ -16,20 +16,15 @@
 
     <!-- ─── ESTILOS PREVENTIVOS PARA SCROLL ─── -->
     <style>
-        /* Garantiza que el contenido principal NO corte el scroll horizontal */
         .colegio-main-content {
             overflow-x: visible !important;
             overflow-y: visible !important;
             min-width: 0;
         }
-
-        /* El contenedor flex principal debe permitir que los hijos crezcan */
         .colegio-content {
             overflow-x: visible !important;
             min-width: 0;
         }
-
-        /* Corrección: todos los items del menú usan la misma estructura */
         .sidebar-menu .nav-link {
             display: block;
             padding: 0;
@@ -65,7 +60,7 @@
                 </a>
             </li>
 
-            <!-- Sedes (Submenú Completo y Seguro) -->
+            <!-- Sedes -->
             <li class="menu-item">
                 <a href="#sedesSubmenu"
                    class="menu-link {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_sede', 'colegio.lista_grupos'] %}active{% endif %}"
@@ -76,7 +71,6 @@
                 </a>
                 <ul class="collapse sub-menu {% if request.endpoint in ['colegio.sedes', 'colegio.nueva_sede', 'colegio.detalle_sede', 'colegio.jornadas_sede', 'colegio.lista_grupos'] %}show{% endif %}" id="sedesSubmenu">
 
-                    <!-- Lista de Sedes -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.sedes') }}"
                            class="menu-link {% if request.endpoint == 'colegio.sedes' %}active{% endif %}">
@@ -84,7 +78,6 @@
                         </a>
                     </li>
 
-                    <!-- Nueva Sede -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.nueva_sede') }}"
                            class="menu-link {% if request.endpoint == 'colegio.nueva_sede' %}active{% endif %}">
@@ -92,7 +85,6 @@
                         </a>
                     </li>
 
-                    <!-- Jornadas (Redirige a las jornadas de la sede seleccionada o la primera disponible) -->
                     {% set sede_ref_id = session.get('sede_actual_id') or (current_user.colegio.sedes[0].id if current_user.colegio and current_user.colegio.sedes else None) %}
                     {% if sede_ref_id %}
                     <li class="menu-item">
@@ -103,7 +95,6 @@
                     </li>
                     {% endif %}
 
-                    <!-- Niveles / Grados (A través del detalle de sede) -->
                     {% if sede_ref_id %}
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.detalle_sede', sede_id=sede_ref_id) }}"
@@ -113,7 +104,6 @@
                     </li>
                     {% endif %}
 
-                    <!-- Grupos (de la primera jornada de la sede de referencia) -->
                     {% if sede_ref_id %}
                         {% set sede_ref = current_user.colegio.sedes | selectattr('id', 'equalto', sede_ref_id) | first %}
                         {% if sede_ref and sede_ref.jornadas and sede_ref.jornadas | length > 0 %}
@@ -130,39 +120,40 @@
                 </ul>
             </li>
 
-            <!-- Plan de Estudios -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.plan_estudios') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
-                    <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
+            <!-- Gestión Académica -->
+            <li class="menu-item has-submenu">
+                <a href="#" class="menu-link submenu-toggle" onclick="toggleSubmenu(this)">
+                    <i class="bi bi-journal-bookmark-fill"></i> Gestión Académica
+                    <i class="bi bi-chevron-down ms-auto" style="font-size: 0.7em;"></i>
                 </a>
+                <ul class="submenu" style="display: none; padding-left: 1.5rem;">
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.plan_estudios') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
+                            <i class="bi bi-grid-3x3-gap"></i> Plan de Estudios
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.lista_materias') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
+                            <i class="bi bi-book"></i> Materias
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.gestion_carga_academica') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.gestion_carga_academica' %}active{% endif %}">
+                            <i class="bi bi-journal-bookmark"></i> Carga Académica
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.configurar_materias_nivel') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.configurar_materias_nivel' %}active{% endif %}">
+                            <i class="bi bi-sliders"></i> Configurar Materias por Nivel
+                        </a>
+                    </li>
+                </ul>
             </li>
 
-            <!-- Materias -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.lista_materias') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
-                    <i class="bi bi-book"></i> Materias
-                </a>
-            </li>
-
-            <!-- Docentes -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.lista_docentes') }}"
-                   class="menu-link {% if request.endpoint in ['colegio.lista_docentes', 'colegio.nuevo_docente', 'colegio.editar_docente'] %}active{% endif %}">
-                    <i class="bi bi-people"></i> Docentes
-                </a>
-            </li>
-
-            <!-- Carga Académica -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.gestion_carga_academica') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.gestion_carga_academica' %}active{% endif %}">
-                    <i class="bi bi-journal-bookmark"></i> Carga Académica
-                </a>
-            </li>
-
-            <!-- Coordinadores -->
             <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_coordinadores') }}"
                    class="menu-link {% if request.endpoint == 'colegio.lista_coordinadores' %}active{% endif %}">
@@ -234,12 +225,24 @@
                 </a>
             </li>
 
-            <!-- PIAR -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.piar') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.piar' %}active{% endif %}">
+            <!-- PIAR (Submenú Desplegable) -->
+            <li class="menu-item has-submenu">
+                <a href="#piarSubmenu" class="menu-link submenu-toggle" data-bs-toggle="collapse" aria-expanded="false">
                     <i class="bi bi-file-earmark-medical-fill"></i> PIAR
+                    <i class="bi bi-chevron-down ms-auto"></i>
                 </a>
+                <ul class="collapse sub-menu" id="piarSubmenu">
+                      <li class="menu-item">
+                        <a href="{{ url_for('piar.lista') }}" class="menu-link {% if request.endpoint == 'piar.lista' %}active{% endif %}">
+                            <i class="bi bi-people me-1"></i> Estudiantes PIAR
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('piar.ajustes') }}" class="menu-link">
+                            <i class="bi bi-tools me-1"></i> Ajustes razonables
+                        </a>
+                    </li>
+                </ul>
             </li>
 
             <!-- Configuración del Sistema -->
@@ -261,22 +264,28 @@
                             <i class="bi bi-calendar-check me-1"></i> Habilitar Edición Competencias
                         </a>
                     </li>
-
-                    <!-- Disciplina -->
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.configuracion_escalamiento') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.configuracion_escalamiento' %}active{% endif %}">
+                            <i class="bi bi-bar-chart-steps me-1"></i> Escala de Evaluación
+                        </a>
+                    </li>
+                                        <!-- Tipos de Evaluación -->
+                    <li class="menu-item">
+                        <a href="#" class="menu-link">
+                            <i class="bi bi-list-check me-1"></i> Tipos de Evaluación
+                        </a>
+                    </li>
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.configuracion_disciplina') }}" class="menu-link">
                             <i class="bi bi-shield-exclamation me-1"></i> Disciplina
                         </a>
                     </li>
-
-                    <!-- Escalamiento -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.configuracion_escalamiento') }}" class="menu-link">
                             <i class="bi bi-arrow-up-right-square me-1"></i> Escalamiento
                         </a>
                     </li>
-
-                    <!-- Usuarios Operativos (NUEVO) -->
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.lista_usuarios_operativos_ruta') }}"
                            class="menu-link {% if 'usuarios_operativos' in (request.endpoint or '') %}active{% endif %}">
@@ -350,3 +359,63 @@
 
 </body>
 </html>
+<script>
+function toggleSubmenu(element) {
+    const submenu = element.nextElementSibling;
+    const icon = element.querySelector('.bi-chevron-down');
+
+    if (submenu.style.display === 'none') {
+        submenu.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        submenu.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Abrir automáticamente el submenú si estamos en una de sus páginas
+document.addEventListener('DOMContentLoaded', function() {
+    const activeLink = document.querySelector('.submenu .menu-link.active');
+    if (activeLink) {
+        const submenu = activeLink.closest('.submenu');
+        const toggle = submenu.previousElementSibling;
+        const icon = toggle.querySelector('.bi-chevron-down');
+        submenu.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    }
+});
+</script>
+
+<style>
+/* Estilos para el submenú en el sidebar oscuro */
+.has-submenu .submenu-toggle {
+    cursor: pointer;
+}
+
+.has-submenu .submenu {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    margin-left: 0.5rem;
+}
+
+.has-submenu .submenu .menu-link {
+    font-size: 0.9em;
+    padding: 0.4rem 1rem;
+    opacity: 0.85;
+}
+
+.has-submenu .submenu .menu-link:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.has-submenu .submenu .menu-link.active {
+    opacity: 1;
+    background-color: rgba(var(--bs-primary-rgb), 0.2);
+    border-left: 3px solid var(--bs-primary);
+}
+
+.bi-chevron-down {
+    transition: transform 0.2s ease;
+}
+</style>

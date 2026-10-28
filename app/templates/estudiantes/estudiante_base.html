@@ -3,22 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>SistPROF - Estudiante</title>
+    <title>SistPROF - Panel Estudiante</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/coordinador.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colegio.css') }}">
+
+    <style>
+        .colegio-main-content {
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            min-width: 0;
+        }
+        .colegio-content {
+            overflow-x: visible !important;
+            min-width: 0;
+        }
+        .sidebar-menu .nav-link {
+            display: block;
+            padding: 0;
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
 </head>
 <body>
 
-<div class="coordinador-container">
-    <aside class="coordinador-sidebar">
+<div class="colegio-container">
+
+    <!-- SIDEBAR ESTUDIANTE -->
+    <aside class="colegio-sidebar">
         <div class="sidebar-header">
-            <h2><i class="bi bi-backpack"></i> Panel Estudiante</h2>
+            <h2><i class="bi bi-mortarboard-fill"></i> Panel Estudiante</h2>
             <p>SistPROF</p>
         </div>
 
         <ul class="sidebar-menu">
+            <!-- Dashboard -->
             <li class="menu-item">
                 <a href="{{ url_for('estudiante.dashboard_estudiante') }}"
                    class="menu-link {% if request.endpoint == 'estudiante.dashboard_estudiante' %}active{% endif %}">
@@ -26,51 +47,108 @@
                 </a>
             </li>
 
+            <!-- Mi Perfil (Imagen 1) -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_perfil') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_perfil' %}active{% endif %}">
+                    <i class="bi bi-person-badge"></i> Mi Perfil
+                </a>
+            </li>
+
+            <!-- Mi Detalle (Imagen 2) -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_detalle') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_detalle' %}active{% endif %}">
+                    <i class="bi bi-eye"></i> Mi Detalle
+                </a>
+            </li>
+
+            <!-- Mi Horario -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_horario') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_horario' %}active{% endif %}">
+                    <i class="bi bi-calendar-week"></i> Mi Horario
+                </a>
+            </li>
+
+            <!-- Mi Asistencia -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_asistencia') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_asistencia' %}active{% endif %}">
+                    <i class="bi bi-clipboard-check"></i> Mi Asistencia
+                </a>
+            </li>
+
+            <!-- Mi Observador -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_observador') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_observador' %}active{% endif %}">
+                    <i class="bi bi-eye-fill"></i> Mi Observador
+                </a>
+            </li>
+
+            <!-- Mis Citaciones -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mis_citaciones') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mis_citaciones' %}active{% endif %}">
+                    <i class="bi bi-calendar-event"></i> Mis Citaciones
+                </a>
+            </li>
+
+            <!-- Mi PIAR -->
+            <li class="menu-item">
+                <a href="{{ url_for('estudiante.mi_piar') }}"
+                   class="menu-link {% if request.endpoint == 'estudiante.mi_piar' %}active{% endif %}">
+                    <i class="bi bi-file-earmark-medical"></i> Mi PIAR
+                </a>
+            </li>
+
+            <!-- Mis Exámenes -->
             <li class="menu-item">
                 <a href="{{ url_for('estudiante.examenes_disponibles') }}"
                    class="menu-link {% if request.endpoint == 'estudiante.examenes_disponibles' %}active{% endif %}">
-                    <i class="bi bi-journal-bookmark-fill"></i> Mis Exámenes
+                    <i class="bi bi-journal-check"></i> Mis Exámenes
                 </a>
             </li>
 
+            <!-- Mis Calificaciones -->
             <li class="menu-item">
                 <a href="{{ url_for('estudiante.mis_calificaciones') }}"
                    class="menu-link {% if request.endpoint == 'estudiante.mis_calificaciones' %}active{% endif %}">
-                    <i class="bi bi-journal-text"></i> Mis Calificaciones
+                    <i class="bi bi-list-check"></i> Mis Calificaciones
                 </a>
             </li>
 
+            <!-- Mi Cuenta -->
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}"
                    class="menu-link {% if request.endpoint == 'auth.estado_cuenta' %}active{% endif %}">
                     <i class="bi bi-person-badge"></i> Mi Cuenta
                 </a>
             </li>
-
-            {% if current_user.colegio_id == 46 %}
-            <li class="menu-item">
-                <a href="{{ url_for('membresia.ver_mi_plan') }}"
-                   class="menu-link {% if request.endpoint == 'membresia.ver_mi_plan' %}active{% endif %}">
-                    <i class="bi bi-credit-card"></i> Mi Membresía
-                </a>
-            </li>
-            {% endif %}
-
-            <li class="menu-item logout-item">
-                <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
-                    <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
-                </button>
-            </li>
         </ul>
+
+        <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+        </button>
     </aside>
 
-    <main class="coordinador-content">
-        <header class="coordinador-header">
-            <h1>{% block estudiante_page_title %}Dashboard Estudiante{% endblock %}</h1>
-            <div class="user-info"><i class="bi bi-person-circle"></i> {{ current_user.email }}</div>
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="colegio-content">
+
+        <header class="colegio-header">
+            <h1>
+                {% block estudiante_page_title %}
+                Panel Estudiante
+                {% endblock %}
+            </h1>
+            <div class="user-info">
+                <i class="bi bi-person-circle"></i>
+                {{ current_user.email }}
+            </div>
         </header>
 
-        <div class="coordinador-main-content">
+        <div class="colegio-main-content">
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
@@ -82,27 +160,11 @@
             {% endif %}
             {% endwith %}
 
-            {% if current_user.colegio_id == 46 %}
-            <div class="alert alert-info d-flex justify-content-between align-items-center">
-                <div>
-                    <strong> Estado de tu membresía:</strong>
-                    {% if dias_restantes is defined and dias_restantes > 0 %}
-                    Te quedan {{ dias_restantes }} días de prueba.
-                    {% elif dias_restantes is defined and dias_restantes <= 0 %}
-                    Tu periodo de prueba ha vencido. Por favor renueva tu membresía.
-                    {% else %}
-                    Verifica el estado de tu membresía.
-                    {% endif %}
-                </div>
-                <a href="{{ url_for('membresia.ver_mi_plan') }}" class="btn btn-sm btn-primary">
-                    💳 Ver/Renovar
-                </a>
-            </div>
-            {% endif %}
-
             {% block estudiante_content %}{% endblock %}
         </div>
+
     </main>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

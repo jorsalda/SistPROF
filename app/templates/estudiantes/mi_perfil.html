@@ -1,0 +1,154 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Mi Perfil | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}Mi Perfil{% endblock %}
+
+{% block estudiante_content %}
+<div style="background: yellow; padding: 10px; color: black; font-weight: bold;">
+    DEBUG: ¿Diagnósticos llegan? = {{ diagnosticos }}
+</div>
+<div class="container-fluid px-4 py-4">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-person-badge text-primary me-2"></i>
+                Mi Perfil
+            </h2>
+            <p class="text-muted mb-0">
+                {{ estudiante.nombre }} {{ estudiante.apellido }} • Grado {{ estudiante.grado }} • {{ estudiante.sede.nombre if estudiante.sede else 'N/A' }}
+            </p>
+        </div>
+        <a href="{{ url_for('estudiante.dashboard_estudiante') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Columna Izquierda: QR, Datos Personales, Información Académica -->
+        <div class="col-lg-6">
+            <!-- Código QR -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-qr-code me-2"></i>Mi Código QR</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted small mb-1">Token:</p>
+                    <p class="fw-bold text-danger mb-3">{{ estudiante.qr_token }}</p>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('{{ estudiante.qr_token }}'); alert('Token copiado');">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Datos Personales -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle text-primary me-2"></i>Datos Personales</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Nombre:</strong> {{ estudiante.nombre }} {{ estudiante.apellido }}</p>
+                    <p><strong>Documento:</strong> {{ estudiante.tipo_documento }} {{ estudiante.documento }}</p>
+                    <p><strong>Dirección:</strong> {{ estudiante.direccion or 'No registrada' }}</p>
+                    <p class="mb-0"><strong>Teléfono:</strong> {{ estudiante.telefono or 'No registrado' }}</p>
+                </div>
+            </div>
+
+            <!-- Información Académica -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-book text-primary me-2"></i>Información Académica</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Grado:</strong> {{ estudiante.grado }}{{ estudiante.grupo_rel.nombre if estudiante.grupo_rel else '' }}</p>
+                    <p><strong>Sede:</strong> {{ estudiante.sede.nombre if estudiante.sede else 'N/A' }}</p>
+                    <p class="mb-0"><strong>Jornada:</strong> {{ estudiante.jornada.nombre if estudiante.jornada else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Acudiente, Diagnósticos, Asistencias, Novedades -->
+        <div class="col-lg-6">
+            <!-- Acudiente -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-people text-primary me-2"></i>Acudiente Principal</h5>
+                </div>
+                <div class="card-body">
+                    {% if estudiante.acudiente_principal %}
+                        <p><strong>Nombre:</strong> {{ estudiante.acudiente_principal.nombre }}</p>
+                        <p><strong>Parentesco:</strong> {{ estudiante.acudiente_principal.parentesco or 'N/A' }}</p>
+                        <p class="mb-0"><strong>Teléfono:</strong> {{ estudiante.acudiente_principal.telefono }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay acudiente registrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Diagnósticos -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clipboard2-pulse text-danger me-2"></i>Mis Diagnósticos</h5>
+                </div>
+                <div class="card-body">
+                    {% if diagnosticos %}
+                        <ul class="list-group list-group-flush">
+                            {% for diag in diagnosticos %}
+                            <li class="list-group-item px-0">
+                                <i class="bi bi-file-medical text-muted me-2"></i>
+                                {{ diag.descripcion }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">No tienes diagnósticos registrados actualmente.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Asistencias Recientes -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history text-warning me-2"></i>Asistencias Recientes</h5>
+                </div>
+                <div class="card-body">
+                    {% if asistencias %}
+                        <ul class="list-group list-group-flush">
+                            {% for a in asistencias %}
+                            <li class="list-group-item px-0 d-flex justify-content-between">
+                                <span>{{ a.fecha.strftime('%d/%m/%Y') }}</span>
+                                <span class="badge {{ 'bg-success' if a.estado == 'presente' else 'bg-danger' if a.estado == 'ausente' else 'bg-warning' }}">{{ a.estado }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Sin registros de asistencia.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Novedades -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Novedades</h5>
+                </div>
+                <div class="card-body">
+                    {% if novedades %}
+                        <ul class="list-group list-group-flush">
+                            {% for n in novedades %}
+                            <li class="list-group-item px-0">
+                                <strong>{{ n.fecha.strftime('%d/%m/%Y') }}:</strong> {{ n.informe }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Sin novedades registradas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

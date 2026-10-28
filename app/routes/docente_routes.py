@@ -6,8 +6,8 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 import json
-from sqlalchemy import or_  # ✅ CORREGIDO: usar sqlalchemy.or_ en lugar de re.or_
-
+import re
+from sqlalchemy import or_  # ✅ CORREGIDO: usar sqlalchemy.or_ en lugar de re.or
 # Imports de Modelos Existentes
 from app.models.pregunta import Pregunta
 from app.models.materia import Materia
@@ -478,7 +478,11 @@ def cambiar_estado(id):
 @docente_bp.route("/banco-preguntas")
 @login_required
 def banco_preguntas():
-    preguntas_banco = Pregunta.query.filter_by(docente_id=current_user.id).order_by(
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("No se encontró perfil de docente.", "danger")
+        return redirect(url_for("docente.dashboard"))
+    preguntas_banco = Pregunta.query.filter_by(docente_id=docente.id).order_by(
         Pregunta.fecha_creacion.desc()).all()
     materias = Materia.query.all()
     return render_template("docentes/banco_preguntas.html", preguntas=preguntas_banco, materias=materias)
@@ -491,7 +495,7 @@ def crear_desde_banco():
         abort(403)
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
     materias = Materia.query.all()
-    preguntas_banco = Pregunta.query.filter_by(docente_id=current_user.id).all()
+    preguntas_banco = Pregunta.query.filter_by(docente_id=docente.id).all()
 
     if request.method == "POST":
         try:
@@ -513,19 +517,65 @@ def crear_desde_banco():
                 flash("Algunas preguntas seleccionadas no son válidas.", "danger")
                 return redirect(url_for("docente.crear_desde_banco"))
 
+            # 🎯 CONSTRUIR contenido_json EN EL FORMATO QUE ESPERA ClsEstudiante.js
+            contenido_json = []
+            for idx, p in enumerate(preguntas_validas, start=1):
+                # Manejar opciones: puede ser array, objeto o None
+                if isinstance(p.opciones, list):
+                    opciones_arr = p.opciones
+                elif isinstance(p.opciones, dict):
+                    opciones_arr = list(p.opciones.values())
+                else:
+                    opciones_arr = []
+
+                # La respuesta_correcta puede venir como letra "B" o como texto
+                respuesta_raw = getattr(p, 'respuesta_correcta', '') or ''
+                if isinstance(p.opciones, dict) and isinstance(respuesta_raw, str) and respuesta_raw in p.opciones:
+                    respuesta_final = p.opciones[respuesta_raw]
+                else:
+                    respuesta_final = respuesta_raw
+
+                # Construir contexto si existe
+                contexto = None
+                if hasattr(p, 'contexto') and p.contexto:
+                    contexto = p.contexto
+                elif getattr(p, 'url_contexto', None):
+                    contexto = {
+                        "tipo": getattr(p, 'tipo_contexto', 'texto') or 'texto',
+                        "texto": "",
+                        "src": p.url_contexto
+                    }
+
+                pregunta_dict = {
+                    "numero": idx,
+                    "pregunta": getattr(p, 'texto', '') or '',
+                    "opciones": opciones_arr,
+                    "respuesta": respuesta_final,
+                    "explicacion": getattr(p, 'explicacion', '') or '',
+                    "dificultad": getattr(p, 'dificultad', 'media') or 'media',
+                    "puntos_maximos": getattr(p, 'puntos_maximos', 1) or 1,
+                    "indicador_logro_id": getattr(p, 'indicador_logro_id', None)
+                }
+
+                if contexto:
+                    pregunta_dict["contexto"] = contexto
+
+                contenido_json.append(pregunta_dict)
+
+            # Crear el examen CON contenido_json lleno
             nuevo_examen = Examen(
-                titulo=titulo, nombre=titulo, descripcion=f"Examen creado desde banco para {grado}",
-                materia_id=materia_id, colegio_id=current_user.colegio_id, tiempo_limite_minutos=30,
-                fecha_creacion=datetime.now(), activo=True
+                titulo=titulo,
+                nombre=titulo,
+                descripcion=f"Examen creado desde banco para {grado}",
+                materia_id=materia_id,
+                colegio_id=current_user.colegio_id,
+                contenido_json=contenido_json,     # ← AQUÍ SE GUARDA EN examenes
+                tiempo_limite_minutos=30,
+                fecha_creacion=datetime.now(),
+                activo=True,
+                eliminado=False
             )
             db.session.add(nuevo_examen)
-            db.session.flush()
-
-            contenido_para_guardar = [{"pregunta_id": p.id, "orden": idx + 1} for idx, p in
-                                      enumerate(preguntas_validas)]
-            nuevo_contenido = ExamenContenido(examen_id=nuevo_examen.id, contenido_json=contenido_para_guardar,
-                                              version=1, activo=True)
-            db.session.add(nuevo_contenido)
             db.session.commit()
 
             flash(f"✅ Examen '{titulo}' creado con {len(preguntas_validas)} preguntas.", "success")
@@ -537,7 +587,6 @@ def crear_desde_banco():
             traceback.print_exc()
     return render_template("examenes/crear_examen.html", docente=docente, materias=materias,
                            preguntas_banco=preguntas_banco)
-
 
 @docente_bp.route("/examen/<int:id>/asignar", methods=["GET", "POST"])
 @login_required
@@ -951,13 +1000,17 @@ def ver_planilla(grupo_id, materia_id):
 
     periodo_id = periodo.id
 
-    config_eval = db.session.execute(text("""
-        SELECT tipo_captura FROM configuracion_evaluacion 
-        WHERE colegio_id = :cid
-    """), {"cid": docente.colegio_id}).fetchone()
-
-    tipo_captura = config_eval.tipo_captura if config_eval else 'NUMERICA'
-
+    # TODO: configuracion_evaluacion no existe en el DDL (ver TEMA-025).
+    # Mientras no exista, se usa 'NUMERICA' por defecto.
+    try:
+        config_eval = db.session.execute(text("""
+            SELECT tipo_captura FROM configuracion_evaluacion 
+            WHERE colegio_id = :cid
+        """), {"cid": docente.colegio_id}).fetchone()
+        tipo_captura = config_eval.tipo_captura if config_eval else 'NUMERICA'
+    except Exception:
+        db.session.rollback()
+        tipo_captura = 'NUMERICA'
     # ========================================================================
     # POST: GUARDAR NOTAS Y NIVELES
     # ========================================================================
@@ -1018,19 +1071,22 @@ def ver_planilla(grupo_id, materia_id):
                         flash(msg, "danger")
                         return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
 
+                    # ✅ FIX: Buscar un indicador real de la competencia
                     indicador = IndicadorLogro.query.filter_by(
                         competencia_materia_id=int(comp_id)
                     ).order_by(IndicadorLogro.id).first()
 
                     if not indicador:
+                        # Si no existe, lo creamos con un código único
                         indicador = IndicadorLogro(
                             competencia_materia_id=int(comp_id),
-                            descripcion=f"Indicador general - Competencia {comp_id}",
-                            codigo="GENERAL"
+                            descripcion=f"Indicador para Competencia {comp_id}",
+                            codigo=f"C{comp_id}"
                         )
                         db.session.add(indicador)
                         db.session.flush()
 
+                    # ✅ FIX: Buscar la evaluación y actualizarla o crearla
                     ev = EvaluacionEstudiante.query.filter_by(
                         estudiante_id=int(est_id),
                         indicador_id=indicador.id,
@@ -1195,7 +1251,7 @@ def ver_planilla(grupo_id, materia_id):
         if ev.estudiante_id not in evals_por_indicador:
             evals_por_indicador[ev.estudiante_id] = {}
         evals_por_indicador[ev.estudiante_id][ev.indicador_id] = {
-            "calificacion": float(ev.calificacion) if ev.calificacion else None,
+            "calificacion": float(ev.calificacion) if ev.calificacion is not None else None,
             "nivel_desempeño": ev.nivel_desempeño
         }
 
@@ -1245,9 +1301,9 @@ def ver_planilla(grupo_id, materia_id):
 
         aporte_fijo = 0.0
         if nota_auto is not None:
-            aporte_fijo += val_auto_calc * (PCT_AUTOEVAL / 5.0)
+            aporte_fijo += val_auto_calc * (PCT_AUTOEVAL / 100)
         if nota_examen is not None:
-            aporte_fijo += val_examen_calc * (PCT_EXAMEN / 5.0)
+            aporte_fijo += val_examen_calc * (PCT_EXAMEN / 100)
 
         aporte_competencias = 0.0
         suma_pcts_docente = 0.0
@@ -1262,7 +1318,7 @@ def ver_planilla(grupo_id, materia_id):
 
             if nota_comp is not None:
                 val_comp = float(nota_comp)
-                aporte_competencias += val_comp * (pct_comp / 5.0)
+                aporte_competencias += val_comp * (pct_comp / 100)
 
         puntaje_total = aporte_competencias + aporte_fijo
         definitiva = round(puntaje_total, 1)

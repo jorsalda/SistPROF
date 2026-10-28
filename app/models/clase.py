@@ -21,7 +21,7 @@ class Clase(db.Model):
     hora_inicio = db.Column(Time, nullable=False)
     hora_fin = db.Column(Time, nullable=False)
     activo = db.Column(db.Boolean, default=True)
-    dia = db.Column(db.Enum(DiaSemana), nullable=False)
+    dia = db.Column(db.Enum(DiaSemana, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
 
     # ========== CLAVES FORÁNEAS ==========
     docente_id = db.Column(

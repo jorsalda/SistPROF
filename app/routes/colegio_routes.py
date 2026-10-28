@@ -1311,9 +1311,8 @@ def seguimiento():
 @colegio_bp.route("/piar")
 @login_required
 def piar():
-    flash("El módulo de PIAR está en construcción.", "info")
-    return redirect(url_for('colegio.dashboard'))
-
+    # Redirige al dashboard del módulo PIAR que ya creamos
+    return redirect(url_for('piar.lista'))
 
 # ==========================================================
 # ÁREAS DE GESTIÓN
@@ -1501,6 +1500,7 @@ def horario_grupo(grupo_id):
     grupo = Grupo.query.filter_by(id=grupo_id, colegio_id=current_user.colegio_id).first_or_404()
     jornada = grupo.jornada
 
+    # --- Lógica de bloques horarios (igual que antes) ---
     bloques_clase = JornadaBloque.query.filter_by(jornada_id=jornada.id, tipo='clase', activo=True).order_by(
         JornadaBloque.orden).all()
     bloques_hora = [{'inicio': b.hora_inicio.strftime('%H:%M'), 'fin': b.hora_fin.strftime('%H:%M'), 'nombre': b.nombre}
@@ -1532,48 +1532,125 @@ def horario_grupo(grupo_id):
 
     dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 
+    # --- PROCESAMIENTO DEL FORMULARIO ---
     if request.method == 'POST':
-        try:
-            for dia in dias:
-                for bloque in bloques_hora:
-                    hora = bloque['inicio']
-                    clave = f"{dia}_{hora}"
-                    grupo_materia_id = request.form.get(clave)
-                    if grupo_materia_id and grupo_materia_id != '':
-                        grupo_materia = GrupoMateria.query.get(int(grupo_materia_id))
-                        if grupo_materia and grupo_materia.docente_id:
-                            horas_actuales = db.session.query(Clase).join(GrupoMateria,
-                                                                          Clase.grupo_materia_id == GrupoMateria.id).filter(
-                                GrupoMateria.docente_id == grupo_materia.docente_id, Clase.activo == True).count()
-                            clase_existente = Clase.query.filter_by(colegio_id=current_user.colegio_id,
-                                                                    dia=DiaSemana(dia),
-                                                                    hora_inicio=datetime.strptime(hora,
-                                                                                                  '%H:%M').time()).first()
-                            if not clase_existente:
-                                horas_actuales += 1
-                            if horas_actuales > 22:
-                                flash(f"⚠️ El docente '{grupo_materia.docente.nombre}' excede 22h semanales.", 'danger')
-                                return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+        # 1. PASO 1: Recopilar TODO lo que el usuario envió (sin guardar nada en BD aún)
+        datos_formulario = []
+        for dia in dias:
+            for bloque in bloques_hora:
+                hora = bloque['inicio']
+                clave = f"{dia.lower()}_{hora}"
+                grupo_materia_id = request.form.get(clave)
 
-                        if clase_existente:
-                            clase_existente.grupo_materia_id = int(grupo_materia_id)
-                            clase_existente.docente_id = grupo_materia.docente_id if grupo_materia else None
-                        else:
-                            db.session.add(
-                                Clase(colegio_id=current_user.colegio_id, grupo_materia_id=int(grupo_materia_id),
-                                      docente_id=grupo_materia.docente_id if grupo_materia else None,
-                                      dia=DiaSemana(dia), hora_inicio=datetime.strptime(hora, '%H:%M').time(),
-                                      hora_fin=datetime.strptime(bloque['fin'], '%H:%M').time(), activo=True))
+                if grupo_materia_id and grupo_materia_id != '':
+                    gm = GrupoMateria.query.get(int(grupo_materia_id))
+                    if gm and gm.docente_id:
+                        datos_formulario.append({
+                            'dia': dia,
+                            'hora': hora,
+                            'hora_fin': bloque['fin'],
+                            'gm': gm
+                        })
+
+        # 2. PASO 2: VALIDAR TODO (si algo falla, redirigir sin guardar NADA)
+        for item in datos_formulario:
+            gm = item['gm']
+            docente = gm.docente
+            dia_actual = item['dia'].lower()
+            hora_actual = item['hora']
+
+            # 2.1 Validar límite de 22 horas
+            horas_asignadas = db.session.query(Clase).join(GrupoMateria,
+                                                           Clase.grupo_materia_id == GrupoMateria.id).filter(
+                GrupoMateria.docente_id == docente.id, Clase.activo == True).count()
+
+            # Si es una clase nueva (no existía antes), sumará 1 hora más
+            existe_previa = Clase.query.filter_by(
+                colegio_id=current_user.colegio_id,
+                dia=DiaSemana(dia_actual),
+                hora_inicio=datetime.strptime(hora_actual, '%H:%M').time()
+            ).first()
+
+            if not existe_previa:
+                horas_asignadas += 1
+
+            if horas_asignadas > 22:
+                flash(f"⚠️ El docente '{docente.nombre}' excede 22h semanales. No se guardó nada.", 'danger')
+                return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+
+            # 2.2 Validar Cruce de Horario (con OTROS grupos)
+            cruce = db.session.query(Clase).join(GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id).filter(
+                Clase.colegio_id == current_user.colegio_id,
+                Clase.dia == DiaSemana(dia_actual),
+                Clase.hora_inicio == datetime.strptime(hora_actual, '%H:%M').time(),
+                Clase.activo == True,
+                GrupoMateria.docente_id == docente.id,
+                GrupoMateria.grupo_id != grupo.id,
+                Clase.id != (existe_previa.id if existe_previa else -1)
+            ).first()
+
+            if cruce:
+                flash(
+                    f"❌ Cruce bloqueado: El docente '{docente.nombre}' ya tiene clase en el grupo {cruce.grupo_materia.grupo.grado}{cruce.grupo_materia.grupo.nombre} a las {hora_actual}. No se guardó nada.",
+                    'danger')
+                return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+
+        # 3. PASO 3: Si llegamos aquí, TODO está validado. GUARDAR TODO.
+        try:
+            for item in datos_formulario:
+                gm = item['gm']
+                dia_actual = item['dia'].lower()
+                hora_actual = item['hora']
+
+                clase = Clase.query.filter_by(
+                    colegio_id=current_user.colegio_id,
+                    dia=DiaSemana(dia_actual),
+                    hora_inicio=datetime.strptime(hora_actual, '%H:%M').time()
+                ).first()
+
+                if clase:
+                    clase.grupo_materia_id = gm.id
+                    clase.docente_id = gm.docente_id
+                else:
+                    db.session.add(Clase(
+                        colegio_id=current_user.colegio_id,
+                        grupo_materia_id=gm.id,
+                        docente_id=gm.docente_id,
+                        dia=DiaSemana(dia_actual),
+                        hora_inicio=datetime.strptime(hora_actual, '%H:%M').time(),
+                        hora_fin=datetime.strptime(item['hora_fin'], '%H:%M').time(),
+                        activo=True
+                    ))
+
             db.session.commit()
-            flash('Horario actualizado', 'success')
-            return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
+            flash('Horario actualizado exitosamente.', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error: {str(e)}', 'danger')
+            flash(f'Error al guardar: {str(e)}', 'danger')
 
-    return render_template('colegio/horario_grupo.html', grupo=grupo, grupo_materias=grupo_materias,
-                           horarios_dict=horarios_dict, dias=dias, bloques_hora=bloques_hora)
+        return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
 
+    # --- VARIABLES PARA EL RENDERIZADO (GET) ---
+    clases_ocupadas = db.session.query(Clase).join(GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id).filter(
+        Clase.colegio_id == current_user.colegio_id,
+        Clase.activo == True
+    ).all()
+
+    docentes_ocupados_global = {}
+    for c in clases_ocupadas:
+        clave_ocupada = f"{c.dia.value}_{c.hora_inicio.strftime('%H:%M')}"
+        if clave_ocupada not in docentes_ocupados_global:
+            docentes_ocupados_global[clave_ocupada] = []
+        if c.grupo_materia.docente_id not in docentes_ocupados_global[clave_ocupada]:
+            docentes_ocupados_global[clave_ocupada].append(c.grupo_materia.docente_id)
+
+    return render_template('colegio/horario_grupo.html',
+                           grupo=grupo,
+                           grupo_materias=grupo_materias,
+                           docentes_ocupados_global=docentes_ocupados_global,
+                           horarios_dict=horarios_dict,
+                           dias=dias,
+                           bloques_hora=bloques_hora)
 
 @colegio_bp.route('/jornadas/<int:jornada_id>/configurar-bloques', methods=['GET', 'POST'])
 @login_required
@@ -1630,15 +1707,23 @@ def plan_estudios():
     grados_otras_modalidades = [g for g in grados_personalizados if g not in grados_programas_especiales]
     grados = grados_estandar + grados_programas_especiales + grados_otras_modalidades
 
-    materias_por_nivel = {
-        'Preescolar': Materia.query.filter_by(nivel_educativo='Preescolar').order_by(Materia.nombre).all(),
-        'Primaria': Materia.query.filter_by(nivel_educativo='Primaria').order_by(Materia.nombre).all(),
-        'Bachillerato': Materia.query.filter_by(nivel_educativo='Bachillerato').order_by(Materia.nombre).all(),
-        'Media': Materia.query.filter_by(nivel_educativo='Media').order_by(Materia.nombre).all(),
-        'Programas Especiales': Materia.query.filter_by(nivel_educativo='Programas Especiales').order_by(
-            Materia.nombre).all(),
-        'Validación': Materia.query.filter_by(nivel_educativo='Validación').order_by(Materia.nombre).all()
-    }
+    # Agrupamos las materias por grado usando el Plan de Estudios
+    plan_actual = PlanEstudios.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
+    
+    # Obtenemos todos los grados únicos que tienen plan de estudios
+    grados_con_plan = sorted(list(set([p.grado for p in plan_actual])))
+    
+    materias_por_nivel = {}
+    for grado in grados_con_plan:
+        materias_ids = [p.materia_id for p in plan_actual if p.grado == grado]
+        materias = Materia.query.filter(Materia.id.in_(materias_ids)).order_by(Materia.nombre).all()
+        materias_por_nivel[grado] = materias
+    
+    # Fallback: si no hay plan de estudios, mostrar todas las materias
+    if not materias_por_nivel:
+        todas = Materia.query.order_by(Materia.nombre).all()
+        materias_por_nivel = {'Sin Plan de Estudios': todas}
+
 
     # Fallback para niveles vacíos
     todas_materias = Materia.query.order_by(Materia.nombre).all()
@@ -1692,17 +1777,44 @@ def plan_estudios():
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
 
-    return render_template('colegio/plan_estudios.html', materias=todas_materias,
-                           materias_preescolar=materias_por_nivel['Preescolar'],
-                           materias_primaria=materias_por_nivel['Primaria'],
-                           materias_bachillerato=materias_por_nivel['Bachillerato'],
-                           materias_media=materias_por_nivel['Media'],
-                           materias_programas_especiales=materias_por_nivel['Programas Especiales'],
-                           materias_validacion=materias_por_nivel['Validación'], grados=grados,
-                           grados_estandar=grados_estandar, grados_personalizados=grados_personalizados,
+    # OBTENER MATERIAS DESDE LA CONFIGURACIÓN DE NIVELES (NivelMateria)
+    # Esto asegura que el Plan de Estudios refleje EXACTAMENTE lo configurado en "Configurar Materias por Nivel"
+    
+    def obtener_materias_por_nivel(nombre_nivel):
+        nm_ids = db.session.query(NivelMateria.materia_id).filter_by(
+            nivel_educativo=nombre_nivel, activo=True
+        ).all()
+        materia_ids = [x[0] for x in nm_ids]
+        if not materia_ids:
+            return []
+        return Materia.query.filter(Materia.id.in_(materia_ids)).order_by(Materia.nombre).all()
+
+    materias_preescolar = obtener_materias_por_nivel('Preescolar')
+    materias_primaria = obtener_materias_por_nivel('Primaria')
+    materias_bachillerato = obtener_materias_por_nivel('Bachillerato')
+    materias_media = obtener_materias_por_nivel('Media')
+    
+    # Para "Otras Modalidades", usamos todas las materias que no estén en los niveles estándar
+    ids_excluidos = set()
+    for lvl in ['Preescolar', 'Primaria', 'Bachillerato', 'Media']:
+        ids_excluidos.update([x[0] for x in db.session.query(NivelMateria.materia_id).filter_by(nivel_educativo=lvl, activo=True).all()])
+    
+    materias_validacion = Materia.query.filter(~Materia.id.in_(ids_excluidos)).order_by(Materia.nombre).all() if ids_excluidos else Materia.query.order_by(Materia.nombre).all()
+
+    return render_template('colegio/plan_estudios.html',
+                           materias=todas_materias,
+                           materias_por_nivel=materias_por_nivel,
+                           grados=grados,
+                           grados_estandar=grados_estandar,
+                           grados_personalizados=grados_personalizados,
                            grados_programas_especiales=grados_programas_especiales,
-                           grados_otras_modalidades=grados_otras_modalidades, plan_dict=plan_dict,
-                           grado_a_nivel=grado_a_nivel, materias_por_nivel=materias_por_nivel)
+                           grados_otras_modalidades=grados_otras_modalidades,
+                           plan_dict=plan_dict,
+                           materias_preescolar=materias_preescolar,
+                           materias_primaria=materias_primaria,
+                           materias_bachillerato=materias_bachillerato,
+                           materias_media=materias_media,
+                           materias_validacion=materias_validacion)
 
 
 @colegio_bp.route('/materias')
@@ -2526,7 +2638,6 @@ from app.models.permiso_usuario import PermisoUsuario
 def editar_permisos_usuario_ruta(usuario_id):
     """Ver y editar los permisos finos de un usuario operativo.
     Solo el admin del colegio puede acceder.
-    Aplica a secretarias (no a porteros).
     """
     if not current_user.es_admin_colegio:
         abort(403)
@@ -2536,48 +2647,45 @@ def editar_permisos_usuario_ruta(usuario_id):
         colegio_id=current_user.colegio_id,
     ).first_or_404()
 
-    # Solo secretarias por ahora (porteros no tienen permisos configurables)
-    if usuario.rol != "secretaria":
-        flash("Solo las secretarias tienen permisos configurables.", "warning")
+    if usuario.rol not in ("secretaria", "psicologo", "profesional_piar"):
+        flash("Este rol no tiene permisos configurables.", "warning")
         return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
 
     if request.method == "POST":
-        # Recorrer el catalogo: si el checkbox viene marcado, valor=True; si no, False.
         for clave in CATALOGO.keys():
             valor = request.form.get(clave) == "on"
 
             permiso = PermisoUsuario.query.filter_by(
                 usuario_id=usuario.id,
-                clave=clave,
+                clave=clave
             ).first()
 
-            if permiso is None:
-                # Crear la fila solo si el valor es True (evitar basura de False)
-                if valor:
-                    nuevo = PermisoUsuario(
-                        usuario_id=usuario.id,
-                        clave=clave,
-                        valor=True,
-                        creado_por=current_user.id,
-                    )
-                    db.session.add(nuevo)
-            else:
+            if permiso:
                 permiso.valor = valor
-                permiso.creado_por = current_user.id
+            else:
+                nuevo_permiso = PermisoUsuario(
+                    usuario_id=usuario.id,
+                    clave=clave,
+                    valor=valor,
+                    creado_por=current_user.id
+                )
+                db.session.add(nuevo_permiso)
 
-        db.session.commit()
-        flash(f"Permisos de {usuario.nombre or usuario.email} actualizados.", "success")
+        try:
+            db.session.commit()
+            flash("✅ Permisos actualizados correctamente.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al guardar los permisos: {str(e)}", "danger")
+
         return redirect(url_for("colegio.editar_permisos_usuario_ruta", usuario_id=usuario.id))
 
-    # GET: cargar permisos actuales como dict
-    permisos_actuales = {
-        p.clave: bool(p.valor)
-        for p in PermisoUsuario.query.filter_by(usuario_id=usuario.id).all()
-    }
+    # LÓGICA PARA MOSTRAR LA PÁGINA (GET)
+    permisos_actuales = {p.clave: p.valor for p in PermisoUsuario.query.filter_by(usuario_id=usuario.id).all()}
 
     return render_template(
         "colegio/formulario_permisos_usuario.html",
         usuario=usuario,
-        catalogo_por_grupo=catalogo_por_grupo(),
         permisos_actuales=permisos_actuales,
+        catalogo_por_grupo=catalogo_por_grupo() # 👈 CORRECCIÓN: Nombre exacto que espera el HTML
     )

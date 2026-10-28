@@ -31,47 +31,41 @@ examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 # CREAR EXAMEN UNIFICADO (BANCO Y MANUAL)
 # ==========================================================
 @examen_bp.route("/crear", methods=["GET", "POST"], endpoint="crear_examen")
-@examen_bp.route("/crear-desde-banco", methods=["GET", "POST"], endpoint="crear_desde_banco")
 @login_required
 def crear_examen():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
 
-    # 1. Cargar materias del colegio o globales
-    materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
-    if not materias:
-        materias = Materia.query.all()
+    # 1. Cargar materias (la tabla materias no tiene colegio_id, así que se cargan todas)
+    materias = Materia.query.filter_by(estado=True).all() if hasattr(Materia, 'estado') else Materia.query.all()
 
-    # 2. Obtener la lista completa de preguntas de la base de datos
+    # 2. Obtener la lista completa de preguntas
     preguntas_db = Pregunta.query.all()
 
-    # 3. Formatear las preguntas a una lista de diccionarios compatible con el modal JS
+    # 3. Formatear preguntas
     preguntas_banco_list = []
     for p in preguntas_db:
-        # Extraer el texto de forma segura sin importar si el atributo es 'texto' o 'enunciado'
         contenido_texto = getattr(p, 'texto', None) or getattr(p, 'enunciado', '')
-
-        # Obtener el nombre de la materia asociada
         materia_obj = next((m for m in materias if m.id == p.materia_id), None)
-        nombre_materia = materia_obj.nombre if materia_obj else "Matemáticas"
+        nombre_materia = materia_obj.nombre if materia_obj else "Sin materia"
 
         preguntas_banco_list.append({
             'id': p.id,
             'texto': contenido_texto,
-            'enunciado': contenido_texto,  # Mapeo clave para la columna del modal
+            'enunciado': contenido_texto,
             'materia_id': p.materia_id,
             'materia_nombre': nombre_materia,
             'dificultad': getattr(p, 'dificultad', 'media'),
             'tipo': getattr(p, 'tipo', 'Múltiple Opción')
         })
 
-    # 4. Construir la estructura de competencias e indicadores para la vista
+    # 4. Construir estructura de competencias
     estructura_evaluacion = {}
     for m in materias:
         competencias = CompetenciaEstudiante.query.filter_by(materia_id=m.id).all()
         comps_data = []
         for c in competencias:
-            inds = IndicadorLogro.query.filter_by(competencia_id=c.id).all()
+            inds = IndicadorLogro.query.filter_by(competencia_materia_id=c.id).all()
             comps_data.append({
                 'id': c.id,
                 'codigo': c.codigo,
@@ -80,7 +74,7 @@ def crear_examen():
             })
         estructura_evaluacion[m.id] = comps_data
 
-    # 5. Guardar la evaluación enviada desde el formulario (POST)
+    # 5. Guardar la evaluación
     if request.method == "POST":
         try:
             titulo = request.form.get("titulo", "").strip() or request.form.get("titulo_examen", "").strip()
@@ -91,7 +85,6 @@ def crear_examen():
                 flash("El título y la materia son obligatorios.", "danger")
                 return redirect(url_for("examen.crear_examen"))
 
-            # Consultar los registros seleccionados
             ids_limpios = [int(pid) for pid in preguntas_ids if pid.isdigit()]
             preguntas_objs = Pregunta.query.filter(Pregunta.id.in_(ids_limpios)).all() if ids_limpios else []
 
@@ -104,13 +97,13 @@ def crear_examen():
                     "opciones": p.opciones if isinstance(p.opciones, dict) else {},
                     "respuesta_correcta": getattr(p, 'respuesta_correcta', ''),
                     "dificultad": getattr(p, 'dificultad', 'media'),
-                    "puntos_maximos": getattr(p, 'puntos', 1)
+                    "puntos_maximos": getattr(p, 'puntos_maximos', 1)
                 })
 
             nuevo_examen = Examen(
                 titulo=titulo,
                 nombre=titulo,
-                descripcion="Evaluación creada desde el banco de preguntas",
+                descripcion="Evaluación creada manualmente",
                 materia_id=int(materia_id),
                 colegio_id=current_user.colegio_id,
                 contenido_json=contenido_json,
@@ -132,14 +125,11 @@ def crear_examen():
     return render_template(
         "examenes/crear_examen.html",
         materias=materias,
-        preguntas_banco=preguntas_banco_list,  # <-- CAMBIAR AQUÍ (estaba como preguntas_db)
+        preguntas_banco=preguntas_banco_list,
         preguntas_banco_json=json.dumps(preguntas_banco_list),
         estructura_evaluacion=json.dumps(estructura_evaluacion)
     )
 
-# ==========================================================
-# VISTA: FORMULARIO GENERADOR DE EXÁMENES CON IA
-# ==========================================================
 @examen_bp.route("/crear-ia", methods=["GET"])
 @login_required
 def crear_examen_ia():
@@ -844,6 +834,15 @@ def asignar_examen(examen_id):
                 flash("La fecha de cierre debe ser posterior a la fecha de apertura.", "danger")
                 return redirect(url_for("examen.asignar_examen", examen_id=examen_id))
 
+            ahora = datetime.now()
+            if fecha_apertura_dt > ahora:
+                flash(
+                    f"⚠️ El examen quedó programado para abrir el "
+                    f"{fecha_apertura_dt.strftime('%d/%m/%Y %H:%M')}. "
+                    f"Los estudiantes no lo verán hasta esa fecha y hora.",
+                    "warning"
+                )
+
             if prog_existente:
                 prog_existente.competencia_materia_id = competencia_id
                 prog_existente.fecha_apertura = fecha_apertura_dt
@@ -870,11 +869,20 @@ def asignar_examen(examen_id):
             import traceback
             traceback.print_exc()
 
+    # Cargar competencias de la materia del examen
+    competencias = CompetenciaEstudiante.query.filter_by(
+        materia_id=examen.materia_id
+    ).order_by(CompetenciaEstudiante.codigo).all()
+
+    print(f"DEBUG asignar_examen: examen_id={examen_id}, materia_id={examen.materia_id}")
+    print(f"DEBUG grupos: {len(grupos)} - {[g.id for g in grupos]}")
+    print(f"DEBUG competencias: {len(competencias)} - {[c.id for c in competencias]}")
+
     return render_template(
         "examenes/asignar_examen.html",
         examen=examen,
         grupos=grupos,
-        materias=materias
+        competencias=competencias
     )
 
 # ==========================================================

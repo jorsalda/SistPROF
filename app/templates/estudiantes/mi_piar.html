@@ -1,0 +1,119 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Mi PIAR | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}
+    <i class="bi bi-person-hearts me-2"></i>Mi PIAR
+{% endblock %}
+
+{% block estudiante_content %}
+<div style="background: yellow; padding: 10px; color: black; font-weight: bold;">
+    DEBUG: {% if piar %}PIAR EXISTE ({{ piar.id }}){% else %}PIAR ES NONE{% endif %}
+</div>
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="bi bi-person-hearts"></i>
+                Mi PIAR
+            </h4>
+            <p class="text-muted mb-0">Plan Individual de Ajustes Razonables</p>
+        </div>
+    </div>
+
+    {% if piar %}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Información del PIAR
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>Fecha de inicio:</strong><br>
+                        {{ piar.fecha_inicio.strftime('%d/%m/%Y') }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Fecha de fin:</strong><br>
+                        {% if piar.fecha_fin %}
+                            {{ piar.fecha_fin.strftime('%d/%m/%Y') }}
+                        {% else %}
+                            <span class="text-muted">Sin fecha definida</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if piar.objetivos %}
+                <div class="mb-3">
+                    <strong>Objetivos:</strong>
+                    <p class="mb-0">{{ piar.objetivos }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check me-1"></i>
+                    Ajustes Razonables
+                    <span class="badge bg-light text-dark ms-2">
+                        {{ piar.ajustes_razonables|length }}
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if piar.ajustes_razonables %}
+                    <ul class="list-group list-group-flush">
+                        {% for aj in piar.ajustes_razonables %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    {{ aj.descripcion }}
+                                </div>
+                                <div class="ms-3">
+                                    {% if aj.aplicado %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Aplicado
+                                        </span>
+                                        {% if aj.fecha_aplicacion %}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ aj.fecha_aplicacion.strftime('%d/%m/%Y') }}
+                                            </small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> Pendiente
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        No hay ajustes razonables registrados.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-person-hearts fs-1 d-block mb-2"></i>
+                <h5>Sin PIAR activo</h5>
+                <p class="mb-0">
+                    No tienes un PIAR activo en este momento.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

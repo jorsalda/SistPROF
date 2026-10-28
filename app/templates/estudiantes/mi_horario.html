@@ -1,0 +1,81 @@
+{% extends "estudiantes/estudiante_base.html" %}
+
+{% block title %}Mi Horario | SistPROF{% endblock %}
+
+{% block estudiante_page_title %}
+    <i class="bi bi-calendar-week me-2"></i>Mi Horario
+{% endblock %}
+
+{% block estudiante_content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="bi bi-calendar-week"></i>
+                Horario del Grupo
+            </h4>
+            <p class="text-muted mb-0">
+                {{ estudiante.grupo_rel.grado }}{{ estudiante.grupo_rel.nombre }}
+                {% if estudiante.grupo_rel.jornada %}
+                    · Jornada {{ estudiante.grupo_rel.jornada.nombre }}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% set dias_nombres = {
+        'lunes': 'Lunes',
+        'martes': 'Martes',
+        'miercoles': 'Miércoles',
+        'jueves': 'Jueves',
+        'viernes': 'Viernes'
+    } %}
+
+    <div class="row g-3">
+        {% for dia, clases in horario.items() %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-calendar-day me-1"></i>
+                        {{ dias_nombres[dia] }}
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if clases %}
+                        <ul class="list-group list-group-flush">
+                            {% for c in clases %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ c.materia }}</strong><br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-person"></i> {{ c.docente }}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-light text-dark border">
+                                            {{ c.hora_inicio }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">{{ c.hora_fin }}</small>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-cup-hot fs-3 d-block mb-2"></i>
+                            <small>Sin clases</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

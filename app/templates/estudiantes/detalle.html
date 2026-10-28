@@ -1,9 +1,10 @@
-{% extends "colegio/colegio_base.html" %}
+{% extends "estudiantes/estudiante_base.html" if current_user.rol == 'estudiante' else "colegio/colegio_base.html" %}
 
 {% block colegio_page_title %}
 Detalle del Estudiante
 {% endblock %}
 
+{% block estudiante_content %}
 {% block colegio_content %}
 <div class="container-fluid py-4">
 
@@ -277,4 +278,5 @@ Detalle del Estudiante
 
     </div>
 </div>
+{% endblock %}
 {% endblock %}

@@ -7,59 +7,134 @@
 
 <div class="container-fluid px-4 py-4">
 
-    <div class="mb-4">
-        <h2 class="fw-bold mb-1">
-            <i class="bi bi-clipboard2-pulse text-primary me-2"></i>
-            Panel del Profesional PIAR
-        </h2>
-        <p class="text-muted mb-0">
-            Bienvenido, {{ current_user.nombre }}. Este es tu espacio de trabajo.
-        </p>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="bi bi-journal-text fs-3 text-primary me-3"></i>
-                        <h5 class="mb-0">Novedades</h5>
-                    </div>
-                    <p class="text-muted mb-0">
-                        Próximamente podrás registrar novedades de los estudiantes.
-                    </p>
-                </div>
-            </div>
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-clipboard2-pulse text-primary me-2"></i>
+                Panel de Inclusión (PIAR)
+            </h2>
+            <p class="text-muted mb-0">
+                Bienvenido, {{ current_user.nombre }}. Rol: <span class="badge bg-secondary">{{ current_user.rol }}</span>
+            </p>
         </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="bi bi-people fs-3 text-success me-3"></i>
-                        <h5 class="mb-0">Estudiantes PIAR</h5>
-                    </div>
-                    <p class="text-muted mb-0">
-                        Aquí verás los estudiantes con PIAR asignados a tu cargo.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="bi bi-clipboard-check fs-3 text-info me-3"></i>
-                        <h5 class="mb-0">Ajustes razonables</h5>
-                    </div>
-                    <p class="text-muted mb-0">
-                        Espacio para gestionar ajustes razonables por materia.
-                    </p>
-                </div>
-            </div>
+        <div>
+            <a href="{{ url_for('piar.lista') }}" class="btn btn-outline-primary">
+                <i class="bi bi-list-ul me-1"></i> Ver Todos los PIAR
+            </a>
         </div>
     </div>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- SECCIÓN 1: PIAR ASIGNADOS DIRECTAMENTE A MÍ                     -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-person-check-fill text-success me-2"></i>
+                Mis PIAR Asignados
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if piares_directos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Materia</th>
+                                <th>Docente</th>
+                                <th>Fecha Inicio</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in piares_directos %}
+                            <tr>
+                                <td class="fw-bold">{{ p.estudiante.nombre }} {{ p.estudiante.apellido }}</td>
+                                <td>{{ p.materia.nombre if p.materia else 'General / Todas' }}</td>
+                                <td>{{ p.docente.nombre if p.docente else 'No asignado' }}</td>
+                                <td>{{ p.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    {% if p.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('piar.detalle', piar_id=p.id) }}" class="btn btn-sm btn-outline-primary" title="Ver Detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    No tienes PIAR asignados directamente en este momento.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- SECCIÓN 2: PIAR DEL COLEGIO (VISIBLE PARA PSICÓLOGOS Y ADMINS)  -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    {% if current_user.rol in ['psicologo', 'admin_colegio', 'coordinador', 'superadmin'] %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-building text-info me-2"></i>
+                Supervisión Global del Colegio
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if piares_colegio %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Materia</th>
+                                <th>Diagnóstico Base</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in piares_colegio %}
+                            <tr>
+                                <td class="fw-bold">{{ p.estudiante.nombre }} {{ p.estudiante.apellido }}</td>
+                                <td>{{ p.materia.nombre if p.materia else 'General' }}</td>
+                                <td>
+                                    <small class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ p.estudiante.diagnostico_base or 'Sin diagnóstico' }}">
+                                        {{ p.estudiante.diagnostico_base or 'Sin diagnóstico registrado' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if p.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    No hay PIAR activos registrados en el colegio actualmente.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 

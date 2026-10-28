@@ -45,6 +45,12 @@
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
+                        <!-- Estudiantes -->
+            <li class="menu-item">
+                <a href="{{ url_for('colegio.lista_estudiantes') }}" class="menu-link {% if request.endpoint in ['estudiante.listar', 'colegio.lista_estudiantes'] %}active{% endif %}">
+                    <i class="bi bi-people"></i> Estudiantes
+                </a>
+            </li>
 
             <li class="menu-item">
                 <a href="#"

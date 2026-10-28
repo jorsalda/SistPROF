@@ -28,6 +28,7 @@ from app.models.indicador_logro import IndicadorLogro
 from app.models.CompetenciaEstudiante import CompetenciaEstudiante
 from app.models.materia import Materia
 from app.models.periodo_academico import PeriodoAcademico
+from app.models.diagnostico_estudiante import DiagnosticoEstudiante
 
 # ✅ CORRECCIÓN CRÍTICA: EL BLUEPRINT DEBE DEFINIRSE ANTES DE CUALQUIER RUTA
 estudiante_bp = Blueprint(
@@ -53,6 +54,7 @@ def dashboard_estudiante():
         return redirect(url_for('auth.logout'))
 
     from app.models.resultado_examen import ResultadoExamen
+    from app.models.diagnostico_estudiante import DiagnosticoEstudiante
     from datetime import datetime
 
     ultimos_resultados = ResultadoExamen.query.filter_by(
@@ -65,6 +67,9 @@ def dashboard_estudiante():
     promedio_general = round(sum(notas_validas) / len(notas_validas), 2) if notas_validas else '-'
     mejor_nota = max(notas_validas) if notas_validas else '-'
 
+    # 👇 CONTAMOS LOS DIAGNÓSTICOS PARA MOSTRAR UN RESUMEN EN EL DASHBOARD
+    total_diagnosticos = DiagnosticoEstudiante.query.filter_by(estudiante_id=estudiante.id).count()
+
     hoy = datetime.now()
 
     return render_template(
@@ -74,9 +79,71 @@ def dashboard_estudiante():
         promedio_general=promedio_general,
         mejor_nota=mejor_nota,
         ultimos_resultados=ultimos_resultados,
+        total_diagnosticos=total_diagnosticos, # 👈 ENVIAMOS EL CONTEO
         hoy=hoy
     )
 
+# ==========================================================
+# VER DETALLE DEL ESTUDIANTE (Solo para el estudiante logueado)
+# ==========================================================
+@estudiante_bp.route('/mi-detalle')
+@login_required
+def mi_detalle():
+    """Vista de detalle exclusiva para el estudiante (ve su propia información)."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    asistencias_recientes = estudiante.asistencias[-10:] if hasattr(estudiante, "asistencias") and estudiante.asistencias else []
+    novedades_recientes = estudiante.novedades[-10:] if hasattr(estudiante, "novedades") and estudiante.novedades else []
+    tiene_piar = estudiante.tiene_piar_activo()
+
+    return render_template(
+        "estudiantes/detalle.html",  # 👈 ESTO ES LO QUE DEBE APUNTAR A LA IMAGEN 2
+        estudiante=estudiante,
+        asistencias=asistencias_recientes,
+        novedades=novedades_recientes,
+        tiene_piar=tiene_piar
+    )
+
+
+@estudiante_bp.route('/mi-perfil')
+@login_required
+def mi_perfil():
+    """Vista unificada del perfil del estudiante (datos, QR, asistencias, novedades)."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.diagnostico_estudiante import DiagnosticoEstudiante
+    diagnosticos = DiagnosticoEstudiante.query.filter_by(estudiante_id=estudiante.id).all()
+
+    # 👇 LÍNEAS DE DIAGNÓSTICO
+    print(f"🔍 DIAGNÓSTICOS ENCONTRADOS: {len(diagnosticos)}")
+    for d in diagnosticos:
+        print(f"🔍 - {d.descripcion}")
+
+    # Traemos asistencias y novedades para la vista unificada
+    asistencias = estudiante.asistencias[-10:] if hasattr(estudiante, "asistencias") and estudiante.asistencias else []
+    novedades = estudiante.novedades[-10:] if hasattr(estudiante, "novedades") and estudiante.novedades else []
+
+    return render_template(
+        'estudiantes/mi_perfil.html',
+        estudiante=estudiante,
+        diagnosticos=diagnosticos,
+        asistencias=asistencias,
+        novedades=novedades
+    )
 
 # ==========================================================
 # MIS CALIFICACIONES POR COMPETENCIA E INDICADOR
@@ -94,7 +161,21 @@ def mis_calificaciones():
         flash('Perfil no encontrado', 'warning')
         return redirect(url_for('auth.logout'))
 
-    # Consulta JOIN explícita
+    # Obtener solo el periodo activo del colegio
+    periodo_activo = PeriodoAcademico.query.filter_by(
+        colegio_id=estudiante.colegio_id,
+        activo=True
+    ).first()
+
+    if not periodo_activo:
+        flash('No hay un periodo académico activo.', 'warning')
+        return render_template(
+            'estudiantes/mis_calificaciones.html',
+            estudiante=estudiante,
+            calificaciones={}
+        )
+
+    # Consulta JOIN filtrada por periodo activo
     evaluaciones = db.session.query(
         EvaluacionEstudiante, IndicadorLogro, CompetenciaEstudiante, Materia, PeriodoAcademico
     ).join(
@@ -106,10 +187,9 @@ def mis_calificaciones():
     ).join(
         PeriodoAcademico, EvaluacionEstudiante.periodo_id == PeriodoAcademico.id
     ).filter(
-        EvaluacionEstudiante.estudiante_id == estudiante.id
+        EvaluacionEstudiante.estudiante_id == estudiante.id,
+        EvaluacionEstudiante.periodo_id == periodo_activo.id
     ).order_by(
-        PeriodoAcademico.anio.desc(),
-        PeriodoAcademico.nombre,
         Materia.nombre,
         CompetenciaEstudiante.codigo,
         IndicadorLogro.orden
@@ -143,8 +223,9 @@ def mis_calificaciones():
                 'enunciado_nivel': ''
             })()
 
-        nota = float(ev.calificacion) if ev.calificacion else None
+        nota = float(ev.calificacion) if ev.calificacion is not None else None
 
+        # ✅ FIX: Asegurar que la nota se asocie al indicador exacto
         calificaciones_por_periodo[pn][mn].competencias[cc].indicadores.append({
             'codigo': ind.codigo,
             'descripcion': ind.descripcion[:80] + '...' if len(ind.descripcion) > 80 else ind.descripcion,
@@ -163,7 +244,9 @@ def mis_calificaciones():
                 notas_validas = [i['nota'] for i in comp.indicadores if i['nota'] is not None]
 
                 if notas_validas:
-                    comp.promedio = round(sum(notas_validas) / len(notas_validas), 1)
+                    # ✅ FIX: Tomar la nota más alta de los indicadores (la que puso el docente)
+                    # en lugar de promediar indicadores vacíos con ceros.
+                    comp.promedio = max(notas_validas)
                     p = comp.promedio
 
                     # Asignar nivel cualitativo
@@ -202,53 +285,239 @@ def mis_calificaciones():
         calificaciones=calificaciones_por_periodo
     )
 
+# ==========================================================
+# MI HORARIO
+# ==========================================================
+@estudiante_bp.route('/mi-horario')
+@login_required
+def mi_horario():
+    """Vista del horario del grupo del estudiante."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    # Si no tiene grupo, no hay horario que mostrar
+    if not estudiante.grupo_id:
+        flash('No tienes un grupo académico asignado.', 'warning')
+        return redirect(url_for('estudiante.dashboard_estudiante'))
+
+    # Consultar clases del grupo del estudiante
+    clases = db.session.query(Clase).join(
+        GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id
+    ).filter(
+        GrupoMateria.grupo_id == estudiante.grupo_id,
+        Clase.colegio_id == estudiante.colegio_id,
+        Clase.activo == True
+    ).order_by(
+        Clase.dia,
+        Clase.hora_inicio
+    ).all()
+
+    # Agrupar por día
+    dias_orden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+    horario = {dia: [] for dia in dias_orden}
+
+    for clase in clases:
+        # clase.dia es un enum DiaSemana (ej. DiaSemana.LUNES)
+        dia_valor = clase.dia.value if hasattr(clase.dia, 'value') else str(clase.dia)
+
+        horario[dia_valor].append({
+            'hora_inicio': clase.hora_inicio.strftime('%H:%M'),
+            'hora_fin': clase.hora_fin.strftime('%H:%M'),
+            'materia': clase.nombre_materia,
+            'docente': clase.docente.nombre_completo if clase.docente else 'Sin asignar',
+            'grupo': clase.nombre_grupo,
+        })
+
+    return render_template(
+        'estudiantes/mi_horario.html',
+        estudiante=estudiante,
+        horario=horario
+    )
+# ==========================================================
+# MI ASISTENCIA
+# ==========================================================
+@estudiante_bp.route('/mi-asistencia')
+@login_required
+def mi_asistencia():
+    """Vista de asistencia del estudiante con consolidado y detalle."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.asistencia import Asistencia
+
+    # Traer todas las asistencias del estudiante
+    asistencias = Asistencia.query.filter_by(
+        estudiante_id=estudiante.id
+    ).order_by(Asistencia.fecha.desc()).all()
+
+    # Consolidado
+    total = len(asistencias)
+    presentes = sum(1 for a in asistencias if a.estado == 'presente')
+    tardes = sum(1 for a in asistencias if a.estado == 'tarde')
+    ausentes = sum(1 for a in asistencias if a.estado == 'ausente')
+    porcentaje = round((presentes / total) * 100, 1) if total > 0 else 0.0
+
+    # Detalle: últimos 50
+    detalle = asistencias[:50]
+
+    return render_template(
+        'estudiantes/mi_asistencia.html',
+        estudiante=estudiante,
+        total=total,
+        presentes=presentes,
+        tardes=tardes,
+        ausentes=ausentes,
+        porcentaje=porcentaje,
+        detalle=detalle
+    )
+
+# ==========================================================
+# MI OBSERVADOR
+# ==========================================================
+@estudiante_bp.route('/mi-observador')
+@login_required
+def mi_observador():
+    """Vista del observador del estudiante: novedades + respuestas."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.novedad import Novedad
+
+    novedades = Novedad.query.filter_by(
+        estudiante_id=estudiante.id
+    ).order_by(Novedad.fecha.desc(), Novedad.hora.desc()).all()
+
+    return render_template(
+        'estudiantes/mi_observador.html',
+        estudiante=estudiante,
+        novedades=novedades
+    )
+
+
+# ==========================================================
+# MIS CITACIONES
+# ==========================================================
+@estudiante_bp.route('/mis-citaciones')
+@login_required
+def mis_citaciones():
+    """Vista de citaciones del estudiante (solo lectura)."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.citacion_acudiente import CitacionAcudiente
+
+    citaciones = CitacionAcudiente.query.filter_by(
+        estudiante_id=estudiante.id
+    ).order_by(CitacionAcudiente.fecha_citacion.desc()).all()
+
+    return render_template(
+        'estudiantes/mis_citaciones.html',
+        estudiante=estudiante,
+        citaciones=citaciones
+    )
+
+# ==========================================================
+# MI PIAR
+# ==========================================================
+@estudiante_bp.route('/mi-piar')
+@login_required
+def mi_piar():
+    """Vista del PIAR activo del estudiante."""
+    if current_user.rol != 'estudiante':
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('auth.login'))
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        flash('Perfil no encontrado', 'warning')
+        return redirect(url_for('auth.logout'))
+
+    from app.models.piar import PIAR
+    from app.extensions import db
+
+    # 👇 USAMOS SQL DIRECTO PARA ASEGURAR QUE EL DATO LLEGUE
+    piar_activo = db.session.execute(
+        db.text("SELECT id FROM piar WHERE estudiante_id = :est_id AND activo = true LIMIT 1"),
+        {"est_id": estudiante.id}
+    ).scalar()
+
+    piar_obj = None
+    if piar_activo:
+        piar_obj = PIAR.query.get(piar_activo)
+
+    # 👇 PRINT DE DIAGNÓSTICO
+    print(f"🔍 ESTUDIANTE: {estudiante.nombre} (ID: {estudiante.id})")
+    print(f"🔍 PIAR OBJ: {piar_obj}")
+
+    return render_template(
+        'estudiantes/mi_piar.html',
+        estudiante=estudiante,
+        piar=piar_obj
+    )
+
+
 
 
 # =========================================================
 # LISTAR ESTUDIANTES
 # =========================================================
 @estudiante_bp.route("/")
-@requiere_permiso('secretaria.ver_estudiantes')
 @login_required
+@requiere_permiso('secretaria.ver_estudiantes')
 def listar():
     search = request.args.get('search', '').strip()
     sede_id = request.args.get('sede_id', type=int)
     grado = request.args.get('grado', '').strip()
     grupo_id = request.args.get('grupo_id', type=int)
 
-    consulta = Estudiante.query.filter_by(
-        colegio_id=current_user.colegio_id,
-        activo=True
-    )
-
-    if search:
-        consulta = consulta.filter(
-            or_(
-                Estudiante.nombre.ilike(f"%{search}%"),
-                Estudiante.apellido.ilike(f"%{search}%")
-            )
-        )
-
-    if sede_id:
-        consulta = consulta.filter_by(sede_id=sede_id)
-    if grado:
-        consulta = consulta.filter_by(grado=grado)
-    if grupo_id:
-        consulta = consulta.filter_by(grupo_id=grupo_id)
+    consulta = Estudiante.query.filter_by(colegio_id=current_user.colegio_id, activo=True)
+    if search: consulta = consulta.filter(or_(Estudiante.nombre.ilike(f"%{search}%"), Estudiante.apellido.ilike(f"%{search}%")))
+    if sede_id: consulta = consulta.filter_by(sede_id=sede_id)
+    if grado: consulta = consulta.filter_by(grado=grado)
+    if grupo_id: consulta = consulta.filter_by(grupo_id=grupo_id)
 
     estudiantes = consulta.order_by(Estudiante.nombre).all()
 
-    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
-    grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Grupo.grado,
-                                                                                             Grupo.nombre).all()
+    # 👇 CREAMOS UN DICCIONARIO PARA SABER QUIÉN TIENE DIAGNÓSTICOS
+    from app.models.diagnostico_estudiante import DiagnosticoEstudiante
+    ids_estudiantes = [e.id for e in estudiantes]
+    ids_con_diagnostico = set()
+    if ids_estudiantes:
+        diagnosticos_existentes = DiagnosticoEstudiante.query.filter(
+            DiagnosticoEstudiante.estudiante_id.in_(ids_estudiantes)
+        ).all()
+        ids_con_diagnostico = {d.estudiante_id for d in diagnosticos_existentes}
 
-    grados_unicos = db.session.query(Estudiante.grado).filter_by(
-        colegio_id=current_user.colegio_id, activo=True
-    ).distinct().order_by(Estudiante.grado).all()
+    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
+    grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Grupo.grado, Grupo.nombre).all()
+    grados_unicos = db.session.query(Estudiante.grado).filter_by(colegio_id=current_user.colegio_id, activo=True).distinct().order_by(Estudiante.grado).all()
     grados_lista = [g[0] for g in grados_unicos if g[0]]
 
-    # Layout dinamico: secretaria ve con su sidebar, admin con el suyo
-    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "psicologo/psicologo_base.html" if current_user.rol == 'psicologo' else "coordinador/coordinador_base.html" if current_user.rol == 'coordinador' else "docentes/docente_base.html" if current_user.rol == 'docente' else "colegio/colegio_base.html"
 
     return render_template(
         "estudiantes/listado.html",
@@ -259,7 +528,8 @@ def listar():
         current_sede_id=sede_id,
         current_grado=grado,
         current_grupo_id=grupo_id,
-        layout=layout
+        layout=layout,
+        ids_con_diagnostico=ids_con_diagnostico # 👈 ENVIAMOS LOS IDs
     )
 
 
@@ -410,6 +680,7 @@ def editar(id):
     estudiante = Estudiante.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
 
     if request.method == "POST":
+        print("🔥 DATOS RECIBIDOS:", request.form.to_dict())
         nombre = request.form.get("nombre", "").strip()
         apellido = request.form.get("apellido", "").strip()
         grupo_id = request.form.get("grupo_id", type=int)
@@ -420,8 +691,17 @@ def editar(id):
         telefono = request.form.get("telefono", "").strip()
         acudiente_principal_id = request.form.get("acudiente_principal_id", type=int)
 
-        if not all([nombre, apellido, grupo_id, direccion, telefono, acudiente_principal_id]):
-            flash("Todos los campos marcados son obligatorios", "danger")
+        tipo_documento = request.form.get("tipo_documento", "").strip()
+        documento = request.form.get("documento", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+
+        # 👇 CAPTURAR DIAGNÓSTICOS (texto multilínea del formulario)
+        diagnosticos_texto = request.form.get("diagnosticos", "").strip()
+        requiere_piar = request.form.get("requiere_piar") == "on"
+
+        if not nombre or not apellido or not grupo_id:
+            flash("Nombre, apellido y grupo son obligatorios", "danger")
             return redirect(url_for("estudiante.editar", id=id))
 
         grupo_obj = Grupo.query.filter_by(id=grupo_id, colegio_id=current_user.colegio_id).first()
@@ -429,34 +709,52 @@ def editar(id):
             flash("Grupo no válido", "danger")
             return redirect(url_for("estudiante.editar", id=id))
 
-        existe = Estudiante.query.filter(
-            Estudiante.nombre == nombre,
-            Estudiante.apellido == apellido,
-            Estudiante.grupo_id == grupo_id,
-            Estudiante.colegio_id == current_user.colegio_id,
-            Estudiante.id != id
-        ).first()
-
-        if existe:
-            flash("Ya existe otro estudiante igual en ese grupo", "warning")
-            return redirect(url_for("estudiante.editar", id=id))
-
+        # Actualizar datos básicos
         estudiante.nombre = nombre
         estudiante.apellido = apellido
-        estudiante.direccion = direccion
-        estudiante.telefono = telefono
-        estudiante.acudiente_principal_id = acudiente_principal_id
+        estudiante.direccion = direccion if direccion else estudiante.direccion
+        estudiante.telefono = telefono if telefono else estudiante.telefono
+        estudiante.acudiente_principal_id = acudiente_principal_id if acudiente_principal_id else estudiante.acudiente_principal_id
         estudiante.grupo_id = grupo_obj.id
         estudiante.sede_id = (sede_id if sede_id else grupo_obj.sede_id)
         estudiante.jornada_id = (jornada_id if jornada_id else grupo_obj.jornada_id)
         estudiante.docente_id = docente_id
+        estudiante.tipo_documento = tipo_documento if tipo_documento else estudiante.tipo_documento
+        estudiante.documento = documento if documento else estudiante.documento
+        estudiante.requiere_piar = requiere_piar
+
+        # Actualizar correo
+        if email:
+            estudiante.email = email
+            if estudiante.usuario:
+                estudiante.usuario.email = email
+
+        # Actualizar contraseña
+        if password and estudiante.usuario:
+            from werkzeug.security import generate_password_hash
+            estudiante.usuario.password_hash = generate_password_hash(password)
 
         if 'activo' in request.form:
             estudiante.activo = request.form.get("activo") == "on"
 
-        db.session.commit()
-        flash(f"Estudiante '{nombre} {apellido}' actualizado", "success")
-        return redirect(url_for("estudiante.listar"))
+        try:
+            db.session.commit()  # Guarda datos del estudiante
+
+            # 👇 AGREGUE ESTAS LÍNEAS AQUÍ
+            from app.models.diagnostico_estudiante import DiagnosticoEstudiante
+            if diagnosticos_texto:
+                for linea in diagnosticos_texto.split('\n'):
+                    if linea.strip():
+                        db.session.add(DiagnosticoEstudiante(estudiante_id=estudiante.id, descripcion=linea.strip()))
+            # 👆 FIN DE LO QUE DEBE AGREGAR
+
+            db.session.commit()  # Guarda los diagnósticos
+            flash(f"Estudiante '{nombre} {apellido}' actualizado", "success")
+            return redirect(url_for("estudiante.listar"))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar: {str(e)}", "danger")
+            return redirect(url_for("estudiante.editar", id=id))
 
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
     jornadas = Jornada.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
@@ -889,7 +1187,8 @@ def guardar_respuesta(id):
             "texto_pregunta": pregunta.get("texto", ""),
             "respuesta_seleccionada": respuesta_estudiante,
             "respuesta_correcta": pregunta.get("respuesta_correcta", ""),
-            "es_correcta": es_correcta
+            "es_correcta": es_correcta,
+            "indicador_logro_id": pregunta.get("indicador_logro_id")
         })
 
     total_preguntas = len(preguntas)
@@ -925,14 +1224,48 @@ def guardar_respuesta(id):
     for det in detalles:
         db.session.add(RespuestaExamenDetalle(resultado_examen_id=resultado.id, **det))
 
+    # ==========================================================
+    # EL PUENTE: Inyectar la nota en evaluaciones_estudiante
+    # ==========================================================
+    programacion = ProgramacionExamen.query.filter_by(
+        examen_id=examen.id, grupo_id=estudiante.grupo_id, activo=True
+    ).first()
+    
+    if programacion and programacion.competencia_materia_id:
+        indicador = IndicadorLogro.query.filter_by(
+            competencia_materia_id=programacion.competencia_materia_id
+        ).order_by(IndicadorLogro.id).first()
+
+        if indicador:
+            from app.models.periodo_academico import PeriodoAcademico
+            periodo_activo = PeriodoAcademico.query.filter_by(
+                colegio_id=estudiante.colegio_id, activo=True
+            ).first()
+            
+            periodo_id = periodo_activo.id if periodo_activo else None
+
+            if periodo_id:
+                ev = EvaluacionEstudiante.query.filter_by(
+                    estudiante_id=estudiante.id,
+                    indicador_id=indicador.id,
+                    periodo_id=periodo_id
+                ).first()
+
+                if ev:
+                    ev.calificacion = nota_numerica
+                else:
+                    db.session.add(EvaluacionEstudiante(
+                        estudiante_id=estudiante.id,
+                        indicador_id=indicador.id,
+                        periodo_id=periodo_id,
+                        calificacion=nota_numerica
+                    ))
+
     db.session.commit()
-    flash("Examen enviado y calificado correctamente.", "success")
+    flash("Examen enviado, calificado y registrado en la planilla correctamente.", "success")
     return redirect(url_for('estudiante.mis_resultados'))
 
 
-# =========================================================
-# EXÁMENES DISPONIBLES
-# =========================================================
 @estudiante_bp.route("/examenes-disponibles")
 @login_required
 def examenes_disponibles():

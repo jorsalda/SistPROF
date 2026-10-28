@@ -1,0 +1,140 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Escala de Evaluación{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid py-4" style="max-width: 1800px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-bar-chart-steps me-2"></i>
+                Configurar Escala de Evaluación
+            </h2>
+            <p class="text-muted mb-0">
+                Niveles estándar del Ministerio de Educación · {{ niveles|length }} niveles disponibles
+            </p>
+        </div>
+    </div>
+
+    <!-- Tip contextual -->
+    <div class="alert alert-info d-flex align-items-center mb-3 py-2">
+        <i class="bi bi-lightbulb-fill text-warning fs-5 me-2"></i>
+        <small>
+            Define los rangos de cada nivel. Los rangos no deben solaparse. Puedes desactivar un nivel con el checkbox o usar el botón "Limpiar" para restablecer los valores por defecto.
+        </small>
+    </div>
+
+    <form method="POST" action="{{ url_for('colegio.guardar_escala_evaluacion') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <!-- Card principal -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check me-1"></i>
+                    Niveles de Desempeño
+                </h5>
+                <span class="badge bg-light text-dark">
+                    <i class="bi bi-check2-circle me-1"></i>
+                    {{ niveles|length }} niveles
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;" class="text-center">Activo</th>
+                            <th style="width: 150px;">Nivel</th>
+                            <th style="width: 140px;">Nota mínima</th>
+                            <th style="width: 140px;">Nota máxima</th>
+                            <th>Rango</th>
+                            <th style="width: 100px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nivel in niveles %}
+                        {% set e = escalas[nivel] %}
+                        <tr>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input"
+                                       name="activo_{{ nivel }}"
+                                       id="activo_{{ nivel }}"
+                                       {% if e.activo %}checked{% endif %}>
+                            </td>
+                            <td>
+                                <label for="activo_{{ nivel }}" class="fw-bold mb-0">
+                                    {{ nivel }}
+                                </label>
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" max="5"
+                                       class="form-control form-control-sm"
+                                       id="min_{{ nivel }}"
+                                       name="min_{{ nivel }}"
+                                       value="{{ '%.2f'|format(e.nota_minima) }}">
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" max="5"
+                                       class="form-control form-control-sm"
+                                       id="max_{{ nivel }}"
+                                       name="max_{{ nivel }}"
+                                       value="{{ '%.2f'|format(e.nota_maxima) }}">
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ '%.2f'|format(e.nota_minima) }} – {{ '%.2f'|format(e.nota_maxima) }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        title="Restablecer a valores por defecto"
+                                        onclick="limpiarFila('{{ nivel }}')">
+                                    <i class="bi bi-eraser-fill"></i> Limpiar
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer con acciones -->
+            <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Los cambios se aplican a todas las calificaciones del colegio.
+                </div>
+                <div>
+                    <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary me-2">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i> Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    // Diccionario con los valores por defecto (debe coincidir con el backend)
+    const defaultRanges = {
+        'Bajo': { min: 0.00, max: 1.90 },
+        'Básico': { min: 2.00, max: 2.90 },
+        'Alto': { min: 3.00, max: 4.40 },
+        'Superior': { min: 4.50, max: 5.00 }
+    };
+
+    function limpiarFila(nivel) {
+        if (defaultRanges[nivel]) {
+            document.getElementById(`min_${nivel}`).value = defaultRanges[nivel].min.toFixed(2);
+            document.getElementById(`max_${nivel}`).value = defaultRanges[nivel].max.toFixed(2);
+        }
+    }
+</script>
+{% endblock %}

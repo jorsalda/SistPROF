@@ -194,9 +194,6 @@ Lista de Docentes
                             </td>
 
                             <td>
-                            </td>
-
-                            <td>
                                 {{ docente.documento or "—" }}
                             </td>
 
@@ -240,7 +237,7 @@ Lista de Docentes
 
                             </td>
 
-                            <td>
+                            <td class="text-nowrap">
 
                                 <a href="{{ url_for('colegio.permisos_docente', docente_id=docente.id) }}"
                                    class="btn btn-sm btn-outline-info me-1"
@@ -265,9 +262,12 @@ Lista de Docentes
                                       method="POST"
                                       class="d-inline">
 
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                                     <button type="submit"
                                             class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('¿Está seguro de eliminar este docente?')">
+                                            onclick="return confirm('¿Está seguro de eliminar este docente?')"
+                                            title="Eliminar">
 
                                         <i class="bi bi-trash"></i>
 

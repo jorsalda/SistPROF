@@ -1,171 +1,92 @@
 {% extends "docentes/docente_base.html" %}
 
-{% block title %}{{ examen.titulo }} | SistPROF{% endblock %}
+{% block title %}Ver Examen | SistPROF{% endblock %}
 
 {% block docente_page_title %}
-    {{ examen.titulo }}
+    Ver Examen
 {% endblock %}
 
 {% block docente_content %}
-<div class="container-fluid py-4">
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
 
-    <!-- Botón volver -->
-    <div class="mb-4">
-        <a href="/api/examen/mis-examenes" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-2"></i>Volver a Mis Exámenes
-        </a>
-    </div>
-
-    <!-- Encabezado del examen -->
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-header bg-primary text-white p-3">
-            <h3 class="mb-0">{{ examen.titulo }}</h3>
-        </div>
-        <div class="card-body p-4">
-            <p class="text-muted mb-4">{{ examen.descripcion or 'Sin descripción disponible' }}</p>
-
-            <div class="row g-3">
-                <div class="col-md-3 col-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-clock fs-4 text-primary me-3"></i>
-                        <div>
-                            <small class="text-muted d-block">Tiempo límite</small>
-                            <strong>{{ examen.tiempo_limite_minutos }} min</strong>
-                        </div>
-                    </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="fw-bold mb-1">{{ examen.titulo }}</h3>
+                    <p class="text-muted mb-0">
+                        <span class="badge bg-secondary me-1">{{ examen.materia.nombre if examen.materia else 'N/A' }}</span>
+                        <span class="badge bg-info text-dark">{{ examen.tiempo_limite_minutos }} min</span>
+                    </p>
                 </div>
-                <div class="col-md-3 col-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-question-circle fs-4 text-primary me-3"></i>
-                        <div>
-                            <small class="text-muted d-block">Preguntas</small>
-                            <!-- ✅ CONTEO SEGURO: Muestra 0 si es NULL -->
-                            <strong>{{ examen.contenido_json|length if examen.contenido_json else 0 }}</strong>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-calendar fs-4 text-primary me-3"></i>
-                        <div>
-                            <small class="text-muted d-block">Fecha creación</small>
-                            <strong>{{ examen.fecha_creacion.strftime('%d/%m/%Y') if examen.fecha_creacion else 'N/A' }}</strong>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-book fs-4 text-primary me-3"></i>
-                        <div>
-                            <small class="text-muted d-block">Materia</small>
-                            <strong>{{ examen.materia.nombre if examen.materia else 'Sin materia' }}</strong>
-                        </div>
-                    </div>
-                </div>
+                <a href="{{ url_for('examen.listar_examenes') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Volver a Mis Exámenes
+                </a>
             </div>
-        </div>
 
-        <!-- ✅ NUEVA SECCIÓN: Estado de Programación -->
-        {% if programaciones %}
-        <div class="card-footer bg-light border-top p-3">
-            <h6 class="fw-bold mb-3"><i class="bi bi-calendar-check me-2 text-success"></i>Grupos Asignados</h6>
-            <div class="row g-2">
-                {% for prog in programaciones %}
-                <div class="col-md-6">
-                    <div class="bg-white border rounded p-2 d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge bg-success me-2">Activo</span>
-                            <strong>{{ prog.grupo.grado }}{{ prog.grupo.nombre }}</strong>
-                            {% if prog.grupo.sede %}
-                                <small class="text-muted ms-1">({{ prog.grupo.sede.nombre }})</small>
+            {% set lista_preguntas = examen.contenido_json.preguntas if examen.contenido_json is mapping else examen.contenido_json %}
+            {% if lista_preguntas %}
+                {% for pregunta in lista_preguntas %}
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="fw-bold">
+                            <span class="badge bg-primary me-2">Pregunta {{ loop.index }}</span>
+                            {{ pregunta.pregunta }}
+                        </h6>
+
+                        {% if pregunta.contexto %}
+                        <div class="alert alert-info border-0 bg-info bg-opacity-10 mb-3">
+                            <strong><i class="bi bi-info-circle me-2"></i>Contexto:</strong>
+                            {% if pregunta.contexto.tipo == 'imagen' %}
+                                <p class="mb-2">{{ pregunta.contexto.texto or '' }}</p>
+                                <img src="{{ pregunta.contexto.src }}" class="img-fluid rounded" alt="Contexto">
+                            {% elif pregunta.contexto.tipo == 'video' %}
+                                <p class="mb-2">{{ pregunta.contexto.texto or '' }}</p>
+                                <video controls class="img-fluid rounded"><source src="{{ pregunta.contexto.src }}" type="video/mp4"></video>
+                            {% else %}
+                                <p class="mb-0">{{ pregunta.contexto.texto if pregunta.contexto.texto is defined else pregunta.contexto }}</p>
                             {% endif %}
                         </div>
-                        <div class="text-end small text-muted">
-                            <div><i class="bi bi-play-circle me-1"></i>{{ prog.fecha_apertura.strftime('%d/%m %H:%M') }}</div>
-                            <div><i class="bi bi-stop-circle me-1"></i>{{ prog.fecha_cierre.strftime('%d/%m %H:%M') }}</div>
+                        {% endif %}
+
+                        {% if pregunta.opciones is mapping %}
+                            {% for letra, opcion in pregunta.opciones.items() %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="p{{ loop.index }}" disabled>
+                                    <label class="form-check-label">
+                                        <strong>{{ letra }})</strong> {{ opcion }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% elif pregunta.opciones is iterable and pregunta.opciones is not string %}
+                            {% set letras = ['A', 'B', 'C', 'D', 'E', 'F'] %}
+                            {% for opcion in pregunta.opciones %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="p{{ loop.index }}" disabled>
+                                    <label class="form-check-label">
+                                        <strong>{{ letras[loop.index0] }})</strong> {{ opcion }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if pregunta.explicacion %}
+                        <div class="alert alert-info border-0 bg-info bg-opacity-10 mt-3 mb-0">
+                            <strong><i class="bi bi-lightbulb me-2"></i>Retroalimentación:</strong>
+                            <p class="mb-0 mt-1">{{ pregunta.explicacion }}</p>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
-            </div>
-        </div>
-        {% else %}
-        <div class="card-footer bg-warning bg-opacity-10 border-warning border-top p-3">
-            <div class="d-flex align-items-start">
-                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-3 mt-1"></i>
-                <div>
-                    <strong class="text-dark">Este examen no está asignado a ningún grupo.</strong>
-                    <p class="mb-0 text-muted small mt-1">Usa el botón "Asignar a Grupo" desde la lista de exámenes para activarlo y permitir que los estudiantes lo presenten.</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- ✅ BOTONES DE ACCIÓN INTELIGENTES -->
-        <div class="card-footer bg-white border-top-0 p-3 d-flex gap-2">
-
-            <!-- Solo mostrar Editar si hay preguntas reales -->
-            {% if examen.contenido_json and examen.contenido_json|length > 0 %}
-                <a href="{{ url_for('examen.editar_examen', id=examen.id) }}" class="btn btn-primary btn-sm flex-grow-1">
-                    <i class="bi bi-pencil me-2"></i>Editar Examen
-                </a>
             {% else %}
-                <button class="btn btn-secondary btn-sm flex-grow-1" disabled title="Este examen no tiene preguntas para editar">
-                    <i class="bi bi-lock me-2"></i>Solo Lectura (Sin preguntas)
-                </button>
+                <div class="alert alert-secondary text-center py-5">
+                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                    <p class="mb-0">Este examen aún no tiene preguntas cargadas.</p>
+                </div>
             {% endif %}
 
         </div>
     </div>
-
-    <!-- Preguntas -->
-    <h4 class="mb-4 fw-bold"><i class="bi bi-list-ol me-2 text-primary"></i>Preguntas del Examen</h4>
-
-    {% if examen.contenido_json and examen.contenido_json|length > 0 %}
-        {% for pregunta in examen.contenido_json %}
-        <div class="card mb-3 shadow-sm border-0">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center p-3">
-                <h5 class="mb-0 fs-6">
-                    <span class="badge bg-primary me-2">Pregunta {{ pregunta.numero }}</span>
-                </h5>
-                <span class="badge bg-{% if pregunta.dificultad == 'baja' %}success{% elif pregunta.dificultad == 'media' %}warning{% else %}danger{% endif %}">
-                    {{ pregunta.dificultad|capitalize }}
-                </span>
-            </div>
-            <div class="card-body p-4">
-                <p class="card-text mb-4 fs-5"><strong>{{ pregunta.texto }}</strong></p>
-
-                <div class="row g-3 mb-4">
-                    {% for letra, opcion in pregunta.opciones.items() %}
-                    <div class="col-md-6">
-                        <div class="alert alert-{% if letra == pregunta.respuesta_correcta %}success{% else %}light{% endif %} border {% if letra == pregunta.respuesta_correcta %}border-success{% endif %} mb-0 py-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <strong>{{ letra }})</strong> {{ opcion }}
-                                </div>
-                                {% if letra == pregunta.respuesta_correcta %}
-                                    <span class="badge bg-success ms-2">✓ Correcta</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                {% if pregunta.explicacion %}
-                <div class="alert alert-info border-0 bg-info bg-opacity-10">
-                    <strong><i class="bi bi-lightbulb me-2"></i>Retroalimentación:</strong>
-                    <p class="mb-0 mt-1">{{ pregunta.explicacion }}</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="alert alert-secondary text-center py-5">
-            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-            <p class="mb-0">Este examen aún no tiene preguntas cargadas.</p>
-        </div>
-    {% endif %}
 </div>
 {% endblock %}

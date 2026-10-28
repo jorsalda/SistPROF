@@ -1,0 +1,215 @@
+{% extends base_template %}
+
+{% block colegio_content %}
+{% block docente_content %}
+{% block coordinador_content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-clipboard2-pulse text-primary me-2"></i>
+                PIAR: {{ piar.estudiante.nombre }} {{ piar.estudiante.apellido }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ piar.materia.nombre if piar.materia else 'General' }} |
+                Docente: {{ piar.docente.nombre if piar.docente else 'No asignado' }}
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('piar.lista') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- COLUMNA IZQUIERDA: DATOS DEL PIAR -->
+        <div class="col-lg-8">
+
+            <!-- Diagnóstico y Contexto -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-file-medical text-danger me-2"></i> Diagnóstico y Contexto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-secondary">Diagnóstico Base</h6>
+                        <p class="mb-0">{{ piar.diagnostico or 'No registrado' }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-secondary">Contexto Familiar</h6>
+                        <p class="mb-0">{{ piar.contexto_familiar or 'No registrado' }}</p>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-secondary">Entidades que Acompañan</h6>
+                        <p class="mb-0">{{ piar.entidades_apoyo or 'No registrado' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ajustes Razonables -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-tools text-warning me-2"></i> Ajustes Razonables</h5>
+                </div>
+                <div class="card-body">
+                    {% if ajustes %}
+                        <ul class="list-group list-group-flush mb-4">
+                            {% for ajuste in ajustes %}
+                            <li class="list-group-item p-3">
+                                <div class="d-flex justify-content-between">
+                                    <p class="mb-1 fw-bold">{{ ajuste.descripcion }}</p>
+                                    {% if ajuste.aplicado %}
+                                        <span class="badge bg-success">Aplicado</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pendiente</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    Docente: {{ ajuste.docente.nombre if ajuste.docente else 'N/A' }} |
+                                    Materia: {{ ajuste.materia.nombre if ajuste.materia else 'N/A' }}
+                                </small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-light border text-center mb-4">
+                            No se han registrado ajustes razonables aún.
+                        </div>
+                    {% endif %}
+
+                    <!-- FORMULARIO EN LÍNEA PARA AJUSTES -->
+                    <h6 class="fw-bold text-secondary mb-3 mt-4">Registrar Nuevo Ajuste</h6>
+                    <form method="POST" action="{{ url_for('piar.nuevo_ajuste', piar_id=piar.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row g-2">
+                            <div class="col-md-9">
+                                <input type="text" class="form-control" name="descripcion" placeholder="Ej: Permitir tiempo extra en evaluaciones..." required>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-save me-1"></i> Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Documentos Oficiales -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-text text-info me-2"></i> Documentos Oficiales</h5>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#formDocumentos">
+                        <i class="bi bi-pencil"></i> Editar Documentos
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Formulario oculto -->
+                    <div class="collapse mb-4" id="formDocumentos">
+                        <form method="POST" action="{{ url_for('piar.editar_documentos', piar_id=piar.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Acta de Acuerdo</label>
+                                <textarea class="form-control" name="acta_acuerdo" rows="3" placeholder="Redacte los compromisos y firmas...">{{ piar.acta_acuerdo or '' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Informe Anual</label>
+                                <textarea class="form-control" name="informe_anual" rows="3" placeholder="Resultados del año escolar...">{{ piar.informe_anual or '' }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-save me-1"></i> Guardar Documentos
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Vista de los documentos actuales -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-secondary">Acta de Acuerdo</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ piar.acta_acuerdo or 'El acta de acuerdo aún no ha sido redactada.' }}
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-secondary">Informe Anual por Competencia</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ piar.informe_anual or 'El informe anual se genera al finalizar el año escolar.' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: INFO GENERAL Y PROFESIONALES -->
+        <div class="col-lg-4">
+
+            <!-- Info del Estudiante -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-person text-primary me-2"></i> Estudiante</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Nombre:</strong> {{ piar.estudiante.nombre }} {{ piar.estudiante.apellido }}</p>
+                    <p class="mb-1"><strong>Documento:</strong> {{ piar.estudiante.documento or 'N/A' }}</p>
+                    <p class="mb-1"><strong>Grado:</strong> {{ piar.estudiante.grado }}{{ piar.estudiante.grupo or '' }}</p>
+                    <p class="mb-0"><strong>Estado:</strong>
+                        {% if piar.estudiante.requiere_piar %}
+                            <span class="badge bg-warning text-dark">Requiere PIAR</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Profesionales Asignados -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-people text-success me-2"></i> Equipo de Apoyo</h6>
+                </div>
+                <div class="card-body">
+                    {% if profesionales %}
+                        <ul class="list-group list-group-flush mb-4">
+                            {% for prof in profesionales %}
+                            <li class="list-group-item px-0 d-flex align-items-center">
+                                <i class="bi bi-person-circle fs-4 text-muted me-3"></i>
+                                <div>
+                                    <div class="fw-bold">{{ prof.profesional.nombre }}</div>
+                                    <small class="text-muted text-capitalize">{{ prof.profesional.rol }}</small>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted text-center mb-4">No hay profesionales asignados.</p>
+                    {% endif %}
+
+                    <!-- FORMULARIO EN LÍNEA PARA ASIGNAR PROFESIONAL -->
+                    <h6 class="fw-bold text-secondary mb-3">Asignar Profesional</h6>
+                    <form method="POST" action="{{ url_for('piar.asignar_profesional', piar_id=piar.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <select class="form-select" name="profesional_id" required>
+                                <option value="">Seleccione...</option>
+                                {% for prof in profesionales_disponibles %}
+                                    <option value="{{ prof.id }}">{{ prof.nombre }} ({{ prof.rol }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-person-plus me-1"></i> Asignar al Equipo
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+{% endblock %}
+{% endblock %}

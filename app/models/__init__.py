@@ -47,6 +47,7 @@ from .evaluacion_criterio import EvaluacionCriterio
 from .evaluacion_estudiante import EvaluacionEstudiante
 from .criterio_evaluacion import CriterioEvaluacion
 from .escala_evaluacion import EscalaEvaluacion
+from .tipo_evaluacion import TipoEvaluacion
 from .acuerdo_evaluacion import AcuerdoEvaluacion
 from .evidencia import Evidencia
 
@@ -75,6 +76,7 @@ from .seguimiento import Seguimiento
 # Inclusión
 from .piar import PIAR
 from .ajuste_razonable import AjusteRazonable
+from .piar_profesional import PiarProfesional # 👈 NUEVO
 
 # Permisos y tokens
 from .permiso import Permiso
@@ -86,6 +88,7 @@ from .notification_log import NotificationLog
 
 # Docente-Áreas
 from .docente_area import DocenteAreas
+from .diagnostico_estudiante import DiagnosticoEstudiante
 
 # Exportar
 __all__ = [
@@ -100,7 +103,7 @@ __all__ = [
     'CompetenciaEstudiante', 'Contribucion', 'IndicadorLogro',
     'Examen', 'Pregunta', 'TipoExamen', 'ResultadoExamen',
     'RespuestaExamenDetalle', 'EvaluacionFinal', 'EvaluacionCriterio',
-    'EvaluacionEstudiante', 'CriterioEvaluacion', 'EscalaEvaluacion',
+    'EvaluacionEstudiante', 'CriterioEvaluacion', 'EscalaEvaluacion', 'TipoEvaluacion',
     'AcuerdoEvaluacion', 'Evidencia',
     'NotaComponenteEstudiante', 'PlanApoyoIA',  # ✅ NUEVO
     'Asistencia', 'Clase', 'ClaseEstudiante', 'IngresoColegio',
@@ -108,8 +111,9 @@ __all__ = [
     'CitacionAcudiente', 'JustificacionAcudiente', 'AcuerdoCorrectivo',
     'ConfiguracionDisciplinaria', 'ConfiguracionEscalamiento',
     'Alerta', 'Seguimiento',
-    'PIAR', 'AjusteRazonable',
+    'PIAR', 'AjusteRazonable', 'PiarProfesional', # 👈 NUEVO
     'Permiso', 'TokenActivacion', 'PermisoUsuario',
     'NotificationLog',
-    'DocenteAreas'
+    'DocenteAreas',
+    'DiagnosticoEstudiante'
 ]
