@@ -1368,3 +1368,22 @@ def citaciones():
         abort(403)
     return render_template("docentes/citaciones.html")
 
+
+from flask import send_file
+
+
+@docente_bp.route("/mis-permisos/imprimir/<int:id>")
+@login_required
+def imprimir_permiso_docente(id):
+    from app.models.permiso import Permiso
+    from app.utils.pdf_generator import generar_pdf_permiso
+
+    permiso = Permiso.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
+    pdf_buffer = generar_pdf_permiso(permiso)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=False,
+        download_name=f'permiso_{permiso.id}.pdf'
+    )

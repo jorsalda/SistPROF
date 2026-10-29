@@ -904,6 +904,33 @@ def lista_coordinadores():
         consulta = consulta.filter_by(sede_id=sede_id)
     coordinadores = consulta.all()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
+    return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes, sede_actual_id=sede_id)
+
+@colegio_bp.route("/permisos/autorizar/<int:id>", methods=["POST"])
+@login_required
+def autorizar_permiso(id):
+    permiso = Permiso.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
+    permiso.estado = 'autorizado'
+    db.session.commit()
+    flash("Permiso autorizado correctamente", "success")
+    return redirect(url_for('colegio.lista_permisos'))
+
+@colegio_bp.route("/permisos/rechazar/<int:id>", methods=["POST"])
+@login_required
+def rechazar_permiso(id):
+    permiso = Permiso.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
+    permiso.estado = 'rechazado'
+    db.session.commit()
+    flash("Permiso rechazado", "warning")
+    return redirect(url_for('colegio.lista_permisos'))
+
+def lista_coordinadores():
+    sede_id = request.args.get('sede_id', type=int)
+    consulta = Coordinador.query.filter_by(colegio_id=current_user.colegio_id)
+    if sede_id:
+        consulta = consulta.filter_by(sede_id=sede_id)
+    coordinadores = consulta.all()
+    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
     return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes,
                            sede_actual_id=sede_id)
 
@@ -2688,4 +2715,24 @@ def editar_permisos_usuario_ruta(usuario_id):
         usuario=usuario,
         permisos_actuales=permisos_actuales,
         catalogo_por_grupo=catalogo_por_grupo() # 👈 CORRECCIÓN: Nombre exacto que espera el HTML
+    )
+
+
+from flask import send_file
+
+
+@colegio_bp.route("/permisos/imprimir/<int:id>")
+@login_required
+def imprimir_permiso_admin(id):
+    from app.models.permiso import Permiso
+    from app.utils.pdf_generator import generar_pdf_permiso
+
+    permiso = Permiso.query.filter_by(id=id, colegio_id=current_user.colegio_id).first_or_404()
+    pdf_buffer = generar_pdf_permiso(permiso)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=False,
+        download_name=f'permiso_{permiso.id}.pdf'
     )

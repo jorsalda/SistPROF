@@ -17,7 +17,7 @@
         <div class="card-body p-4">
             <form method="POST" action="{{ url_for('docente.nuevo_permiso_docente') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Tipo de Permiso <span class="text-danger">*</span></label>
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <!-- 2. TABLA DE HISTORIAL (La que ya tenías, con estados corregidos) -->
+    <!-- 2. TABLA DE HISTORIAL -->
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
             <h5 class="mb-3">Historial de Permisos</h5>
@@ -92,16 +92,20 @@
                                     <span class="badge bg-secondary rounded-pill">{{ permiso.estado|title }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-nowrap">
+                                <!-- 🖨️ BOTÓN DE IMPRIMIR -->
+                                <a href="{{ url_for('docente.imprimir_permiso_docente', id=permiso.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="Imprimir">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+
+                                <!-- 🗑️ BOTÓN DE ELIMINAR (Solo si está pendiente y es futuro) -->
                                 {% if permiso.fecha_inicio > hoy and permiso.estado == 'pendiente' %}
                                 <form method="POST" action="{{ url_for('docente.eliminar_permiso_docente', permiso_id=permiso.id) }}" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Está seguro de eliminar este permiso?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Está seguro de eliminar este permiso?')" title="Eliminar">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
-                                {% else %}
-                                <span class="text-muted small">No disponible</span>
                                 {% endif %}
                             </td>
                         </tr>

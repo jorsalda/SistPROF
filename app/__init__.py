@@ -171,4 +171,17 @@ def create_app():
             'tiene_alguno': tiene_alguno_template,
         }
 
+    # ✅ CONTEXT PROCESSOR: Hace que 'permisos_pendientes' esté disponible en TODAS las plantillas
+    @app.context_processor
+    def inject_permisos_pendientes():
+        from app.models.permiso import Permiso
+        from flask_login import current_user
+        if current_user.is_authenticated and hasattr(current_user, 'colegio_id') and current_user.colegio_id:
+            count = Permiso.query.filter_by(
+                colegio_id=current_user.colegio_id,
+                estado='pendiente'
+            ).count()
+            return dict(permisos_pendientes=count)
+        return dict(permisos_pendientes=0)
+
     return app
