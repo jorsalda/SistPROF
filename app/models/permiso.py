@@ -16,3 +16,4 @@ class Permiso(db.Model):
     observacion = db.Column(db.Text)
 
     activo = db.Column(db.Boolean, default=True)
+    estado = db.Column(db.String(20), default='pendiente', nullable=False)

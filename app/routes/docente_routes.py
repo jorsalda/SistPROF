@@ -241,7 +241,8 @@ def nuevo_permiso_docente():
 
             permiso = Permiso(
                 docente_id=docente.id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
-                tipo=tipo, observacion=observacion if observacion else None, colegio_id=docente.colegio_id
+                tipo=tipo, observacion=observacion if observacion else None, 
+                colegio_id=docente.colegio_id, estado='pendiente'
             )
             db.session.add(permiso)
             db.session.commit()
