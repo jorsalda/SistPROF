@@ -24,6 +24,23 @@ body {
     height: 100vh;
     z-index: 100;
     transition: all 0.3s ease;
+    overflow-y: auto; /* ✅ Barra de desplazamiento vertical */
+    overflow-x: hidden; /* Evita scroll horizontal */
+}
+
+/* Estilizar la barra de desplazamiento para que se integre al diseño */
+.admin-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+.admin-sidebar::-webkit-scrollbar-track {
+    background: #121a22;
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: #3498db;
+    border-radius: 4px;
+}
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #2980b9;
 }
 
 .admin-sidebar .sidebar-header {

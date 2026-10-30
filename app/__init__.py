@@ -184,4 +184,11 @@ def create_app():
             return dict(permisos_pendientes=count)
         return dict(permisos_pendientes=0)
 
+    @app.context_processor
+    def inject_layout():
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            return dict(layout="secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html")
+        return dict(layout="colegio/colegio_base.html")
+
     return app

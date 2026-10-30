@@ -1,4 +1,4 @@
-{% extends "colegio/colegio_base.html" %}
+{% extends layout %}
 
 {% block colegio_page_title %}Permisos de {{ docente.nombre }}{% endblock %}
 
@@ -67,10 +67,11 @@
                        class="btn btn-outline-primary w-100 mb-2">
                         <i class="bi bi-pencil"></i> Editar Docente
                     </a>
-                    <a href="{{ url_for('colegio.nuevo_permiso') }}" 
-                       class="btn btn-outline-success w-100">
+                                        {% if current_user.es_admin_colegio or tiene_permiso('secretaria.crear_permisos_docentes') %}
+                    <a href="{{ url_for('colegio.nuevo_permiso', docente_id=docente.id) }}" class="btn btn-success w-100 mt-2">
                         <i class="bi bi-plus-circle"></i> Nuevo Permiso
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -122,9 +123,16 @@
                                         {% endif %}
                                     </td>
                                     <td>
+                                        <a href="{{ url_for('colegio.imprimir_permiso_admin', id=permiso.id) }}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-outline-secondary me-1" 
+                                           title="Imprimir PDF">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
                                         <form action="{{ url_for('colegio.eliminar_permiso', id=permiso.id) }}" 
                                               method="POST" 
                                               class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" 
                                                     class="btn btn-sm btn-outline-danger"
                                                     onclick="return confirm('¿Estás seguro de eliminar este permiso?')">
