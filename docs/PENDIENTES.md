@@ -656,3 +656,30 @@ Completar la arquitectura de permisos (Secretaría y Coordinador) y desarrollar 
 - [ ] **Paso 4.3:** Endpoint para que el portero registre.
 - [ ] **Paso 4.4:** Job que detecta ausencias.
 
+
+## TEMA-028: Módulo de Importación y Exportación de Datos (Migración)
+
+**Prioridad:** Media
+**Estado:** Pendiente (Idea para futuro)
+**Fecha de registro:** 2026-10-29
+**Origen:** Chat Módulo Novedades y Asistencia
+
+### Contexto
+Los colegios que se vinculen a SistPROF necesitarán migrar su información desde otros sistemas o archivos Excel (estudiantes, docentes, notas, etc.). Así mismo, si un colegio se retira, necesitará exportar sus datos. No es seguro ni escalable usar backups directos de la base de datos (`.sql`) porque el sistema es multi-tenant (varios colegios en la misma BD).
+
+### Reglas de Arquitectura
+- **Nunca** permitir backups `.sql` directos entre clientes.
+- Toda importación/exportación debe pasar por la aplicación y estar filtrada por `colegio_id` (el del usuario logueado).
+- La importación debe ser transaccional (si falla una fila, no se guarda nada a medias).
+
+### Plan de tratamiento (Futuro)
+**1. Módulo de Importación (Wizard en 3 pasos):**
+   - **Paso 1:** El Admin sube un archivo CSV o Excel (usando `pandas` o `openpyxl` en el backend).
+   - **Paso 2:** Mapeo visual. El sistema muestra las columnas del Excel y el Admin las asocia a los campos de SistPROF (ej. Columna A -> Documento, Columna B -> Nombre, etc.).
+   - **Paso 3:** Validación en memoria (verificar correos duplicados, sedes existentes) y previsualización de errores antes de guardar.
+   - **Creación:** Usar los servicios existentes (ej. `crear_usuario`, `crear_estudiante`) para respetar las reglas de negocio.
+
+**2. Módulo de Exportación:**
+   - Botón en el panel del Admin para descargar reportes en Excel/CSV.
+   - Filtros por tabla: Estudiantes, Docentes, Calificaciones, Asistencia, etc.
+   - Generación de Excel usando `openpyxl` o reportes PDF usando `pdf_generator.py`.

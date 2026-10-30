@@ -103,6 +103,16 @@ SECRETARIA_EDITAR_GRUPOS = 'secretaria.editar_grupos'
 SECRETARIA_ELIMINAR_GRUPOS = 'secretaria.eliminar_grupos'
 
 # ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_MATERIAS = 'secretaria.ver_materias'
+SECRETARIA_CREAR_MATERIAS = 'secretaria.crear_materias'
+SECRETARIA_VER_AREAS = 'secretaria.ver_areas'
+SECRETARIA_CREAR_AREAS = 'secretaria.crear_areas'
+SECRETARIA_VER_CARGA = 'secretaria.ver_carga_academica'
+SECRETARIA_EDITAR_CARGA = 'secretaria.editar_carga_academica'
+SECRETARIA_VER_PERMISOS_DOCENTES = 'secretaria.ver_permisos_docentes'
+SECRETARIA_CREAR_PERMISOS_DOCENTES = 'secretaria.crear_permisos_docentes'
+
 # CATALOGO COMPLETO (para UI y validaciones)
 # ─────────────────────────────────────────────────────────────
 
@@ -321,6 +331,59 @@ CATALOGO = {
         'titulo': 'Eliminar Grupos',
         'descripcion': 'Permite eliminar grupos.',
         'grupo': 'Secretaría · Grupos',
+    },
+    SECRETARIA_ELIMINAR_GRUPOS: {
+        'titulo': 'Eliminar Grupos',
+        'descripcion': 'Permite eliminar grupos.',
+        'grupo': 'Secretaría · Grupos',
+    },
+
+    # Materias
+    SECRETARIA_VER_MATERIAS: {
+        'titulo': 'Ver Materias',
+        'descripcion': 'Acceso al listado de materias.',
+        'grupo': 'Secretaría · Materias',
+    },
+    SECRETARIA_CREAR_MATERIAS: {
+        'titulo': 'Crear Materias',
+        'descripcion': 'Permite crear nuevas materias.',
+        'grupo': 'Secretaría · Materias',
+    },
+
+    # Áreas
+    SECRETARIA_VER_AREAS: {
+        'titulo': 'Ver Áreas',
+        'descripcion': 'Acceso al listado de áreas.',
+        'grupo': 'Secretaría · Áreas',
+    },
+    SECRETARIA_CREAR_AREAS: {
+        'titulo': 'Crear Áreas',
+        'descripcion': 'Permite crear nuevas áreas.',
+        'grupo': 'Secretaría · Áreas',
+    },
+
+    # Carga Académica
+    SECRETARIA_VER_CARGA: {
+        'titulo': 'Ver Carga Académica',
+        'descripcion': 'Acceso a la gestión de carga académica.',
+        'grupo': 'Secretaría · Carga Académica',
+    },
+    SECRETARIA_EDITAR_CARGA: {
+        'titulo': 'Editar Carga Académica',
+        'descripcion': 'Permite modificar la carga académica.',
+        'grupo': 'Secretaría · Carga Académica',
+    },
+
+    # Permisos Docentes
+    SECRETARIA_VER_PERMISOS_DOCENTES: {
+        'titulo': 'Ver Permisos de Docentes',
+        'descripcion': 'Acceso a los permisos laborales de docentes.',
+        'grupo': 'Secretaría · Permisos Docentes',
+    },
+    SECRETARIA_CREAR_PERMISOS_DOCENTES: {
+        'titulo': 'Crear Permisos de Docentes',
+        'descripcion': 'Permite registrar permisos laborales.',
+        'grupo': 'Secretaría · Permisos Docentes',
     },
 }
 

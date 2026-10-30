@@ -1,4 +1,4 @@
-{% extends "colegio/colegio_base.html" %}
+{% extends layout %}
 
 {% block colegio_page_title %}
 Jornadas de {{ sede.nombre }}
@@ -72,6 +72,7 @@ Jornadas de {{ sede.nombre }}
                     <form method="POST"
                           action="{{ url_for('colegio.cambiar_estado_jornada', sede_id=sede.id, jornada_id=jornada.id) }}"
                           style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         {% if jornada.activo %}
                         <button type="submit" class="btn btn-outline-warning btn-sm">
                             <i class="bi bi-pause"></i> Desactivar

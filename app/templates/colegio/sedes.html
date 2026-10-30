@@ -91,6 +91,7 @@ Sedes del Colegio
                             {% if sede.activo %}
                                 <form method="POST"
                                       action="{{ url_for('colegio.desactivar_sede', sede_id=sede.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit"
                                             class="btn btn-outline-danger btn-sm">
                                         <i class="bi bi-x-circle"></i>
@@ -100,6 +101,7 @@ Sedes del Colegio
                             {% else %}
                                 <form method="POST"
                                       action="{{ url_for('colegio.activar_sede', sede_id=sede.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit"
                                             class="btn btn-outline-success btn-sm">
                                         <i class="bi bi-check-circle"></i>

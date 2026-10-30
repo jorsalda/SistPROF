@@ -142,7 +142,8 @@ def nueva_sede():
         flash("Sede registrada correctamente", "success")
         return redirect(url_for("colegio.sedes"))
 
-    return render_template("colegio/formulario_sede.html")
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/formulario_sede.html", layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>")
@@ -152,8 +153,9 @@ def detalle_sede(sede_id):
     docentes = Docente.query.filter_by(sede_id=sede.id, activo=True).order_by(Docente.nombre).all()
     estudiantes = Estudiante.query.filter_by(sede_id=sede.id, activo=True).all()
     jornadas = Jornada.query.filter_by(sede_id=sede.id, activo=True).all()
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
     return render_template("colegio/detalle_sede.html", sede=sede, docentes=docentes, estudiantes=estudiantes,
-                           jornadas=jornadas)
+                           jornadas=jornadas, layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/editar", methods=["GET", "POST"])
@@ -169,7 +171,9 @@ def editar_sede(sede_id):
         db.session.commit()
         flash("Sede actualizada correctamente", "success")
         return redirect(url_for("colegio.detalle_sede", sede_id=sede.id))
-    return render_template("colegio/formulario_sede.html", sede=sede)
+
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/formulario_sede.html", sede=sede, layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/desactivar", methods=["POST"])
@@ -203,7 +207,7 @@ def seleccionar_sede(sede_id):
         flash(f'Sede seleccionada: {sede.nombre}', 'success')
     else:
         flash('Sede no válida', 'danger')
-    return redirect(url_for('colegio.dashboard'))
+    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 # ==========================================================
@@ -215,7 +219,8 @@ def seleccionar_sede(sede_id):
 def jornadas_sede(sede_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     jornadas = sede.jornadas
-    return render_template("colegio/jornadas_sede.html", sede=sede, jornadas=jornadas)
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/jornadas_sede.html", sede=sede, jornadas=jornadas, layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/nueva", methods=["GET", "POST"])
@@ -262,7 +267,8 @@ def nueva_jornada(sede_id):
         flash("Jornada registrada correctamente.", "success")
         return redirect(url_for("colegio.jornadas_sede", sede_id=sede.id))
 
-    return render_template("colegio/formulario_jornada.html", sede=sede)
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/formulario_jornada.html", sede=sede, layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/editar", methods=["GET", "POST"])
@@ -288,7 +294,8 @@ def editar_jornada(sede_id, jornada_id):
         flash("Jornada actualizada correctamente", "success")
         return redirect(url_for("colegio.jornadas_sede", sede_id=sede.id))
 
-    return render_template("colegio/formulario_jornada.html", sede=sede, jornada=jornada)
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/formulario_jornada.html", sede=sede, jornada=jornada, layout=layout)
 
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/cambiar-estado", methods=["POST"])
@@ -334,11 +341,13 @@ def lista_grupos(sede_id, jornada_id):
         Grupo.nombre
     ).all()
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
     return render_template(
         "colegio/grupos.html",
         sede=sede,
         jornada=jornada,
-        grupos=grupos
+        grupos=grupos,
+        layout=layout
     )
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/nuevo", methods=["GET", "POST"])
@@ -507,6 +516,7 @@ def editar_grupo(sede_id, jornada_id, grupo_id):
         Grupo.activo == False
     ).order_by(Grupo.nombre).all()
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
     return render_template(
         "colegio/formulario_grupo.html",
         grupo=grupo,
@@ -514,7 +524,8 @@ def editar_grupo(sede_id, jornada_id, grupo_id):
         jornada=jornada,
         docentes=docentes,
         grupos_fusion=grupos_fusion,
-        grupos_inactivos=grupos_inactivos
+        grupos_inactivos=grupos_inactivos,
+        layout=layout
     )
 
 
@@ -1326,28 +1337,28 @@ def eliminar_acudiente(id):
 @login_required
 def observador():
     flash("El módulo del Observador del Alumno está en construcción.", "info")
-    return redirect(url_for('colegio.dashboard'))
+    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/citaciones")
 @login_required
 def citaciones():
     flash("El módulo de Citaciones está en construcción.", "info")
-    return redirect(url_for('colegio.dashboard'))
+    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/convivencia")
 @login_required
 def convivencia():
     flash("El módulo de Convivencia está en construcción.", "info")
-    return redirect(url_for('colegio.dashboard'))
+    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/seguimiento")
 @login_required
 def seguimiento():
     flash("El módulo de Seguimiento Académico está en construcción.", "info")
-    return redirect(url_for('colegio.dashboard'))
+    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/piar")
@@ -1723,7 +1734,9 @@ def configurar_bloques_jornada(jornada_id):
             flash(f'Error: {str(e)}', 'danger')
 
     bloques = JornadaBloque.query.filter_by(jornada_id=jornada.id, activo=True).order_by(JornadaBloque.orden).all()
-    return render_template('colegio/configurar_bloques.html', jornada=jornada, bloques=bloques)
+
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template('colegio/configurar_bloques.html', jornada=jornada, bloques=bloques, layout=layout)
 
 
 # ==========================================================
@@ -1862,8 +1875,11 @@ def plan_estudios():
 
 @colegio_bp.route('/materias')
 @login_required
+@requiere_permiso('secretaria.ver_materias')
 def lista_materias():
-    return render_template('colegio/materias.html', materias=Materia.query.order_by(Materia.nombre).all())
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template('colegio/materias.html', materias=Materia.query.order_by(Materia.nombre).all(), layout=layout)
+
 
 
 @colegio_bp.route('/materias/nueva', methods=['GET', 'POST'])
