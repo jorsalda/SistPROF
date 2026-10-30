@@ -74,6 +74,34 @@ SECRETARIA_EDITAR_PSICOLOGOS = 'secretaria.editar_psicologos'
 SECRETARIA_ELIMINAR_PSICOLOGOS = 'secretaria.eliminar_psicologos'
 
 
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Sedes
+# ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_SEDES = 'secretaria.ver_sedes'
+SECRETARIA_CREAR_SEDES = 'secretaria.crear_sedes'
+SECRETARIA_EDITAR_SEDES = 'secretaria.editar_sedes'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Jornadas
+# ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_JORNADAS = 'secretaria.ver_jornadas'
+SECRETARIA_CREAR_JORNADAS = 'secretaria.crear_jornadas'
+SECRETARIA_EDITAR_JORNADAS = 'secretaria.editar_jornadas'
+
+
+# ─────────────────────────────────────────────────────────────
+# SECRETARIA — Grupos
+# ─────────────────────────────────────────────────────────────
+
+SECRETARIA_VER_GRUPOS = 'secretaria.ver_grupos'
+SECRETARIA_CREAR_GRUPOS = 'secretaria.crear_grupos'
+SECRETARIA_EDITAR_GRUPOS = 'secretaria.editar_grupos'
+SECRETARIA_ELIMINAR_GRUPOS = 'secretaria.eliminar_grupos'
+
 # ─────────────────────────────────────────────────────────────
 # CATALOGO COMPLETO (para UI y validaciones)
 # ─────────────────────────────────────────────────────────────
@@ -231,6 +259,68 @@ CATALOGO = {
         'titulo': 'Eliminar Psicólogos',
         'descripcion': 'Permite eliminar psicólogos.',
         'grupo': 'Secretaría · Psicólogos',
+    },
+
+    SECRETARIA_ELIMINAR_PSICOLOGOS: {
+        'titulo': 'Eliminar Psicólogos',
+        'descripcion': 'Permite eliminar psicólogos.',
+        'grupo': 'Secretaría · Psicólogos',
+    },
+
+    # Sedes
+    SECRETARIA_VER_SEDES: {
+        'titulo': 'Ver Sedes',
+        'descripcion': 'Acceso al listado de sedes.',
+        'grupo': 'Secretaría · Sedes',
+    },
+    SECRETARIA_CREAR_SEDES: {
+        'titulo': 'Crear Sedes',
+        'descripcion': 'Permite crear nuevas sedes.',
+        'grupo': 'Secretaría · Sedes',
+    },
+    SECRETARIA_EDITAR_SEDES: {
+        'titulo': 'Editar Sedes',
+        'descripcion': 'Permite editar sedes existentes.',
+        'grupo': 'Secretaría · Sedes',
+    },
+
+    # Jornadas
+    SECRETARIA_VER_JORNADAS: {
+        'titulo': 'Ver Jornadas',
+        'descripcion': 'Acceso al listado de jornadas.',
+        'grupo': 'Secretaría · Jornadas',
+    },
+    SECRETARIA_CREAR_JORNADAS: {
+        'titulo': 'Crear Jornadas',
+        'descripcion': 'Permite crear nuevas jornadas.',
+        'grupo': 'Secretaría · Jornadas',
+    },
+    SECRETARIA_EDITAR_JORNADAS: {
+        'titulo': 'Editar Jornadas',
+        'descripcion': 'Permite editar jornadas existentes.',
+        'grupo': 'Secretaría · Jornadas',
+    },
+
+    # Grupos
+    SECRETARIA_VER_GRUPOS: {
+        'titulo': 'Ver Grupos',
+        'descripcion': 'Acceso al listado de grupos.',
+        'grupo': 'Secretaría · Grupos',
+    },
+    SECRETARIA_CREAR_GRUPOS: {
+        'titulo': 'Crear Grupos',
+        'descripcion': 'Permite crear nuevos grupos.',
+        'grupo': 'Secretaría · Grupos',
+    },
+    SECRETARIA_EDITAR_GRUPOS: {
+        'titulo': 'Editar Grupos',
+        'descripcion': 'Permite editar grupos existentes.',
+        'grupo': 'Secretaría · Grupos',
+    },
+    SECRETARIA_ELIMINAR_GRUPOS: {
+        'titulo': 'Eliminar Grupos',
+        'descripcion': 'Permite eliminar grupos.',
+        'grupo': 'Secretaría · Grupos',
     },
 }
 

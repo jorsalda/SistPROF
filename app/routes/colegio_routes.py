@@ -103,14 +103,17 @@ def dashboard():
 # ==========================================================
 @colegio_bp.route("/sedes")
 @login_required
+@requiere_permiso('secretaria.ver_sedes')
 def sedes():
     colegio = Colegio.query.get_or_404(current_user.colegio_id)
     sedes = colegio.sedes
-    return render_template("colegio/sedes.html", colegio=colegio, sedes=sedes)
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template("colegio/sedes.html", colegio=colegio, sedes=sedes, layout=layout)
 
 
 @colegio_bp.route("/sedes/nueva", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.crear_sedes')
 def nueva_sede():
     if request.method == "POST":
         nombre = request.form.get("nombre", "").strip()
@@ -155,6 +158,7 @@ def detalle_sede(sede_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/editar", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.editar_sedes')
 def editar_sede(sede_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == "POST":
@@ -170,6 +174,7 @@ def editar_sede(sede_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/desactivar", methods=["POST"])
 @login_required
+@requiere_permiso('secretaria.editar_sedes')
 def desactivar_sede(sede_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     sede.activo = False
@@ -180,6 +185,7 @@ def desactivar_sede(sede_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/activar", methods=["POST"])
 @login_required
+@requiere_permiso('secretaria.editar_sedes')
 def activar_sede(sede_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     sede.activo = True
@@ -205,6 +211,7 @@ def seleccionar_sede(sede_id):
 # ==========================================================
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas")
 @login_required
+@requiere_permiso('secretaria.ver_jornadas')
 def jornadas_sede(sede_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     jornadas = sede.jornadas
@@ -213,6 +220,7 @@ def jornadas_sede(sede_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/nueva", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.crear_jornadas')
 def nueva_jornada(sede_id):
     sede = Sede.query.filter_by(
         id=sede_id,
@@ -259,6 +267,7 @@ def nueva_jornada(sede_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/editar", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.editar_jornadas')
 def editar_jornada(sede_id, jornada_id):
     jornada = Jornada.query.filter_by(
         id=jornada_id,
@@ -284,6 +293,7 @@ def editar_jornada(sede_id, jornada_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/cambiar-estado", methods=["POST"])
 @login_required
+@requiere_permiso('secretaria.editar_jornadas')
 def cambiar_estado_jornada(sede_id, jornada_id):
     jornada = Jornada.query.filter_by(
         id=jornada_id,
@@ -301,6 +311,7 @@ def cambiar_estado_jornada(sede_id, jornada_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos")
 @login_required
+@requiere_permiso('secretaria.ver_grupos')
 def lista_grupos(sede_id, jornada_id):
     sede = Sede.query.filter_by(
         id=sede_id,
@@ -332,6 +343,7 @@ def lista_grupos(sede_id, jornada_id):
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/nuevo", methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.crear_grupos')
 def nuevo_grupo(sede_id, jornada_id):
     """
     Crea un nuevo grupo. En GET usa sede_id y jornada_id de la URL como
@@ -463,6 +475,7 @@ def nuevo_grupo(sede_id, jornada_id):
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/editar",
                   methods=["GET", "POST"])
 @login_required
+@requiere_permiso('secretaria.editar_grupos')
 def editar_grupo(sede_id, jornada_id, grupo_id):
     sede = Sede.query.filter_by(id=sede_id, colegio_id=current_user.colegio_id).first_or_404()
     jornada = Jornada.query.filter_by(id=jornada_id, sede_id=sede.id, colegio_id=current_user.colegio_id).first_or_404()
@@ -904,7 +917,8 @@ def lista_coordinadores():
         consulta = consulta.filter_by(sede_id=sede_id)
     coordinadores = consulta.all()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
-    return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes, sede_actual_id=sede_id)
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+    return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes, sede_actual_id=sede_id, layout=layout)
 
 @colegio_bp.route("/permisos/autorizar/<int:id>", methods=["POST"])
 @login_required
@@ -931,8 +945,9 @@ def lista_coordinadores():
         consulta = consulta.filter_by(sede_id=sede_id)
     coordinadores = consulta.all()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
     return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes,
-                           sede_actual_id=sede_id)
+                           sede_actual_id=sede_id, layout=layout)
 
 
 @colegio_bp.route("/nuevo-coordinador", methods=["GET", "POST"])
@@ -1502,6 +1517,7 @@ def asignar_materias_grupo(grupo_id):
 
 @colegio_bp.route('/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/<int:grupo_id>/eliminar', methods=['POST'])
 @login_required
+@requiere_permiso('secretaria.eliminar_grupos')
 def eliminar_grupo(sede_id, jornada_id, grupo_id):
     grupo = Grupo.query.filter_by(id=grupo_id, colegio_id=current_user.colegio_id).first_or_404()
     try:
@@ -2448,6 +2464,8 @@ def lista_usuarios_operativos_ruta():
         is_active=True,
     ).count()
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
+
     return render_template(
         "colegio/usuarios_operativos.html",
         usuarios=usuarios,
@@ -2457,6 +2475,7 @@ def lista_usuarios_operativos_ruta():
         total_profesional_piar=total_profesional_piar,
         total_psicologos=total_psicologos,
         limite_sin_costo=3,
+        layout=layout,
     )
 
 

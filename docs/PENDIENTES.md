@@ -610,3 +610,49 @@ NO borrar. La historia sirve.
 ---
 
 _(pendiente de réplica a Supabase — coordinar con TEMA-001)_
+
+---
+
+## TEMA-027: Plan de Implementación - Módulo Novedades y Asistencia
+
+**Prioridad:** Alta
+**Estado:** En progreso
+**Fecha de registro:** 2026-10-29
+**Origen:** Chat Módulo Novedades y Asistencia
+
+### Objetivo
+Completar la arquitectura de permisos (Secretaría y Coordinador) y desarrollar los 3 módulos de Novedades y Asistencia. Dejando para el final los permisos del Coordinador para no frenar la entrega de la versión 1.
+
+### FASE 1: Arquitectura de Permisos y Roles (En progreso)
+*El objetivo es que el Coordinador tenga acceso natural a lo académico y que la Secretaría tenga permisos granulares.*
+
+- [ ] **Paso 1.1:** Configurar los permisos de Sedes, Jornadas y Grupos en `permisos_catalogo.py`.
+- [ ] **Paso 1.2:** Proteger los endpoints de Sedes, Jornadas y Grupos en `colegio_routes.py` con los nuevos permisos.
+- [ ] **Paso 1.3:** Ajustar los templates (menús laterales) para que la Secretaría vea solo lo que tiene permiso.
+- [ ] **Paso 1.4:** Pruebas de acceso (Login como Admin, Secretaria para verificar qué ve y a qué entra).
+- [ ] **Paso 1.5 (Pospuesto para post-entrega):** Implementar permisos de Coordinador (ver TEMA-026).
+
+### FASE 2: Módulo de Novedades (Core)
+*El objetivo es que los docentes, coordinadores, PIAR y psicólogos registren novedades según la matriz acordada.*
+
+- [ ] **Paso 2.1:** Diagnóstico de `app/services/novedad_service.py` y `app/models/novedad.py`.
+- [ ] **Paso 2.2:** Crear el servicio `registrar_novedad()` con las validaciones de la matriz de roles.
+- [ ] **Paso 2.3:** Crear las rutas y endpoints en los dashboards correspondientes.
+- [ ] **Paso 2.4:** Crear los formularios visuales para registrar la novedad.
+- [ ] **Paso 2.5:** Corregir el API actual del acudiente.
+
+### FASE 3: Asistencia de Acudientes a Citaciones
+*El objetivo es registrar si el acudiente asistió y notificar inasistencias.*
+
+- [ ] **Paso 3.1:** Diagnóstico de `citaciones_acudiente`.
+- [ ] **Paso 3.2:** Endpoint para registrar asistencia.
+- [ ] **Paso 3.3:** UI en el panel del docente/coordinador.
+- [ ] **Paso 3.4:** Job de inasistencia.
+- [ ] **Paso 3.5:** Lógica de escalamiento.
+
+### FASE 4: Asistencia Laboral de Docentes
+- [ ] **Paso 4.1:** Diagnóstico de `configuracion_asistencia_laboral`.
+- [ ] **Paso 4.2:** UI para que el admin configure.
+- [ ] **Paso 4.3:** Endpoint para que el portero registre.
+- [ ] **Paso 4.4:** Job que detecta ausencias.
+
