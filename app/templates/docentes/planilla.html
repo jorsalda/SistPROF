@@ -80,7 +80,15 @@
                                 data-porcentaje="{{ comp.porcentaje|default(0) }}">
                                 <span class="fw-bold text-dark" style="font-size: 1.1rem;">C{{ loop.index }}</span>
                                 <br>
-                                <small class="pct-label" style="font-size: 0.75rem;">{{ comp.porcentaje|default(0) }}%</small>
+                                <!-- VISTA (Texto) -->
+                                <small class="pct-label pct-view" style="font-size: 0.75rem;">{{ comp.porcentaje|default(0) }}%</small>
+                                <!-- EDICIÓN (Input oculto por defecto) -->
+                                <input type="number"
+                                       class="pct-input d-none"
+                                       style="width: 60px; font-size: 0.75rem; text-align: center; padding: 2px; border: 1px solid #ccc; border-radius: 4px;"
+                                       data-comp-id="{{ comp.id }}"
+                                       value="{{ comp.porcentaje|default(0) }}"
+                                       min="0" max="75" step="0.1">
                             </th>
                             {% endfor %}
 
@@ -185,7 +193,8 @@
                                 {% set eval_data = est.evaluaciones.get(comp.id, {}) %}
                                 {% set nivel_guardado = eval_data.nivel_desempeño %}
 
-                                <td class="td-nivel col-nivel-cell text-center" data-comp-id="{{ comp.id }}">
+                                <td class="td-nivel col-nivel-cell text-center" data-comp-id="{{ comp.id }}"
+    data-descripcion-indicador="{{ est.evaluaciones[comp.id].descripcion_indicador if est.evaluaciones and comp.id in est.evaluaciones and est.evaluaciones[comp.id] and est.evaluaciones[comp.id].descripcion_indicador else 'Sin descripción' }}">
                                     <div class="nivel-container" id="nivel-{{ est.id }}-{{ comp.id }}">
                                         {% if nivel_guardado %}
                                             <span class="badge-nivel">{{ nivel_guardado }}</span>
@@ -290,7 +299,293 @@
     };
 
     window.CSRF_TOKEN = "{{ csrf_token() }}";
-</script>
+    const PCT_COMPETENCIAS_MAX = 75.0;
+    const PCT_AUTOEVAL = 5.0;
+    const PCT_EXAMEN = 20.0;
 
-<script src="{{ url_for('static', filename='js/planilla.js') }}"></script>
+    // =============================================
+    // LÓGICA DE PONDERACIONES (NUEVO)
+    // =============================================
+
+    function toggleEdicionPonderaciones(activar) {
+        const inputsPct = document.querySelectorAll('.pct-input');
+        const viewsPct = document.querySelectorAll('.pct-view');
+        const btnEditar = document.getElementById('btnEditarPonderaciones');
+        const btnAplicar = document.getElementById('btnAplicarPonderaciones');
+        const btnCancelar = document.getElementById('btnCancelarPonderaciones');
+        const badgeSuma = document.getElementById('badgeSumaPonderaciones');
+
+        if (activar) {
+            inputsPct.forEach(inp => inp.classList.remove('d-none'));
+            viewsPct.forEach(v => v.classList.add('d-none'));
+            btnEditar.classList.add('d-none');
+            btnAplicar.classList.remove('d-none');
+            btnCancelar.classList.remove('d-none');
+            badgeSuma.classList.remove('d-none');
+            actualizarBadgeSuma();
+        } else {
+            // Cancelar: restaurar valores originales
+            inputsPct.forEach(inp => {
+                const th = inp.closest('th');
+                inp.value = th.dataset.porcentaje;
+            });
+            inputsPct.forEach(inp => inp.classList.add('d-none'));
+            viewsPct.forEach(v => v.classList.remove('d-none'));
+            btnEditar.classList.remove('d-none');
+            btnAplicar.classList.add('d-none');
+            btnCancelar.classList.add('d-none');
+            badgeSuma.classList.add('d-none');
+            actualizarBadgeTotalSuperior();
+        }
+    }
+
+    function actualizarBadgeSuma() {
+        const inputsPct = document.querySelectorAll('.pct-input');
+        let suma = 0;
+        inputsPct.forEach(inp => suma += parseFloat(inp.value) || 0);
+
+        const badgeSuma = document.getElementById('badgeSumaPonderaciones');
+        const btnAplicar = document.getElementById('btnAplicarPonderaciones');
+        const totalConFijos = suma + PCT_AUTOEVAL + PCT_EXAMEN;
+
+        badgeSuma.textContent = `Competencias: ${suma.toFixed(1)}% / 75% | Total: ${totalConFijos.toFixed(1)}%`;
+
+        if (suma > PCT_COMPETENCIAS_MAX + 0.01) {
+            badgeSuma.className = 'badge text-bg-danger';
+            btnAplicar.disabled = true;
+            btnAplicar.title = `Las competencias no pueden superar el ${PCT_COMPETENCIAS_MAX}%`;
+        } else {
+            badgeSuma.className = 'badge text-bg-success';
+            btnAplicar.disabled = false;
+            btnAplicar.title = 'Aplicar ponderaciones';
+        }
+    }
+
+    function actualizarBadgeTotalSuperior() {
+        let sumaComp = 0;
+        document.querySelectorAll('.h-comp').forEach(th => {
+            sumaComp += parseFloat(th.dataset.porcentaje) || 0;
+        });
+        const total = sumaComp + PCT_AUTOEVAL + PCT_EXAMEN;
+        const txtTotal = document.getElementById('txtTotalPct');
+        const badgeTotal = document.getElementById('badgeTotalPct');
+        if (txtTotal) txtTotal.textContent = total.toFixed(1);
+        if (badgeTotal) {
+            badgeTotal.className = `badge pl-badge ${Math.abs(total - 100) < 0.01 ? 'text-bg-success' : 'text-bg-warning'}`;
+        }
+    }
+
+    async function aplicarPonderaciones() {
+        const btn = document.getElementById('btnAplicarPonderaciones');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+        btn.disabled = true;
+
+        let ponderaciones = {};
+        document.querySelectorAll('.pct-input').forEach(inp => {
+            ponderaciones[inp.dataset.compId] = parseFloat(inp.value) || 0;
+        });
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.CSRF_TOKEN || ''
+                },
+                body: JSON.stringify({ ponderaciones: ponderaciones })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ ' + result.message);
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + (result.error || 'Error desconocido'));
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('Error de conexión: ' + err.message);
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+    }
+
+    // =============================================
+    // UTILIDADES DE LA PLANILLA
+    // =============================================
+
+    function pintarCelda(input) {
+        input.classList.remove('nota-baja', 'nota-alta');
+        const v = parseFloat(input.value);
+        if (isNaN(v)) return;
+        if (v < 3.0) input.classList.add('nota-baja');
+        else if (v >= 4.5) input.classList.add('nota-alta');
+    }
+
+    function calcularNotaDefinitiva(estudianteId) {
+        const fila = document.querySelector(`tr[data-estudiante-id="${estudianteId}"]`);
+        if (!fila) return;
+        const config = window.PLANILLA_CONFIG;
+        let definitiva = 0;
+
+        config.competencias.forEach(comp => {
+            const input = fila.querySelector(`.input-nota[data-competencia-id="${comp.id}"]`);
+            if (!input) return;
+            const v = parseFloat(input.value);
+            if (!isNaN(v)) {
+                definitiva += v * (comp.porcentaje / 100);
+            }
+        });
+
+        const autoInput = fila.querySelector('input[data-tipo="autoeval"]');
+        const auto = parseFloat(autoInput?.value) || 0;
+        definitiva += auto * (PCT_AUTOEVAL / 100);
+
+        const examenInput = fila.querySelector('input[data-tipo="examen"]');
+        const examen = parseFloat(examenInput?.value) || 0;
+        definitiva += examen * (PCT_EXAMEN / 100);
+
+        const celdaDefinitiva = document.getElementById(`definitiva-${estudianteId}`);
+        if (celdaDefinitiva) {
+            if (definitiva > 0) celdaDefinitiva.value = definitiva.toFixed(1);
+            else celdaDefinitiva.value = '—';
+        }
+    }
+
+    function calcularPromedios() {
+        document.querySelectorAll('tr[data-estudiante-id]').forEach(row => {
+            calcularNotaDefinitiva(row.dataset.estudianteId);
+        });
+    }
+
+    function sincronizarNivelAutomatico(inputNota) {
+        const valor = parseFloat(inputNota.value);
+        if (isNaN(valor)) return;
+
+        const estId = inputNota.dataset.estudianteId;
+        const compId = inputNota.dataset.competenciaId;
+
+        const fila = inputNota.closest('tr');
+        if (!fila) return;
+
+        const celdaNivel = fila.querySelector(`.td-nivel[data-comp-id="${compId}"]`);
+        if (!celdaNivel) return;
+
+        const containerNivel = celdaNivel.querySelector('.nivel-container');
+        const inputNivelOculto = celdaNivel.querySelector(`input[name^="nivel_"]`);
+
+        if (!containerNivel) return;
+
+        let nivelTexto, codigoGenerado;
+        if (valor >= 4.7) { nivelTexto = 'Superior'; codigoGenerado = 'S500'; }
+        else if (valor >= 4.0) { nivelTexto = 'Alto'; codigoGenerado = 'A400'; }
+        else if (valor >= 3.0) { nivelTexto = 'Basico'; codigoGenerado = 'B300'; }
+        else { nivelTexto = 'Bajo'; codigoGenerado = 'b200'; }
+
+        const compIndex = Array.from(fila.querySelectorAll('.td-nota')).findIndex(td => td.dataset.compId === compId) + 1;
+        const codigoCompleto = `C${compIndex}-${codigoGenerado}`;
+        const descripcion = celdaNivel.getAttribute('data-descripcion-indicador') || 'Sin descripción';
+
+        containerNivel.innerHTML = `<span class="badge-nivel" style="font-weight:bold; color:#2c3e50;" data-bs-toggle="tooltip" title="${codigoCompleto}: ${descripcion}">${codigoCompleto}</span>`;
+
+        var tooltipTrigger = containerNivel.querySelector('.badge-nivel');
+        if (tooltipTrigger) new bootstrap.Tooltip(tooltipTrigger);
+
+        if (inputNivelOculto) inputNivelOculto.value = nivelTexto;
+        calcularNotaDefinitiva(estId);
+    }
+
+    // =============================================
+    // INICIALIZACIÓN
+    // =============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.pl-input:not(.definitiva)').forEach(function(inp) {
+            pintarCelda(inp);
+            inp.addEventListener('input', function() {
+                pintarCelda(this);
+                calcularNotaDefinitiva(this.dataset.estudianteId);
+            });
+        });
+
+        document.querySelectorAll('.input-nota').forEach(input => {
+            if (input.value && input.value !== '') sincronizarNivelAutomatico(input);
+        });
+
+        calcularPromedios();
+        actualizarBadgeTotalSuperior();
+
+        document.querySelectorAll('.pct-input').forEach(inp => {
+            inp.addEventListener('input', actualizarBadgeSuma);
+        });
+
+        const btnGuardar = document.getElementById('btn-guardar-notas');
+        if (btnGuardar) btnGuardar.addEventListener('click', guardarNotas);
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('.pl-tooltip, [data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    // =============================================
+    // GUARDADO MASIVO DE NOTAS
+    // =============================================
+    async function guardarNotas() {
+        const btn = document.getElementById('btn-guardar-notas');
+        if (!btn) return;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+        btn.disabled = true;
+
+        const payload = { notas: {}, componentes: {}, niveles: {} };
+
+        document.querySelectorAll('.input-nota[data-competencia-id]').forEach(input => {
+            if (input.value !== '' && input.value !== null) {
+                const estId = input.dataset.estudianteId;
+                const compId = input.dataset.competenciaId;
+                if (!payload.notas[estId]) payload.notas[estId] = {};
+                payload.notas[estId][compId] = input.value;
+            }
+        });
+
+        document.querySelectorAll('.pl-input[data-tipo]').forEach(input => {
+            if (input.value !== '' && input.value !== null) {
+                const estId = input.dataset.estudianteId;
+                const tipo = input.dataset.tipo;
+                const key = tipo === 'autoeval' ? 'autoevaluacion' : 'examen_final';
+                if (!payload.componentes[estId]) payload.componentes[estId] = {};
+                payload.componentes[estId][key] = input.value;
+            }
+        });
+
+        document.querySelectorAll('.td-nivel input[name^="nivel_"]').forEach(input => {
+            if (input.value && input.value.trim() !== '') {
+                const match = input.name.match(/^nivel_(\d+)_(\d+)$/);
+                if (match) {
+                    const estId = match[1];
+                    const compId = match[2];
+                    if (!payload.niveles[estId]) payload.niveles[estId] = {};
+                    payload.niveles[estId][compId] = input.value;
+                }
+            }
+        });
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.CSRF_TOKEN || '' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) { alert('✅ ' + result.message); window.location.reload(); }
+            else alert('❌ Error: ' + (result.error || 'Error desconocido'));
+        } catch (err) {
+            alert('Error de conexión: ' + err.message);
+        } finally {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+    }
+</script>
 {% endblock %}

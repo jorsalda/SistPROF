@@ -1,13 +1,16 @@
 # ==========================================================
 # DOCENTE ROUTES - SistPROF (CORREGIDO)
 # ==========================================================
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, current_app
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 import json
 import re
-from sqlalchemy import or_  # ✅ CORREGIDO: usar sqlalchemy.or_ en lugar de re.or
+import os  # ✅ NUEVO
+import uuid  # ✅ NUEVO
+from werkzeug.utils import secure_filename  # ✅ NUEVO
+from sqlalchemy import or_
 # Imports de Modelos Existentes
 from app.models.pregunta import Pregunta
 from app.models.materia import Materia
@@ -29,11 +32,10 @@ from app.models.evaluacion_estudiante import EvaluacionEstudiante
 from app.models.periodo_academico import PeriodoAcademico
 from app.models.configuracion_periodo import ConfiguracionPeriodo
 from app.models.nota_componente import NotaComponenteEstudiante
-from app.services.ia_service import generar_analisis_pedagogico, logger  # ✅ CORREGIDO: agregar 'app.' al inicio
+from app.services.ia_service import generar_analisis_pedagogico, logger
 
 # ✅ BLUEPRINT DEFINIDO DESPUÉS DE TODOS LOS IMPORTS
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
-
 
 # ==========================================================
 # DASHBOARD DEL DOCENTE
@@ -483,8 +485,13 @@ def banco_preguntas():
     if not docente:
         flash("No se encontró perfil de docente.", "danger")
         return redirect(url_for("docente.dashboard"))
-    preguntas_banco = Pregunta.query.filter_by(docente_id=docente.id).order_by(
-        Pregunta.fecha_creacion.desc()).all()
+
+    # ✅ FIX: Filtrar por colegio_id (no solo por docente_id)
+    preguntas_banco = Pregunta.query.filter_by(
+        docente_id=docente.id,  # ✅ Filtro por docente (privado)
+        activo=True
+    ).order_by(Pregunta.fecha_creacion.desc()).all()
+
     materias = Materia.query.all()
     return render_template("docentes/banco_preguntas.html", preguntas=preguntas_banco, materias=materias)
 
@@ -494,15 +501,40 @@ def banco_preguntas():
 def crear_desde_banco():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
+
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
-    materias = Materia.query.all()
-    preguntas_banco = Pregunta.query.filter_by(docente_id=docente.id).all()
+    if not docente:
+        flash("No se encontró perfil de docente.", "danger")
+        return redirect(url_for("docente.dashboard"))
+
+    # ✅ Traer SOLO las materias que el docente tiene asignadas
+    materias = db.session.query(Materia).join(
+        GrupoMateria, GrupoMateria.materia_id == Materia.id
+    ).filter(
+        GrupoMateria.docente_id == docente.id,
+        GrupoMateria.activo == True,
+        Materia.estado == True
+    ).distinct().order_by(Materia.nombre).all()
+
+    # ✅ NUEVO: Traer SOLO los grupos que el docente tiene asignados
+    grupos_docente = db.session.query(Grupo).join(
+        GrupoMateria, GrupoMateria.grupo_id == Grupo.id
+    ).filter(
+        GrupoMateria.docente_id == docente.id,
+        GrupoMateria.activo == True,
+        Grupo.activo == True
+    ).distinct().order_by(Grupo.grado, Grupo.nombre).all()
+
+    preguntas_banco = Pregunta.query.filter_by(
+        docente_id=docente.id,
+        activo=True
+    ).order_by(Pregunta.fecha_creacion.desc()).all()
 
     if request.method == "POST":
         try:
             titulo = request.form.get("titulo_examen", "").strip()
             materia_id = request.form.get("materia_id")
-            grado = request.form.get("grado")
+            grado = request.form.get("grado")  # Aquí llegará el nombre del grupo (ej. "11° 1")
             if not titulo or not materia_id:
                 flash("Título y materia son obligatorios.", "danger")
                 return redirect(url_for("docente.crear_desde_banco"))
@@ -518,10 +550,9 @@ def crear_desde_banco():
                 flash("Algunas preguntas seleccionadas no son válidas.", "danger")
                 return redirect(url_for("docente.crear_desde_banco"))
 
-            # 🎯 CONSTRUIR contenido_json EN EL FORMATO QUE ESPERA ClsEstudiante.js
+            # 🎯 CONSTRUIR contenido_json
             contenido_json = []
             for idx, p in enumerate(preguntas_validas, start=1):
-                # Manejar opciones: puede ser array, objeto o None
                 if isinstance(p.opciones, list):
                     opciones_arr = p.opciones
                 elif isinstance(p.opciones, dict):
@@ -529,14 +560,12 @@ def crear_desde_banco():
                 else:
                     opciones_arr = []
 
-                # La respuesta_correcta puede venir como letra "B" o como texto
                 respuesta_raw = getattr(p, 'respuesta_correcta', '') or ''
                 if isinstance(p.opciones, dict) and isinstance(respuesta_raw, str) and respuesta_raw in p.opciones:
                     respuesta_final = p.opciones[respuesta_raw]
                 else:
                     respuesta_final = respuesta_raw
 
-                # Construir contexto si existe
                 contexto = None
                 if hasattr(p, 'contexto') and p.contexto:
                     contexto = p.contexto
@@ -563,14 +592,14 @@ def crear_desde_banco():
 
                 contenido_json.append(pregunta_dict)
 
-            # Crear el examen CON contenido_json lleno
             nuevo_examen = Examen(
                 titulo=titulo,
                 nombre=titulo,
                 descripcion=f"Examen creado desde banco para {grado}",
                 materia_id=materia_id,
                 colegio_id=current_user.colegio_id,
-                contenido_json=contenido_json,     # ← AQUÍ SE GUARDA EN examenes
+                docente_id=docente.id,
+                contenido_json=contenido_json,
                 tiempo_limite_minutos=30,
                 fecha_creacion=datetime.now(),
                 activo=True,
@@ -586,8 +615,14 @@ def crear_desde_banco():
             flash(f"Error al crear examen: {str(e)}", "danger")
             import traceback
             traceback.print_exc()
-    return render_template("examenes/crear_examen.html", docente=docente, materias=materias,
-                           preguntas_banco=preguntas_banco)
+
+    return render_template(
+        "examenes/crear_examen.html",
+        docente=docente,
+        materias=materias,
+        grupos=grupos_docente,  # ✅ Enviamos los grupos a la plantilla
+        preguntas_banco=preguntas_banco
+    )
 
 @docente_bp.route("/examen/<int:id>/asignar", methods=["GET", "POST"])
 @login_required
@@ -757,9 +792,11 @@ def crear_competencia_madre():
         }
 
         for key, config in config_indicadores.items():
+            descripcion_especifica = indicadores[key].strip()
             ind = IndicadorLogro(
                 competencia_materia_id=nueva_competencia.id,
-                descripcion=indicadores[key].strip(),
+                descripcion=descripcion_especifica,  # Mantenemos la lógica anterior
+                descripcion_nivel=descripcion_especifica,  # ✅ NUEVO: Guardamos la descripción específica
                 codigo=config['codigo'],
                 nivel=config['nombre'],
                 orden=config['orden']
@@ -789,12 +826,19 @@ def crear_competencia_madre():
 @login_required
 def gestionar_competencias():
     docente = Docente.query.filter_by(usuario_id=current_user.id).first()
-    periodo_actual = PeriodoAcademico.query.filter_by(colegio_id=docente.colegio_id, activo=True).first()
 
+    # Buscar el periodo activo más reciente
+    periodo_actual = PeriodoAcademico.query.filter_by(
+        colegio_id=docente.colegio_id,
+        activo=True
+    ).order_by(PeriodoAcademico.anio.desc()).first()
+
+    # ✅ FIX: Si no hay configuración, permitir por defecto.
     periodo_abierto = True
     if periodo_actual:
         config = ConfiguracionPeriodo.query.filter_by(periodo_id=periodo_actual.id).first()
-        if config and not config.permite_editar_competencias:
+        # Solo bloqueamos si el registro EXISTE y EXPLÍCITAMENTE dice que no se puede editar
+        if config and config.permite_editar_competencias is False:
             periodo_abierto = False
 
     materias_raw = db.session.query(GrupoMateria, Materia, Grupo).join(
@@ -824,7 +868,6 @@ def gestionar_competencias():
         try:
             materia_id_seleccionada = int(parts[0])
             grupo_id_seleccionado = int(parts[1])
-            print(f" [DEBUG] Selección detectada: Materia={materia_id_seleccionada}, Grupo={grupo_id_seleccionado}")
         except ValueError:
             pass
 
@@ -838,9 +881,6 @@ def gestionar_competencias():
             materia_id=materia_id_seleccionada,
             grupo_id=grupo_id_seleccionado
         ).order_by(CompetenciaEstudiante.codigo).all()
-        print(f"📋 [DEBUG] Competencias encontradas para Grupo {grupo_id_seleccionado}: {len(competencias_madres)}")
-    else:
-        print("⚠️ [WARN] No se pudo determinar materia/grupo válido.")
 
     ids_madres = [c.id for c in competencias_madres]
     indicadores_hijos = []
@@ -871,7 +911,6 @@ def gestionar_competencias():
         materia_seleccionada_id=materia_id_seleccionada,
         grupo_seleccionado_id=grupo_id_seleccionado
     )
-
 
 # ============================================================
 # ENDPOINT IA PARA ANÁLISIS PEDAGÓGICO
@@ -1001,8 +1040,6 @@ def ver_planilla(grupo_id, materia_id):
 
     periodo_id = periodo.id
 
-    # TODO: configuracion_evaluacion no existe en el DDL (ver TEMA-025).
-    # Mientras no exista, se usa 'NUMERICA' por defecto.
     try:
         config_eval = db.session.execute(text("""
             SELECT tipo_captura FROM configuracion_evaluacion 
@@ -1012,6 +1049,7 @@ def ver_planilla(grupo_id, materia_id):
     except Exception:
         db.session.rollback()
         tipo_captura = 'NUMERICA'
+
     # ========================================================================
     # POST: GUARDAR NOTAS Y NIVELES
     # ========================================================================
@@ -1072,13 +1110,11 @@ def ver_planilla(grupo_id, materia_id):
                         flash(msg, "danger")
                         return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
 
-                    # ✅ FIX: Buscar un indicador real de la competencia
                     indicador = IndicadorLogro.query.filter_by(
                         competencia_materia_id=int(comp_id)
                     ).order_by(IndicadorLogro.id).first()
 
                     if not indicador:
-                        # Si no existe, lo creamos con un código único
                         indicador = IndicadorLogro(
                             competencia_materia_id=int(comp_id),
                             descripcion=f"Indicador para Competencia {comp_id}",
@@ -1087,7 +1123,6 @@ def ver_planilla(grupo_id, materia_id):
                         db.session.add(indicador)
                         db.session.flush()
 
-                    # ✅ FIX: Buscar la evaluación y actualizarla o crearla
                     ev = EvaluacionEstudiante.query.filter_by(
                         estudiante_id=int(est_id),
                         indicador_id=indicador.id,
@@ -1251,22 +1286,69 @@ def ver_planilla(grupo_id, materia_id):
     for ev in evaluaciones:
         if ev.estudiante_id not in evals_por_indicador:
             evals_por_indicador[ev.estudiante_id] = {}
+
+        descripcion_real = ev.indicador.descripcion_nivel if ev.indicador and ev.indicador.descripcion_nivel else (
+            ev.indicador.descripcion if ev.indicador else "Sin descripción")
+
         evals_por_indicador[ev.estudiante_id][ev.indicador_id] = {
             "calificacion": float(ev.calificacion) if ev.calificacion is not None else None,
-            "nivel_desempeño": ev.nivel_desempeño
+            "nivel_desempeño": ev.nivel_desempeño,
+            "codigo_indicador": ev.indicador.codigo if ev.indicador else "",
+            "descripcion_indicador": descripcion_real
         }
 
     evaluaciones_por_competencia = {}
     for est_id in estudiantes_ids:
         evaluaciones_por_competencia[est_id] = {}
         for comp in competencias_raw:
+            # 1. Buscar la evaluación del estudiante para esta competencia
             primer_ind_id = primer_indicador_por_comp.get(comp.id)
+            eval_data = None
+
             if primer_ind_id and primer_ind_id in evals_por_indicador.get(est_id, {}):
-                evaluaciones_por_competencia[est_id][comp.id] = evals_por_indicador[est_id][primer_ind_id]
+                eval_data = evals_por_indicador[est_id][primer_ind_id]
+
+            # 2. Obtener la descripción correcta (según el nivel de la nota)
+            descripcion_final = "Sin descripción"
+
+            if eval_data and eval_data.get("calificacion") is not None:
+                nota = float(eval_data["calificacion"])
+                # Determinamos el nivel según la nota
+                if nota >= 4.7:
+                    nivel_buscado = "Superior"
+                elif nota >= 4.0:
+                    nivel_buscado = "Alto"
+                elif nota >= 3.0:
+                    nivel_buscado = "Basico"
+                else:
+                    nivel_buscado = "Bajo"
+
+                # Buscar el indicador que coincida con ese nivel
+                for ind in IndicadorLogro.query.filter_by(competencia_materia_id=comp.id).all():
+                    if ind.nivel == nivel_buscado:
+                        descripcion_final = ind.descripcion_nivel or ind.descripcion or "Sin descripción"
+                        break
+
+            # 3. Asignar al diccionario
+            if eval_data:
+                evaluaciones_por_competencia[est_id][comp.id] = {
+                    "calificacion": eval_data.get("calificacion"),
+                    "nivel_desempeño": eval_data.get("nivel_desempeño"),
+                    "codigo_indicador": eval_data.get("codigo_indicador", ""),
+                    "descripcion_indicador": descripcion_final
+                }
             else:
+                # Si no hay evaluación, buscar la descripción del primer indicador (b200)
+                ind_b200 = IndicadorLogro.query.filter_by(
+                    competencia_materia_id=comp.id,
+                    nivel="Bajo"
+                ).first()
+                desc_b200 = ind_b200.descripcion_nivel if ind_b200 else "Sin descripción"
                 evaluaciones_por_competencia[est_id][comp.id] = {
                     "calificacion": None,
-                    "nivel_desempeño": None
+                    "nivel_desempeño": None,
+                    "codigo_indicador": "",
+                    "descripcion_indicador": desc_b200
                 }
 
     componentes = NotaComponenteEstudiante.query.filter(
@@ -1329,7 +1411,7 @@ def ver_planilla(grupo_id, materia_id):
             "nombre": est.nombre or "",
             "apellido": est.apellido or "",
             "piar_activo": piar_activo,
-            "evaluaciones": evals_est,
+            "evaluaciones": evaluaciones_por_competencia.get(est.id, {}),
             "autoeval": nota_auto,
             "examen": nota_examen,
             "definitiva_calculada": definitiva,
@@ -1348,7 +1430,6 @@ def ver_planilla(grupo_id, materia_id):
         puede_editar=puede_editar,
         tipo_captura=tipo_captura
     )
-
 
 # ==========================================================
 # OBSERVADOR Y CITACIONES
@@ -1386,4 +1467,188 @@ def imprimir_permiso_docente(id):
         mimetype='application/pdf',
         as_attachment=False,
         download_name=f'permiso_{permiso.id}.pdf'
+    )
+# ============================================================
+# EDITAR COMPETENCIA (Actualización de competencia madre e hijos)
+# ============================================================
+# ============================================================
+# EDITAR COMPETENCIA (Actualización de competencia madre e hijos)
+# ============================================================
+@docente_bp.route("/competencias/<int:competencia_id>/editar", methods=["POST"])
+@login_required
+def editar_competencia(competencia_id):
+    if current_user.rol != 'docente':
+        abort(403)
+
+    try:
+        data = request.get_json()
+        descripcion_madre = data.get('descripcion_madre', '').strip()
+        indicadores = data.get('indicadores', {})  # {bajo: '...', basico: '...', ...}
+
+        competencia = CompetenciaEstudiante.query.get_or_404(competencia_id)
+
+        # 1. Actualizar la competencia madre
+        competencia.descripcion = descripcion_madre
+        competencia.nombre = descripcion_madre[:150]
+
+        # 2. Actualizar los indicadores hijos
+        for key, desc in indicadores.items():
+            if not desc or not desc.strip():
+                continue
+
+            codigo_map = {
+                'bajo': 'b200',
+                'basico': 'B300',
+                'alto': 'A400',
+                'superior': 'S500'
+            }
+            codigo = codigo_map.get(key)
+            if not codigo:
+                continue
+
+            # ✅ Búsqueda sin importar mayúsculas/minúsculas
+            ind = IndicadorLogro.query.filter(
+                IndicadorLogro.competencia_materia_id == competencia.id,
+                IndicadorLogro.codigo.ilike(codigo)
+            ).first()
+
+            if ind:
+                ind.descripcion = desc.strip()
+                ind.descripcion_nivel = desc.strip()
+                print(f"✅ Indicador {ind.codigo} actualizado a: {desc.strip()}")
+            else:
+                print(f"⚠️ No se encontró indicador con código {codigo} para competencia {competencia.id}")
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Competencia actualizada correctamente"})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error al editar competencia: {e}")
+        return jsonify({"error": str(e)}), 500
+@docente_bp.route("/competencias/<int:competencia_id>/datos", methods=["GET"])
+@login_required
+def datos_competencia(competencia_id):
+    if current_user.rol != 'docente':
+        abort(403)
+    
+    comp = CompetenciaEstudiante.query.get_or_404(competencia_id)
+    indicadores = IndicadorLogro.query.filter_by(competencia_materia_id=comp.id).order_by(IndicadorLogro.orden).all()
+    
+    data = {
+        "id": comp.id,
+        "descripcion_madre": comp.descripcion,
+        "indicadores": {}
+    }
+    
+    for ind in indicadores:
+        key = ind.codigo.lower() if ind.codigo else ""
+        # Mapear códigos a llaves
+        if 'b200' in key or ind.nivel == 'Bajo': key = 'bajo'
+        elif 'b300' in key or ind.nivel == 'Basico': key = 'basico'
+        elif 'a400' in key or ind.nivel == 'Alto': key = 'alto'
+        elif 's500' in key or ind.nivel == 'Superior': key = 'superior'
+        
+        data["indicadores"][key] = ind.descripcion_nivel or ind.descripcion or ""
+    
+    return jsonify(data)
+
+
+# ============================================================
+# CREAR PREGUNTA MANUAL (BANCO DE PREGUNTAS)
+# ============================================================
+@docente_bp.route("/banco-preguntas/nueva", methods=["GET", "POST"])
+@login_required
+def nueva_pregunta_banco():
+    if current_user.rol != 'docente':
+        abort(403)
+
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("No se encontró perfil de docente.", "danger")
+        return redirect(url_for("docente.dashboard"))
+
+    # ✅ FIX: Traer SOLO las materias que el docente tiene asignadas
+    materias = db.session.query(Materia).join(
+        GrupoMateria, GrupoMateria.materia_id == Materia.id
+    ).filter(
+        GrupoMateria.docente_id == docente.id,
+        GrupoMateria.activo == True,
+        Materia.estado == True
+    ).distinct().order_by(Materia.nombre).all()
+
+    if request.method == "POST":
+        try:
+            texto = request.form.get("texto", "").strip()
+            materia_id = request.form.get("materia_id")
+            opcion_a = request.form.get("opcion_a", "").strip()
+            opcion_b = request.form.get("opcion_b", "").strip()
+            opcion_c = request.form.get("opcion_c", "").strip()
+            opcion_d = request.form.get("opcion_d", "").strip()
+            respuesta_correcta = request.form.get("respuesta_correcta", "").strip()
+            explicacion = request.form.get("explicacion", "").strip()
+            dificultad = request.form.get("dificultad", "media")
+            tema = request.form.get("tema", "").strip()
+
+            tipo_contexto = request.form.get("tipo_contexto", "texto")
+            archivo_contexto = request.files.get("archivo_contexto")
+
+            if not texto or not materia_id or not respuesta_correcta:
+                flash("Texto, materia y respuesta correcta son obligatorios.", "danger")
+                return redirect(url_for("docente.nueva_pregunta_banco"))
+
+            opciones = {
+                "A": opcion_a,
+                "B": opcion_b,
+                "C": opcion_c,
+                "D": opcion_d
+            }
+
+            contexto = None
+            if tipo_contexto in ['imagen', 'video'] and archivo_contexto and archivo_contexto.filename:
+                extension = os.path.splitext(secure_filename(archivo_contexto.filename))[1]
+                nombre_unico = f"{uuid.uuid4().hex}{extension}"
+
+                upload_folder = os.path.join(current_app.static_folder, 'uploads', 'contexto')
+                if not os.path.exists(upload_folder):
+                    os.makedirs(upload_folder)
+
+                ruta_archivo = os.path.join(upload_folder, nombre_unico)
+                archivo_contexto.save(ruta_archivo)
+
+                contexto = {
+                    "tipo": tipo_contexto,
+                    "src": f"/static/uploads/contexto/{nombre_unico}"
+                }
+
+            nueva_pregunta = Pregunta(
+                tipo='icfes',
+                texto=texto,
+                opciones=opciones,
+                respuesta_correcta=respuesta_correcta,
+                explicacion=explicacion if explicacion else None,
+                tema=tema if tema else None,
+                dificultad=dificultad,
+                materia_id=int(materia_id),
+                docente_id=docente.id,
+                colegio_id=docente.colegio_id,
+                activo=True,
+                fecha_creacion=datetime.now(),
+                contexto=contexto
+            )
+            db.session.add(nueva_pregunta)
+            db.session.commit()
+
+            flash("✅ Pregunta creada y agregada al banco exitosamente.", "success")
+            return redirect(url_for("docente.banco_preguntas"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al crear pregunta: {str(e)}", "danger")
+            return redirect(url_for("docente.nueva_pregunta_banco"))
+
+    return render_template(
+        "docentes/banco_preguntas_form.html",
+        materias=materias,
+        docente=docente
     )

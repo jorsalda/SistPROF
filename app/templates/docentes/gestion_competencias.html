@@ -17,7 +17,7 @@
     </div>
     {% endif %}
 
-    <!-- FORMULARIO DE INGRESO -->
+    <!-- FORMULARIO DE INGRESO / EDICIÓN -->
     {% if periodo_abierto %}
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white fw-bold py-3">
@@ -25,6 +25,9 @@
         </div>
         <div class="card-body">
             <form id="formCompetenciaMadre" class="row g-3">
+                <!-- ✅ CAMPO OCULTO PARA SABER SI ES EDICIÓN -->
+                <input type="hidden" id="competencia_id_edicion" value="">
+
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">Materia *</label>
                     <select name="seleccion" id="materia_select" class="form-select" required onchange="this.form.submit()">
@@ -141,7 +144,7 @@
                                     <tr>
                                         <td><span class="badge bg-secondary font-monospace">{{ hijo.codigo }}</span></td>
                                         <td><span class="fw-bold text-dark">{{ hijo.nivel }}</span></td>
-                                        <td class="small">{{ hijo.descripcion }}</td>
+                                        <td class="small">{{ hijo.descripcion_nivel or hijo.descripcion }}</td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-link text-decoration-none"
                                                     onclick="editarIndicador({{ hijo.id }})">
@@ -221,9 +224,16 @@ document.addEventListener('DOMContentLoaded', function() {
             grupoId = parseInt(parts[1]);
         }
 
+        // ✅ DETECTAR SI ES EDICIÓN O CREACIÓN
+        const competenciaId = document.getElementById('competencia_id_edicion').value;
+        const esEdicion = competenciaId !== '';
+
+        // ✅ CORRECCIÓN: Se ajustó el orden de la URL para que coincida con Flask
+        const url = esEdicion ? `/docentes/competencias/${competenciaId}/editar` : '/docentes/api/competencias-madre';
+
         const payload = {
             materia_id: materiaId,
-            grupo_id: grupoId, // ✅ ENVIAR GRUPO_ID AL BACKEND
+            grupo_id: grupoId,
             descripcion_madre: document.getElementById('descripcion_madre').value.trim(),
             indicadores: {
                 bajo: document.getElementById('desc_bajo').value.trim(),
@@ -234,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         try {
-            const response = await fetch('/docentes/api/competencias-madre', {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -244,7 +254,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             let result;
-            try { result = await response.json(); } catch (jsonErr) { throw new Error(`Respuesta inválida (${response.status})`); }
+            try {
+                result = await response.json();
+            } catch (jsonErr) {
+                throw new Error(`Respuesta inválida (${response.status})`);
+            }
 
             if (!response.ok) throw new Error(result.error || `Error (${response.status})`);
 
@@ -265,7 +279,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function editarCompetencia(id) { alert('Editar madre ID: ' + id); }
-function editarIndicador(id) { alert('Editar hijo ID: ' + id); }
+function editarCompetencia(id) {
+    fetch(`/docentes/competencias/${id}/datos`)
+        .then(res => res.json())
+        .then(data => {
+            // Llenar el formulario superior
+            document.getElementById('competencia_id_edicion').value = data.id;
+            document.getElementById('descripcion_madre').value = data.descripcion_madre;
+            document.getElementById('desc_bajo').value = data.indicadores.bajo || '';
+            document.getElementById('desc_basico').value = data.indicadores.basico || '';
+            document.getElementById('desc_alto').value = data.indicadores.alto || '';
+            document.getElementById('desc_superior').value = data.indicadores.superior || '';
+
+            // Cambiar el botón a "Actualizar"
+            const btnGuardar = document.getElementById('btnGuardarComp');
+            btnGuardar.innerText = 'Actualizar Competencia';
+            btnGuardar.classList.remove('btn-success');
+            btnGuardar.classList.add('btn-warning');
+
+            // Scroll al formulario
+            document.getElementById('formCompetenciaMadre').scrollIntoView({behavior: 'smooth'});
+        })
+        .catch(err => alert('Error al cargar datos: ' + err));
+}
+
+function editarIndicador(id) {
+    alert('Editar hijo ID: ' + id);
+}
 </script>
 {% endblock %}

@@ -2,9 +2,7 @@
 
 {% block title %}Presentar Examen | SistPROF{% endblock %}
 
-{% block estudiante_page_title %}
-Presentar Examen
-{% endblock %}
+{% block estudiante_page_title %}Presentar Examen{% endblock %}
 
 {% block estudiante_content %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -12,82 +10,79 @@ Presentar Examen
 
 <!-- TÍTULO Y CONTROLES -->
 <div id="exam-wrapper">
-<div class="exam-header-section">
-    <h1 class="exam-title">Evaluación</h1>
+    <div class="exam-header-section">
+        <h1 class="exam-title">Evaluación</h1>
 
-    <div class="exam-controls-box">
-        <div class="control-item">
-            <label for="numQuestions">Número de preguntas:</label>
-            <input type="number" id="numQuestions" min="1" max="50" value="10">
-        </div>
-
-        <div class="control-item">
-            <label for="timePerQuestion">Tiempo por pregunta:</label>
-            <select id="timePerQuestion">
-                <option value="1">1 minuto</option>
-                <option value="2" selected>2 minutos</option>
-                <option value="3">3 minutos</option>
-            </select>
-        </div>
-
-        <div class="control-item">
-            <button id="updateQuestions" class="btn-update">Actualizar y Recargar</button>
-        </div>
-
-        <div class="control-item">
-            <span id="examInfo" class="info-text"></span>
-        </div>
-    </div>
-</div>
-
-<!-- 🔥 CONTADORES DE TIEMPO -->
-<div id="timers-container" style="display:none;">
-    <div id="question-timer" class="timer-badge timer-warning">
-        <i class="bi bi-clock"></i> Pregunta: <span id="question-time">2:00</span>
-    </div>
-    <div id="exam-timer" class="timer-badge timer-danger">
-        <i class="bi bi-hourglass-split"></i> Examen: <span id="exam-time">20:00</span>
-    </div>
-</div>
-
-<!-- Contenedor de 3 columnas -->
-<div id="container">
-
-    <!-- Columna 1: Contexto y Pregunta -->
-    <div class="col-1-contexto-pregunta">
-        <div id="contexto"></div>
-        <div id="question">
-            <div class="text-center p-4">
-                <div class="spinner-border text-primary"></div>
-                <p class="mt-3">Cargando...</p>
+        <div class="exam-controls-box">
+            <div class="control-item">
+                <label for="numQuestions">Número de preguntas:</label>
+                <input type="number" id="numQuestions" min="1" max="50" value="10">
+            </div>
+            <div class="control-item">
+                <label for="timePerQuestion">Tiempo por pregunta:</label>
+                <select id="timePerQuestion">
+                    <option value="1">1 minuto</option>
+                    <option value="2" selected>2 minutos</option>
+                    <option value="3">3 minutos</option>
+                </select>
+            </div>
+            <div class="control-item">
+                <button id="updateQuestions" class="btn-update">Actualizar y Recargar</button>
+            </div>
+            <div class="control-item">
+                <span id="examInfo" class="info-text"></span>
             </div>
         </div>
     </div>
 
-    <!-- Columna 2: Opciones -->
-    <div class="col-2-opciones">
-        <div id="options"></div>
-        <button id="nextButton" style="display:none;">Siguiente Pregunta</button>
-        <button id="explanationButton" style="display:none;">Ver Explicación</button>
-        <div id="feedback" style="display:none;"></div>
+    <!-- CONTADORES -->
+    <div id="timers-container" style="display:none;">
+        <div id="question-timer" class="timer-badge timer-warning">
+            <i class="bi bi-clock"></i> Pregunta: <span id="question-time">2:00</span>
+        </div>
+        <div id="exam-timer" class="timer-badge timer-danger">
+            <i class="bi bi-hourglass-split"></i> Examen: <span id="exam-time">20:00</span>
+        </div>
     </div>
 
-    <!-- Columna 3: Explicación -->
-    <div class="col-3-explicacion">
-        <div id="explanation-column"></div>
+    <!-- CONTENEDOR DE 3 COLUMNAS -->
+    <div id="container">
+        <div class="col-1-contexto-pregunta">
+            <div id="contexto"></div>
+            <div id="question">
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-3">Cargando...</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-2-opciones">
+            <div id="options"></div>
+            <button id="nextButton" style="display:none;">Siguiente Pregunta</button>
+            <button id="explanationButton" style="display:none;">Ver Explicación</button>
+            <div id="feedback" style="display:none;"></div>
+        </div>
+        <div class="col-3-explicacion">
+            <div id="explanation-column"></div>
+        </div>
     </div>
+</div>
 
-</div>
-</div>
 <div id="result" style="display:none;"></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- ✅ INYECCIÓN SEGURA DE DATOS DESDE FLASK -->
+<script>
+    // Usar tojson para escapar correctamente caracteres especiales y evitar XSS
+    window.PREGUNTAS_INYECTADAS = {{ preguntas_json | default([]) | tojson }};
+    const EXAMEN_ID_FLASK = {{ examen_id | default(0) }};
+    const MATERIA_ID_FLASK = {{ materia_id | default('null') }};
+</script>
+
 <script src="{{ url_for('static', filename='js/ClsEstudiante.js') }}"></script>
 
 <script>
-    const EXAMEN_ID_FLASK = {{ examen_id | default(0) }};
-    const MATERIA_ID_FLASK = {{ materia_id | default('null') }};
-
     $(document).ready(function() {
         if (typeof clsEstudiante !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
@@ -96,14 +91,19 @@ Presentar Examen
 
             if (examenId && examenId > 0) {
                 console.log('>>>>> Iniciando examen ID:', examenId, 'Materia:', materiaId);
-                clsEstudiante.seleccionarExamen(examenId, materiaId);
+
+                // Validar que haya preguntas antes de iniciar
+                if (window.PREGUNTAS_INYECTADAS && window.PREGUNTAS_INYECTADAS.length > 0) {
+                    clsEstudiante.seleccionarExamen(examenId, materiaId);
+                } else {
+                    $('#question').html('<div class="alert alert-warning">Este examen no tiene preguntas cargadas.</div>');
+                }
             } else {
-                $('#question').html('<div class="alert alert-danger">Error: No se recibió ID de examen. Contacta al docente.</div>');
+                $('#question').html('<div class="alert alert-danger">Error: No se recibió ID de examen.</div>');
             }
         } else {
-            $('#question').html('<div class="alert alert-danger">Error: No se pudo cargar el motor del examen (ClsEstudiante).</div>');
+            $('#question').html('<div class="alert alert-danger">Error crítico: No se pudo cargar ClsEstudiante.js</div>');
         }
     });
 </script>
-
 {% endblock %}

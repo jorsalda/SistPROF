@@ -21,6 +21,7 @@ class Pregunta(db.Model):
 
     # NUEVAS COLUMNAS PARA EL BANCO DE PREGUNTAS
     docente_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    colegio_id = db.Column(db.Integer, db.ForeignKey('colegios.id'), nullable=True)  # ✅ NUEVO
     examen_id = db.Column(db.Integer, db.ForeignKey('examenes.id'), nullable=True)
 
     url_contexto = db.Column(db.String(300), nullable=True)
@@ -42,6 +43,7 @@ class Pregunta(db.Model):
     # Relaciones
     materia = db.relationship("Materia", backref="preguntas")
     docente = db.relationship("Usuario", backref="preguntas_creadas", foreign_keys=[docente_id])
+    colegio = db.relationship("Colegio", backref="preguntas_colegio")  # ✅ NUEVO
     examen = db.relationship("Examen", backref="preguntas_asignadas", foreign_keys=[examen_id])
 
     # ✅ RELACIÓN CON INDICADOR DE LOGRO
@@ -59,6 +61,7 @@ class Pregunta(db.Model):
             'dificultad': self.dificultad,
             'materia_id': self.materia_id,
             'docente_id': self.docente_id,
+            'colegio_id': self.colegio_id,  # ✅ NUEVO
             'examen_id': self.examen_id,
             'url_contexto': self.url_contexto,
             'tipo_contexto': self.tipo_contexto,

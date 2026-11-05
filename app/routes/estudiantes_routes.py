@@ -29,7 +29,7 @@ from app.models.CompetenciaEstudiante import CompetenciaEstudiante
 from app.models.materia import Materia
 from app.models.periodo_academico import PeriodoAcademico
 from app.models.diagnostico_estudiante import DiagnosticoEstudiante
-
+from app.models.nota_componente import NotaComponenteEstudiante
 # ✅ CORRECCIÓN CRÍTICA: EL BLUEPRINT DEBE DEFINIRSE ANTES DE CUALQUIER RUTA
 estudiante_bp = Blueprint(
     "estudiante",
@@ -79,9 +79,10 @@ def dashboard_estudiante():
         promedio_general=promedio_general,
         mejor_nota=mejor_nota,
         ultimos_resultados=ultimos_resultados,
-        total_diagnosticos=total_diagnosticos, # 👈 ENVIAMOS EL CONTEO
+        total_diagnosticos=total_diagnosticos,  # 👈 ENVIAMOS EL CONTEO
         hoy=hoy
     )
+
 
 # ==========================================================
 # VER DETALLE DEL ESTUDIANTE (Solo para el estudiante logueado)
@@ -99,8 +100,10 @@ def mi_detalle():
         flash('Perfil no encontrado', 'warning')
         return redirect(url_for('auth.logout'))
 
-    asistencias_recientes = estudiante.asistencias[-10:] if hasattr(estudiante, "asistencias") and estudiante.asistencias else []
-    novedades_recientes = estudiante.novedades[-10:] if hasattr(estudiante, "novedades") and estudiante.novedades else []
+    asistencias_recientes = estudiante.asistencias[-10:] if hasattr(estudiante,
+                                                                    "asistencias") and estudiante.asistencias else []
+    novedades_recientes = estudiante.novedades[-10:] if hasattr(estudiante,
+                                                                "novedades") and estudiante.novedades else []
     tiene_piar = estudiante.tiene_piar_activo()
 
     return render_template(
@@ -145,13 +148,14 @@ def mi_perfil():
         novedades=novedades
     )
 
+
 # ==========================================================
 # MIS CALIFICACIONES POR COMPETENCIA E INDICADOR
 # ==========================================================
 @estudiante_bp.route('/mis-calificaciones')
 @login_required
 def mis_calificaciones():
-    """Vista de calificaciones del estudiante con tooltips coherentes."""
+    """Vista de calificaciones del estudiante con cálculo de definitiva 75/5/20 y datos completos."""
     if current_user.rol != 'estudiante':
         flash('Acceso no autorizado', 'danger')
         return redirect(url_for('auth.login'))
@@ -175,31 +179,48 @@ def mis_calificaciones():
             calificaciones={}
         )
 
-    # Consulta JOIN filtrada por periodo activo
-    evaluaciones = db.session.query(
-        EvaluacionEstudiante, IndicadorLogro, CompetenciaEstudiante, Materia, PeriodoAcademico
-    ).join(
-        IndicadorLogro, EvaluacionEstudiante.indicador_id == IndicadorLogro.id
-    ).join(
-        CompetenciaEstudiante, IndicadorLogro.competencia_materia_id == CompetenciaEstudiante.id
+    # 1. Obtener TODAS las competencias del grupo del estudiante
+    competencias = db.session.query(
+        CompetenciaEstudiante, Materia
     ).join(
         Materia, CompetenciaEstudiante.materia_id == Materia.id
-    ).join(
-        PeriodoAcademico, EvaluacionEstudiante.periodo_id == PeriodoAcademico.id
     ).filter(
-        EvaluacionEstudiante.estudiante_id == estudiante.id,
-        EvaluacionEstudiante.periodo_id == periodo_activo.id
+        CompetenciaEstudiante.grupo_id == estudiante.grupo_id
     ).order_by(
         Materia.nombre,
-        CompetenciaEstudiante.codigo,
-        IndicadorLogro.orden
+        CompetenciaEstudiante.id
     ).all()
+
+    # 2. Obtener las evaluaciones del estudiante para este periodo
+    evaluaciones = EvaluacionEstudiante.query.filter_by(
+        estudiante_id=estudiante.id,
+        periodo_id=periodo_activo.id
+    ).all()
+
+    notas_por_indicador = {ev.indicador_id: ev for ev in evaluaciones}
+
+    # 3. Obtener las notas de componentes (Auto y Examen) agrupadas por materia
+    grupo_materias = GrupoMateria.query.filter_by(grupo_id=estudiante.grupo_id).all()
+    gm_por_materia = {gm.materia_id: gm.id for gm in grupo_materias}
+
+    notas_componentes = NotaComponenteEstudiante.query.filter(
+        NotaComponenteEstudiante.estudiante_id == estudiante.id,
+        NotaComponenteEstudiante.periodo_academico_id == periodo_activo.id
+    ).all()
+
+    componentes_por_materia = {}
+    for nc in notas_componentes:
+        mat_id = next((m_id for m_id, g_id in gm_por_materia.items() if g_id == nc.grupo_materia_id), None)
+        if mat_id:
+            if mat_id not in componentes_por_materia:
+                componentes_por_materia[mat_id] = {}
+            componentes_por_materia[mat_id][nc.tipo_componente] = float(nc.calificacion) if nc.calificacion else None
 
     # ESTRUCTURA LIMPIA
     calificaciones_por_periodo = {}
 
-    for ev, ind, comp, mat, per in evaluaciones:
-        pn = per.nombre
+    for comp, mat in competencias:
+        pn = periodo_activo.nombre
         mn = mat.nombre
         cc = comp.codigo
         cn = comp.nombre
@@ -208,76 +229,94 @@ def mis_calificaciones():
             calificaciones_por_periodo[pn] = {}
 
         if mn not in calificaciones_por_periodo[pn]:
+            autoeval = componentes_por_materia.get(mat.id, {}).get('autoevaluacion')
+            examen = componentes_por_materia.get(mat.id, {}).get('examen_final')
+
             calificaciones_por_periodo[pn][mn] = type('MateriaObj', (), {
                 'materia_id': mat.id,
                 'competencias': {},
-                'definitiva': 0.0
+                'definitiva': 0.0,
+                'autoevaluacion': autoeval,
+                'examen_final': examen
             })()
 
         if cc not in calificaciones_por_periodo[pn][mn].competencias:
             calificaciones_por_periodo[pn][mn].competencias[cc] = type('CompObj', (), {
                 'nombre': cn,
+                'porcentaje': float(comp.porcentaje) if comp.porcentaje else 0.0,
                 'indicadores': [],
                 'promedio': None,
                 'nivel': '',
-                'enunciado_nivel': ''
+                'enunciado_nivel': '',
+                'codigo_indicador': '' # ✅ NUEVO: Inicializar vacío
             })()
 
-        nota = float(ev.calificacion) if ev.calificacion is not None else None
+        # 4. Obtener los indicadores de esta competencia
+        indicadores = IndicadorLogro.query.filter_by(
+            competencia_materia_id=comp.id
+        ).order_by(IndicadorLogro.orden).all()
 
-        # ✅ FIX: Asegurar que la nota se asocie al indicador exacto
-        calificaciones_por_periodo[pn][mn].competencias[cc].indicadores.append({
-            'codigo': ind.codigo,
-            'descripcion': ind.descripcion[:80] + '...' if len(ind.descripcion) > 80 else ind.descripcion,
-            'nota': nota,
-            'nivel_desempeño': getattr(ev, 'nivel_desempeño', None),
-            'observacion': ev.observacion
-        })
+        for ind in indicadores:
+            ev = notas_por_indicador.get(ind.id)
+            nota = float(ev.calificacion) if ev and ev.calificacion is not None else None
 
-    # Calcular promedios y enunciados EXACTOS
+            calificaciones_por_periodo[pn][mn].competencias[cc].indicadores.append({
+                'codigo': ind.codigo,
+                'descripcion': ind.descripcion[:80] + '...' if len(ind.descripcion) > 80 else ind.descripcion,
+                'nota': nota,
+                'nivel_desempeño': ev.nivel_desempeño if ev else None,
+                'observacion': ev.observacion if ev else None
+            })
+
+    # Calcular promedios, definitivas reales (75/5/20) y enunciados
     for periodo in calificaciones_por_periodo.values():
         for materia in periodo.values():
-            def_suma = 0.0
-            def_cuenta = 0
+            aporte_competencias = 0.0
 
             for comp in materia.competencias.values():
                 notas_validas = [i['nota'] for i in comp.indicadores if i['nota'] is not None]
 
                 if notas_validas:
-                    # ✅ FIX: Tomar la nota más alta de los indicadores (la que puso el docente)
-                    # en lugar de promediar indicadores vacíos con ceros.
                     comp.promedio = max(notas_validas)
                     p = comp.promedio
 
                     # Asignar nivel cualitativo
-                    if p >= 4.5:
+                    if p >= 4.7:
                         comp.nivel = 'Superior'
-                    elif p >= 3.0:
+                    elif p >= 4.0:
                         comp.nivel = 'Alto'
-                    elif p >= 2.0:
+                    elif p >= 3.0:
                         comp.nivel = 'Básico'
                     else:
                         comp.nivel = 'Bajo'
 
-                    # ✅ LÓGICA ESTRICTA: Buscar SOLO el indicador con nivel_desempeño exacto
+                    # ✅ FIX: Buscar el indicador y guardar tanto la descripción como el código
                     enunciado_encontrado = ''
+                    codigo_encontrado = ''
                     for ind_data in comp.indicadores:
-                        # Comparación exacta de strings (case-sensitive)
                         if ind_data.get('nivel_desempeño') == comp.nivel and ind_data.get('descripcion'):
                             enunciado_encontrado = ind_data['descripcion']
-                            break  # Salir al encontrar el primero
+                            codigo_encontrado = ind_data['codigo']
+                            break
 
-                    # Si no hay coincidencia exacta, dejar vacío (no mezclar)
                     comp.enunciado_nivel = enunciado_encontrado
+                    comp.codigo_indicador = codigo_encontrado
 
-                    def_suma += p
-                    def_cuenta += 1
+                    aporte_competencias += p * (comp.porcentaje / 100)
                 else:
                     comp.promedio = None
                     comp.nivel = ''
                     comp.enunciado_nivel = ''
+                    comp.codigo_indicador = ''
 
-            materia.definitiva = round(def_suma / def_cuenta, 2) if def_cuenta > 0 else 0.0
+            # ✅ CÁLCULO FINAL DE DEFINITIVA (Fórmula 75 / 5 / 20)
+            aporte_fijo = 0.0
+            if materia.autoevaluacion is not None:
+                aporte_fijo += materia.autoevaluacion * 0.05
+            if materia.examen_final is not None:
+                aporte_fijo += materia.examen_final * 0.20
+
+            materia.definitiva = round(aporte_competencias + aporte_fijo, 2)
 
     return render_template(
         'estudiantes/mis_calificaciones.html',
@@ -339,6 +378,8 @@ def mi_horario():
         estudiante=estudiante,
         horario=horario
     )
+
+
 # ==========================================================
 # MI ASISTENCIA
 # ==========================================================
@@ -382,6 +423,7 @@ def mi_asistencia():
         porcentaje=porcentaje,
         detalle=detalle
     )
+
 
 # ==========================================================
 # MI OBSERVADOR
@@ -440,6 +482,7 @@ def mis_citaciones():
         citaciones=citaciones
     )
 
+
 # ==========================================================
 # MI PIAR
 # ==========================================================
@@ -480,8 +523,6 @@ def mi_piar():
     )
 
 
-
-
 # =========================================================
 # LISTAR ESTUDIANTES
 # =========================================================
@@ -495,7 +536,8 @@ def listar():
     grupo_id = request.args.get('grupo_id', type=int)
 
     consulta = Estudiante.query.filter_by(colegio_id=current_user.colegio_id, activo=True)
-    if search: consulta = consulta.filter(or_(Estudiante.nombre.ilike(f"%{search}%"), Estudiante.apellido.ilike(f"%{search}%")))
+    if search: consulta = consulta.filter(
+        or_(Estudiante.nombre.ilike(f"%{search}%"), Estudiante.apellido.ilike(f"%{search}%")))
     if sede_id: consulta = consulta.filter_by(sede_id=sede_id)
     if grado: consulta = consulta.filter_by(grado=grado)
     if grupo_id: consulta = consulta.filter_by(grupo_id=grupo_id)
@@ -513,8 +555,11 @@ def listar():
         ids_con_diagnostico = {d.estudiante_id for d in diagnosticos_existentes}
 
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
-    grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Grupo.grado, Grupo.nombre).all()
-    grados_unicos = db.session.query(Estudiante.grado).filter_by(colegio_id=current_user.colegio_id, activo=True).distinct().order_by(Estudiante.grado).all()
+    grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Grupo.grado,
+                                                                                             Grupo.nombre).all()
+    grados_unicos = db.session.query(Estudiante.grado).filter_by(colegio_id=current_user.colegio_id,
+                                                                 activo=True).distinct().order_by(
+        Estudiante.grado).all()
     grados_lista = [g[0] for g in grados_unicos if g[0]]
 
     layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "psicologo/psicologo_base.html" if current_user.rol == 'psicologo' else "coordinador/coordinador_base.html" if current_user.rol == 'coordinador' else "docentes/docente_base.html" if current_user.rol == 'docente' else "colegio/colegio_base.html"
@@ -529,7 +574,7 @@ def listar():
         current_grado=grado,
         current_grupo_id=grupo_id,
         layout=layout,
-        ids_con_diagnostico=ids_con_diagnostico # 👈 ENVIAMOS LOS IDs
+        ids_con_diagnostico=ids_con_diagnostico  # 👈 ENVIAMOS LOS IDs
     )
 
 
@@ -942,8 +987,7 @@ def mis_resultados():
     ).join(Examen, ResultadoExamen.examen_id == Examen.id).filter(
         ResultadoExamen.estudiante_id == estudiante.id
     ).order_by(ResultadoExamen.fecha_finalizacion.desc()).all()
-
-    return render_template('estudiantes/mis_resultados.html', estudiante=estudiante, resultados=resultados)
+    return render_template('estudiantes/mis_resultado.html', estudiante=estudiante, resultados=resultados)
 
 
 # =========================================================
@@ -1133,6 +1177,7 @@ def presentar_examen(id):
 
     examen = Examen.query.get_or_404(id)
 
+    # Verificar si ya respondió
     ya_respondio = ResultadoExamen.query.filter_by(
         examen_id=id, estudiante_id=estudiante.id
     ).first()
@@ -1141,9 +1186,11 @@ def presentar_examen(id):
         flash("Ya has presentado este examen.", "warning")
         return redirect(url_for('estudiante.mis_resultados'))
 
+    # ✅ INYECCIÓN DE PREGUNTAS PARA EL TEMPLATE
     return render_template(
         'estudiantes/examen_estudiante.html',
-        examen_id=id
+        examen_id=id,
+        preguntas_json=examen.contenido_json or []  # ← ESTO ES LO QUE FALTABA
     )
 
 
@@ -1230,7 +1277,7 @@ def guardar_respuesta(id):
     programacion = ProgramacionExamen.query.filter_by(
         examen_id=examen.id, grupo_id=estudiante.grupo_id, activo=True
     ).first()
-    
+
     if programacion and programacion.competencia_materia_id:
         indicador = IndicadorLogro.query.filter_by(
             competencia_materia_id=programacion.competencia_materia_id
@@ -1241,7 +1288,7 @@ def guardar_respuesta(id):
             periodo_activo = PeriodoAcademico.query.filter_by(
                 colegio_id=estudiante.colegio_id, activo=True
             ).first()
-            
+
             periodo_id = periodo_activo.id if periodo_activo else None
 
             if periodo_id:

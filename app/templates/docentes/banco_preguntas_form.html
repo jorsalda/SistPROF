@@ -1,0 +1,134 @@
+{% extends "docentes/docente_base.html" %}
+
+{% block title %}Nueva Pregunta | SistPROF{% endblock %}
+
+{% block docente_page_title %}Nueva Pregunta para el Banco{% endblock %}
+
+{% block docente_content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white fw-bold py-3">
+            <i class="bi bi-plus-circle me-2"></i>Crear Nueva Pregunta
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('docente.nueva_pregunta_banco') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="row g-3">
+                    <!-- TEXTO DE LA PREGUNTA -->
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Texto de la Pregunta *</label>
+                        <textarea name="texto" class="form-control" rows="3" required
+                                  placeholder="Ej: ¿Cuál es el valor de x en la ecuación 3x + 12 = 27?"></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Materia *</label>
+                        <select name="materia_id" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            {% for mat in materias %}
+                            <option value="{{ mat.id }}">{{ mat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- OPCIONES -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Opción A</label>
+                        <input type="text" name="opcion_a" class="form-control" placeholder="Opción A">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Opción B</label>
+                        <input type="text" name="opcion_b" class="form-control" placeholder="Opción B">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Opción C</label>
+                        <input type="text" name="opcion_c" class="form-control" placeholder="Opción C">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Opción D</label>
+                        <input type="text" name="opcion_d" class="form-control" placeholder="Opción D">
+                    </div>
+
+                    <!-- RESPUESTA Y DIFICULTAD -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Respuesta Correcta *</label>
+                        <select name="respuesta_correcta" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Dificultad</label>
+                        <select name="dificultad" class="form-select">
+                            <option value="baja">Baja</option>
+                            <option value="media" selected>Media</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Tema (Opcional)</label>
+                        <input type="text" name="tema" class="form-control" placeholder="Ej: Ecuaciones lineales">
+                    </div>
+
+                    <!-- ✅ CONTEXTO CON SUBIDA DE ARCHIVO -->
+                    <div class="col-12"><hr class="my-2"></div>
+                    <div class="col-12">
+                        <h6 class="text-muted"><i class="bi bi-paperclip me-2"></i>Contexto (Opcional)</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Tipo de Contexto</label>
+                        <select name="tipo_contexto" id="tipo_contexto" class="form-select">
+                            <option value="texto">Texto (No requiere archivo)</option>
+                            <option value="imagen">Imagen</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8" id="div_archivo_contexto" style="display:none;">
+                        <label class="form-label fw-semibold">Subir Archivo (Imagen o Video)</label>
+                        <input type="file" name="archivo_contexto" id="archivo_contexto" class="form-control" accept="image/*,video/mp4">
+                        <small class="text-muted">Tamaño máximo: 16 MB.</small>
+                    </div>
+
+                    <!-- EXPLICACIÓN -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Explicación (Opcional)</label>
+                        <textarea name="explicacion" class="form-control" rows="2"
+                                  placeholder="Explicación de por qué la respuesta es correcta..."></textarea>
+                    </div>
+
+                    <div class="col-12 text-end mt-3">
+                        <a href="{{ url_for('docente.banco_preguntas') }}" class="btn btn-secondary px-4">Cancelar</a>
+                        <button type="submit" class="btn btn-success px-4">
+                            <i class="bi bi-save me-1"></i> Guardar Pregunta
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mostrar/ocultar el input de archivo según el tipo de contexto
+    document.getElementById('tipo_contexto').addEventListener('change', function() {
+        const tipo = this.value;
+        const divArchivo = document.getElementById('div_archivo_contexto');
+        const inputArchivo = document.getElementById('archivo_contexto');
+
+        if (tipo === 'imagen' || tipo === 'video') {
+            divArchivo.style.display = 'block';
+            if (tipo === 'imagen') {
+                inputArchivo.accept = 'image/*';
+            } else {
+                inputArchivo.accept = 'video/mp4,video/webm';
+            }
+        } else {
+            divArchivo.style.display = 'none';
+            inputArchivo.value = '';
+        }
+    });
+</script>
+{% endblock %}

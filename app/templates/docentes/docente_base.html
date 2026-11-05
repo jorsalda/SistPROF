@@ -45,26 +45,25 @@
                 </a>
             </li>
 
-            <!-- Mis Permisos -->
+                <!-- Mis Estudiantes -->
             <li class="menu-item">
-                <a href="{{ url_for('docente.mis_permisos') }}"
-                   class="menu-link {% if request.endpoint in ['docente.mis_permisos','docente.nuevo_permiso_docente'] %}active{% endif %}">
-                    <i class="bi bi-clipboard-check"></i>
-                    Mis Permisos
+                <a href="{{ url_for('docente.mis_estudiantes') }}"
+                   class="menu-link {% if request.endpoint == 'docente.mis_estudiantes' %}active{% endif %}">
+                    <i class="bi bi-people"></i>
+                    Mis Estudiantes
                 </a>
             </li>
 
+            <!-- Después de "Gestión de Competencias" -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.ver_planilla_selector') }}"
+                   class="menu-link {% if request.endpoint == 'docente.ver_planilla_selector' %}active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                    Seguimiento Académico
+                </a>
+            </li>
             <!-- SEPARADOR VISUAL (Opcional, para organizar mejor) -->
             <li class="menu-divider"></li>
-
-            <!-- Mi Banco de Preguntas (CORREGIDO) -->
-            <li class="menu-item">
-                <a href="{{ url_for('docente.banco_preguntas') }}"
-                   class="menu-link {% if request.endpoint == 'docente.banco_preguntas' %}active{% endif %}">
-                    <i class="bi bi-database"></i>
-                    Mi Banco de Preguntas
-                </a>
-            </li>
 
             <!-- Gestión de Competencias (CORREGIDO Y ALINEADO) -->
             <li class="menu-item">
@@ -75,41 +74,23 @@
                 </a>
             </li>
 
-            <!-- Después de "Gestión de Competencias" -->
+            <!-- Mi Banco de Preguntas (CORREGIDO) -->
             <li class="menu-item">
-                <a href="{{ url_for('docente.ver_planilla_selector') }}"
-                   class="menu-link {% if request.endpoint == 'docente.ver_planilla_selector' %}active{% endif %}">
-                    <i class="bi bi-grid-3x3-gap-fill"></i>
-                    Planilla de Calificaciones
+                <a href="{{ url_for('docente.banco_preguntas') }}"
+                   class="menu-link {% if request.endpoint == 'docente.banco_preguntas' %}active{% endif %}">
+                    <i class="bi bi-database"></i>
+                    Mi Banco de Preguntas
+                </a>
+            </li>
+             <!-- Mis Exámenes -->
+            <li class="menu-item">
+                <a href="{{ url_for('examen.listar_examenes') }}"
+                   class="menu-link {% if request.endpoint == 'examen.listar_examenes' %}active{% endif %}">
+                    <i class="bi bi-file-earmark-text"></i>
+                    Mis Exámenes
                 </a>
             </li>
 
-            <!-- Mis Estudiantes -->
-            <li class="menu-item">
-                <a href="{{ url_for('docente.mis_estudiantes') }}"
-                   class="menu-link {% if request.endpoint == 'docente.mis_estudiantes' %}active{% endif %}">
-                    <i class="bi bi-people"></i>
-                    Mis Estudiantes
-                </a>
-            </li>
-
-            <!-- Observador -->
-            <li class="menu-item">
-                <a href="{{ url_for('docente.observador') }}"
-                   class="menu-link {% if request.endpoint == 'docente.observador' %}active{% endif %}">
-                    <i class="bi bi-eye-fill"></i>
-                    Observador
-                </a>
-            </li>
-
-            <!-- Citaciones -->
-            <li class="menu-item">
-                <a href="{{ url_for('docente.citaciones') }}"
-                   class="menu-link {% if request.endpoint == 'docente.citaciones' %}active{% endif %}">
-                    <i class="bi bi-calendar-event-fill"></i>
-                    Citaciones
-                </a>
-            </li>
 
             <!-- Crear examenes desde el banco -->
             <li class="menu-item">
@@ -129,30 +110,40 @@
                 </a>
             </li>
 
-            <!-- Mis Exámenes -->
+
+            <!-- Observador -->
             <li class="menu-item">
-                <a href="{{ url_for('examen.listar_examenes') }}"
-                   class="menu-link {% if request.endpoint == 'examen.listar_examenes' %}active{% endif %}">
-                    <i class="bi bi-file-earmark-text"></i>
-                    Mis Exámenes
+                <a href="{{ url_for('docente.observador') }}"
+                   class="menu-link {% if request.endpoint == 'docente.observador' %}active{% endif %}">
+                    <i class="bi bi-eye-fill"></i>
+                    Observador
                 </a>
             </li>
 
-            <!-- Seguimiento Académico -->
+                <!-- Citaciones -->
             <li class="menu-item">
-                <a href="{{ url_for('docente.seguimiento') }}"
-                   class="menu-link {% if request.endpoint == 'docente.seguimiento' %}active{% endif %}">
-                    <i class="bi bi-graph-up-arrow"></i>
-                    Seguimiento Académico
+                <a href="{{ url_for('docente.citaciones') }}"
+                   class="menu-link {% if request.endpoint == 'docente.citaciones' %}active{% endif %}">
+                    <i class="bi bi-calendar-event-fill"></i>
+                    Citaciones
                 </a>
             </li>
+
+
                         <!-- PIAR -->
             <li class="menu-item">
                 <a href="{{ url_for('piar.lista') }}" class="menu-link {% if request.endpoint in ['piar.lista', 'piar.detalle', 'piar.nuevo', 'piar.ajustes'] %}active{% endif %}">
                     <i class="bi bi-file-earmark-medical"></i> Módulo PIAR
                 </a>
             </li>
-
+                <!-- Mis Permisos -->
+            <li class="menu-item">
+                <a href="{{ url_for('docente.mis_permisos') }}"
+                   class="menu-link {% if request.endpoint in ['docente.mis_permisos','docente.nuevo_permiso_docente'] %}active{% endif %}">
+                    <i class="bi bi-clipboard-check"></i>
+                    Mis Permisos
+                </a>
+            </li>
             <!-- Mi Cuenta -->
             <li class="menu-item">
                 <a href="{{ url_for('auth.estado_cuenta') }}"

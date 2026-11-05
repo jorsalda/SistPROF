@@ -104,21 +104,27 @@ class ClsEstudiante {
     }
 
     seleccionarExamen(examenId, materiaId) {
-        console.log('>>>>> seleccionarExamen:', examenId);
-        this.examenId = examenId;
-        this.materiaId = materiaId;
+    this.examenId = examenId;
+    this.materiaId = materiaId;
 
-        const cantidad = parseInt($("#numQuestions").val()) || 10;
-        const tiempoPorPreguntaMin = parseInt($("#timePerQuestion").val()) || 2;
+    // USAR DATOS INYECTADOS EN LUGAR DE FETCH
+    if (window.PREGUNTAS_INYECTADAS && window.PREGUNTAS_INYECTADAS.length > 0) {
+        this.preguntas = window.PREGUNTAS_INYECTADAS;
+        this.numPreguntasJuego = this.preguntas.length;
 
-        this.tiempoPorPregunta = tiempoPorPreguntaMin * 60;
-        this.tiempoTotalExamen = cantidad * this.tiempoPorPregunta;
+        // Configurar tiempo por defecto si no hay inputs visibles
+        this.tiempoPorPregunta = 120; // 2 minutos por defecto
+        this.tiempoTotalExamen = this.numPreguntasJuego * this.tiempoPorPregunta;
         this.tiempoRestanteTotal = this.tiempoTotalExamen;
 
-        $("#examInfo").text(`${cantidad} preguntas | ${tiempoPorPreguntaMin} min/pregunta | Total: ${this.formatTime(this.tiempoTotalExamen)}`).show();
+        $("#examInfo").text(`${this.numPreguntasJuego} preguntas | 2 min/pregunta | Total: ${this.formatTime(this.tiempoTotalExamen)}`).show();
 
-        this.cargarPreguntasDesdeAPI(examenId, cantidad);
+        this.iniciarContadorTotal();
+        this.mostrarPregunta();
+    } else {
+        $('#question').html('<div class="alert alert-danger">Error: No hay preguntas cargadas para este examen.</div>');
     }
+}
 
     cargarPreguntasDesdeAPI(examenId, cantidadSolicitada) {
         console.log('>>>>> Cargando', cantidadSolicitada, 'preguntas del examen', examenId);
@@ -266,10 +272,13 @@ class ClsEstudiante {
                 $("#contexto").empty().hide();
             }
 
-            // 🔥 Mostrar número correcto de pregunta
-            $("#question").html(`<b>Pregunta ${this.preguntaActual + 1} de ${this.numPreguntasJuego}:</b> ${pregunta.pregunta}`);
+             // ✅ CORRECTO: Usa el campo real que viene desde Python ("texto")
 
-            $("#options").empty();
+
+            // ✅ CORRECTO: Usa el campo real que viene desde Python ("texto")
+            const enunciado = pregunta.pregunta || pregunta.texto || 'Enunciado no disponible';
+            $("#question").html(`<b>Pregunta ${this.preguntaActual + 1} de ${this.numPreguntasJuego}:</b> ${enunciado}`);
+                        $("#options").empty();
             var opciones = this.shuffleArray(pregunta.opciones.slice());
             var letrasOpciones = ['A)', 'B)', 'C)', 'D)'];
             opciones.forEach((opcion, index) => {

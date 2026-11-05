@@ -1979,38 +1979,39 @@ def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None)
 
     # 2. Detectar nivel automáticamente basado en materias del Plan
     def detectar_nivel(grado_raw):
-        grado_limpio = grado_raw.replace('°', '').replace('º', '').strip()
-        plan_items = PlanEstudios.query.filter(
-            PlanEstudios.colegio_id == colegio_id,
-            func.replace(func.replace(PlanEstudios.grado, '°', ''), 'º', '') == grado_limpio,
-            PlanEstudios.activo == True,
-            PlanEstudios.horas_semanales > 0
-        ).all()
+        """
+        Detecta el nivel educativo basado en el NÚMERO del grado.
+        Es mucho más robusto que depender de las materias del plan de estudios.
 
-        if not plan_items:
+        - Preescolar/Jardín/Transición → PREESCOLAR
+        - 1° a 5° → PRIMARIA
+        - 6° a 9° → BACHILLERATO
+        - 10° y 11° → MEDIA ACADÉMICA
+        - Sin número reconocible → OTRAS MODALIDADES
+        """
+        grado_limpio = grado_raw.replace('°', '').replace('º', '').strip().lower()
+
+        # 1. Detectar palabras clave del nivel
+        if any(kw in grado_limpio for kw in
+               ['jardín', 'jardin', 'transición', 'transicion', 'preescolar', 'kinder', 'párvulo', 'parvulo']):
+            return 'PREESCOLAR'
+
+        # 2. Extraer el número del grado (ej: "1a" → 1, "11b" → 11)
+        import re
+        match = re.match(r'^(\d+)', grado_limpio)
+        if not match:
             return 'OTRAS MODALIDADES'
 
-        materia_ids = [p.materia_id for p in plan_items]
-        materias_obj = Materia.query.filter(Materia.id.in_(materia_ids)).all()
-        nombres_materias = [m.nombre.lower() for m in materias_obj]
-        texto_materias = ' '.join(nombres_materias)
+        numero = int(match.group(1))
 
-        if any(kw in texto_materias for kw in
-               ['preescolar', 'dim-estética', 'dim-cognitiva', 'dim-comunicativa', 'dim-espiritual', 'dim-ética',
-                'dim-socioafectiva', 'dim-corporal']):
-            return 'PREESCOLAR'
-        elif any(kw in texto_materias for kw in
-                 ['actitudinal (primaria)', 'dim-espacial (primaria)', 'dim-numérica (primaria)',
-                  'espacial (primaria)']):
+        if 1 <= numero <= 5:
             return 'PRIMARIA'
-        elif any(kw in texto_materias for kw in ['actitudinal (bachillerato)', 'biología', 'geometría', 'química']):
+        elif 6 <= numero <= 9:
             return 'BACHILLERATO'
-        elif any(kw in texto_materias for kw in ['física', 'química', 'religion', 'música']) and not any(
-                kw in texto_materias for kw in ['geometría', 'biología']):
+        elif 10 <= numero <= 11:
             return 'MEDIA ACADÉMICA'
         else:
             return 'OTRAS MODALIDADES'
-
     # 3. Agrupar grupos por nivel detectado
     grupos_por_nivel = {}
     for g in grupos:

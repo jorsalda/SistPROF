@@ -1,5 +1,7 @@
 # app/routes/examen_routes.py
 
+
+
 import json
 import random
 from datetime import datetime
@@ -21,8 +23,11 @@ from app.models.examen_contenido import ExamenContenido
 from app.models.evaluacion_estudiante import EvaluacionEstudiante
 from app.models.CompetenciaEstudiante import CompetenciaEstudiante
 from app.models.indicador_logro import IndicadorLogro
-from app.services.document_service import extraer_texto_de_archivo
-from app.services.ia_service import generar_preguntas_json
+
+
+from app.models.docente import Docente
+from app.models.grupo_materia import GrupoMateria
+
 
 examen_bp = Blueprint('examen', __name__, url_prefix='/api/examen')
 
@@ -135,7 +140,7 @@ def crear_examen():
 def crear_examen_ia():
     if current_user.rol not in ['docente', 'coordinador', 'admin_colegio']:
         abort(403)
-    materias = Materia.query.filter_by(colegio_id=current_user.colegio_id).all()
+    materias = Materia.query.all()
     return render_template("examenes/crear_examen_ia.html", materias=materias)
 
 # ==========================================================
@@ -520,12 +525,20 @@ def listado_examenes():
 @examen_bp.route("/mis-examenes")
 @login_required
 def listar_examenes():
+    # 1. Obtener el docente logueado
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("No se encontró perfil de docente.", "danger")
+        return redirect(url_for("docente.dashboard"))
+
+    # 2. Filtrar los exámenes por docente_id (solo los que él creó)
     examenes = Examen.query.options(
         joinedload(Examen.programaciones)
-    ).filter_by(
-        colegio_id=current_user.colegio_id,
-        activo=True,
-        eliminado=False
+    ).filter(
+        Examen.colegio_id == current_user.colegio_id,
+        Examen.docente_id == docente.id,  # ✅ NUEVO: Filtrar por creador
+        Examen.activo == True,
+        Examen.eliminado == False
     ).order_by(Examen.fecha_creacion.desc()).all()
 
     examenes_con_contteo = []
@@ -540,6 +553,7 @@ def listar_examenes():
         examenes_con_contteo.append({'examen': e, 'total_preguntas': total})
 
     return render_template("examenes/listar_examenes.html", examenes=examenes_con_contteo)
+
 
 # ==========================================================
 # VER DETALLE DE EXAMEN

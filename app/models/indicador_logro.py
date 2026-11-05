@@ -15,6 +15,7 @@ class IndicadorLogro(db.Model):
 
     # ✅ USAR EL TIPO ENUM NATIVO DE POSTGRESQL
     nivel = db.Column(NivelDesempenoEnum, nullable=True)
+    descripcion_nivel = db.Column(db.Text, nullable=True)
 
     orden = db.Column(db.Integer, default=1, nullable=False)
 

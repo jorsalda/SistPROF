@@ -1,12 +1,11 @@
 {% extends "docentes/docente_base.html" %}
 
-{% block docente_page_title %}
-    Mi Banco de Preguntas
-{% endblock %}
+{% block title %}Mi Banco de Preguntas | SistPROF{% endblock %}
+
+{% block docente_page_title %}Mi Banco de Preguntas{% endblock %}
 
 {% block docente_content %}
 <div class="container-fluid py-4">
-    <!-- Encabezado con acciones -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h3 mb-0 text-gray-800">
             <i class="bi bi-database me-2"></i>Gestión de Preguntas
@@ -15,10 +14,9 @@
             <a href="{{ url_for('docente.dashboard') }}" class="btn btn-outline-secondary btn-sm me-2">
                 <i class="bi bi-arrow-left"></i> Volver al Dashboard
             </a>
-            <!-- Botón para crear nueva pregunta manualmente -->
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaPregunta">
+            <a href="{{ url_for('docente.nueva_pregunta_banco') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-lg"></i> Nueva Pregunta
-            </button>
+            </a>
         </div>
     </div>
 
@@ -149,13 +147,11 @@
 <script>
     function verPregunta(id) {
         alert('Función para ver detalle de pregunta ID: ' + id);
-        // Aquí podrías hacer un fetch AJAX para llenar el modal
     }
 
     function eliminarPregunta(id) {
         if(confirm('¿Estás seguro de eliminar esta pregunta del banco? Esta acción no se puede deshacer.')) {
             console.log('Eliminando pregunta:', id);
-            // Lógica de eliminación POST
         }
     }
 </script>

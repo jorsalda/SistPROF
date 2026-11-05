@@ -27,7 +27,7 @@ class Examen(db.Model):
 
     activo = db.Column(db.Boolean, default=True)
 
-    # ✅ CAMPO PARA BORRADO LÓGICO (UBICADO CORRECTAMENTE DENTRO DE LA CLASE)
+    # ✅ CAMPO PARA BORRADO LÓGICO
     eliminado = db.Column(db.Boolean, default=False)
 
     fecha_creacion = db.Column(
@@ -45,6 +45,13 @@ class Examen(db.Model):
         db.Integer,
         db.ForeignKey("colegios.id", ondelete="CASCADE"),
         nullable=False
+    )
+
+    # ✅ NUEVO: Docente creador del examen
+    docente_id = db.Column(
+        db.Integer,
+        db.ForeignKey("docentes.id"),
+        nullable=True
     )
 
     archivo_json = db.Column(db.String(200))
@@ -66,6 +73,12 @@ class Examen(db.Model):
     colegio = db.relationship(
         "Colegio",
         backref="examenes"
+    )
+
+    # ✅ NUEVO: Relación con el docente creador
+    docente = db.relationship(
+        "Docente",
+        backref="examenes_creados"
     )
 
     tipo_examen = db.relationship(
@@ -133,4 +146,3 @@ class ProgramacionExamen(db.Model):
 
     def __repr__(self):
         return f"<ProgramacionExamen {self.id} - Grupo {self.grupo_id}>"
-
