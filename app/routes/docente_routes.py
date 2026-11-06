@@ -822,6 +822,7 @@ def crear_competencia_madre():
 # ============================================================
 # GESTIÓN DE COMPETENCIAS (VISTA INLINE)
 # ============================================================
+
 @docente_bp.route("/competencias")
 @login_required
 def gestionar_competencias():
@@ -833,11 +834,9 @@ def gestionar_competencias():
         activo=True
     ).order_by(PeriodoAcademico.anio.desc()).first()
 
-    # ✅ FIX: Si no hay configuración, permitir por defecto.
     periodo_abierto = True
     if periodo_actual:
         config = ConfiguracionPeriodo.query.filter_by(periodo_id=periodo_actual.id).first()
-        # Solo bloqueamos si el registro EXISTE y EXPLÍCITAMENTE dice que no se puede editar
         if config and config.permite_editar_competencias is False:
             periodo_abierto = False
 
@@ -871,15 +870,35 @@ def gestionar_competencias():
         except ValueError:
             pass
 
+    # ✅ LÓGICA NUEVA: Si no hay selección, buscar la primera materia que tenga competencias
     if not materia_id_seleccionada and opciones_materias:
-        materia_id_seleccionada = opciones_materias[0]['id']
-        grupo_id_seleccionado = opciones_materias[0]['grupo_id']
+        materia_con_competencias = None
+        for opcion in opciones_materias:
+            # Verificamos si esta materia tiene competencias
+            tiene_comp = CompetenciaEstudiante.query.filter_by(
+                materia_id=opcion['id'],
+                grupo_id=opcion['grupo_id']
+            ).first()
+            if tiene_comp:
+                materia_con_competencias = opcion
+                break
+
+        if materia_con_competencias:
+            materia_id_seleccionada = materia_con_competencias['id']
+            grupo_id_seleccionado = materia_con_competencias['grupo_id']
+        else:
+            materia_id_seleccionada = opciones_materias[0]['id']
+            grupo_id_seleccionado = opciones_materias[0]['grupo_id']
 
     competencias_madres = []
     if materia_id_seleccionada and grupo_id_seleccionado:
-        competencias_madres = CompetenciaEstudiante.query.filter_by(
-            materia_id=materia_id_seleccionada,
-            grupo_id=grupo_id_seleccionado
+        # Buscamos las competencias (con or_ por si acaso tienen grupo_id nulo)
+        competencias_madres = CompetenciaEstudiante.query.filter(
+            CompetenciaEstudiante.materia_id == materia_id_seleccionada,
+            or_(
+                CompetenciaEstudiante.grupo_id == grupo_id_seleccionado,
+                CompetenciaEstudiante.grupo_id == None
+            )
         ).order_by(CompetenciaEstudiante.codigo).all()
 
     ids_madres = [c.id for c in competencias_madres]
@@ -909,8 +928,10 @@ def gestionar_competencias():
         competencias=lista_final,
         periodo_actual=periodo_actual,
         materia_seleccionada_id=materia_id_seleccionada,
-        grupo_seleccionado_id=grupo_id_seleccionado
+        grupo_id_seleccionado=grupo_id_seleccionado
     )
+
+
 
 # ============================================================
 # ENDPOINT IA PARA ANÁLISIS PEDAGÓGICO

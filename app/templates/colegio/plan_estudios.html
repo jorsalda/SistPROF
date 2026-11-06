@@ -1,25 +1,18 @@
 {% extends layout %}
 
-{% block colegio_page_title %}
-Plan de Estudios
-{% endblock %}
+{% block colegio_page_title %}Plan de Estudios{% endblock %}
 
 {% block colegio_content %}
-
 <div class="container-fluid py-4">
 
     <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-1">
-                <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
-            </h2>
-            <p class="text-muted mb-0">
-                Configuración de horas semanales por grado y materia
-            </p>
+            <h2 class="fw-bold mb-1"><i class="bi bi-journal-text"></i> Plan de Estudios</h2>
+            <p class="text-muted mb-0">Asigne las horas semanales a cada materia por grado educativo</p>
         </div>
-        <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver
+        <a href="{{ url_for('colegio.configurar_materias_nivel') }}" class="btn btn-outline-primary">
+            <i class="bi bi-gear"></i> Configurar Materias por Nivel
         </a>
     </div>
 
@@ -27,7 +20,7 @@ Plan de Estudios
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -35,507 +28,289 @@ Plan de Estudios
         {% endif %}
     {% endwith %}
 
-    <!-- Información -->
-    <div class="alert alert-info mb-4">
-        <i class="bi bi-info-circle"></i>
-        <strong>Instrucciones:</strong> Define cuántas horas semanales debe tener cada materia por grado.
-        Deja en <strong>0</strong> o vacío si la materia no aplica para ese grado.
-    </div>
-
-    <!-- ============================================ -->
-    <!-- SECCIÓN: GRADOS PERSONALIZADOS / MODALIDADES -->
-    <!-- ============================================ -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-info text-white">
-            <h6 class="mb-0">
-                <i class="bi bi-stars"></i> Modalidades Especiales / Grados Personalizados
-            </h6>
-        </div>
-        <div class="card-body">
-            <p class="text-muted mb-3">
-                <small>
-                    <i class="bi bi-info-circle"></i>
-                    Crea grados personalizados para modalidades como: Aceleración, Integración, Refuerzo, Bilingüe, etc.
-                </small>
-            </p>
-
-            <div class="d-flex gap-2 flex-wrap">
-                <form method="POST" class="d-flex gap-2">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="text"
-                           name="nuevo_grado"
-                           class="form-control form-control-sm"
-                           placeholder="Ej: Aceleración 6°, Integración 1°, Bilingüe 5°"
-                           style="width: 300px;">
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bi bi-plus-circle"></i> Agregar Grado
-                    </button>
-                </form>
-            </div>
-
-            {% if grados_personalizados %}
-            <div class="mt-3">
-                <small class="text-muted">Grados personalizados existentes:</small>
-                <div class="d-flex gap-2 flex-wrap mt-2">
-                    {% for grado in grados_personalizados %}
-                    <span class="badge bg-info text-dark d-flex align-items-center gap-2">
-                        {{ grado }}
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('¿Eliminar este grado personalizado y toda su configuración?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="eliminar_grado" value="{{ grado }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger p-0" style="width: 20px; height: 20px; line-height: 18px;">
-                                <i class="bi bi-x" style="font-size: 12px;"></i>
-                            </button>
-                        </form>
-                    </span>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- FORMULARIO PRINCIPAL: MALLA CURRICULAR       -->
-    <!-- ============================================ -->
-    <form method="POST">
+    <!-- Formulario Principal -->
+    <form method="POST" id="formPlanEstudios">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-table"></i> Malla Curricular
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover mb-0">
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: PREESCOLAR                       -->
-                        <!-- ========================================= -->
-                        <thead class="table-warning">
-                            <tr>
-                                <td colspan="{{ materias_preescolar|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-balloon-heart-fill text-danger"></i> PREESCOLAR
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_preescolar %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for grado in ['Pre-jardín', 'Jardín', 'Transición'] %}
-                            {% if grado in grados %}
-                            <tr>
-                                <td class="text-center fw-bold bg-light">
-                                    {{ grado }}
-                                </td>
-                                {% for materia in materias_preescolar %}
-                                <td class="text-center p-1">
-                                    <input
-                                        type="number"
-                                        name="horas[]"
-                                        value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                        min="0"
-                                        max="10"
-                                        class="form-control form-control-sm text-center"
-                                        data-grado="{{ grado }}"
-                                        data-materia-id="{{ materia.id }}"
-                                        onchange="actualizarTotal(this)"
-                                    >
-                                    <input type="hidden" name="grado[]" value="{{ grado }}">
-                                    <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                </td>
-                                {% endfor %}
-                                <td class="text-center fw-bold">
-                                    <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: PRIMARIA                         -->
-                        <!-- ========================================= -->
-                        <thead class="table-success">
-                            <tr>
-                                <td colspan="{{ materias_primaria|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-book-fill text-success"></i> PRIMARIA
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_primaria %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for grado in ['1°', '2°', '3°', '4°', '5°'] %}
-                            {% if grado in grados %}
-                            <tr>
-                                <td class="text-center fw-bold bg-light">
-                                    {{ grado }}
-                                </td>
-                                {% for materia in materias_primaria %}
-                                <td class="text-center p-1">
-                                    <input
-                                        type="number"
-                                        name="horas[]"
-                                        value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                        min="0"
-                                        max="10"
-                                        class="form-control form-control-sm text-center"
-                                        data-grado="{{ grado }}"
-                                        data-materia-id="{{ materia.id }}"
-                                        onchange="actualizarTotal(this)"
-                                    >
-                                    <input type="hidden" name="grado[]" value="{{ grado }}">
-                                    <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                </td>
-                                {% endfor %}
-                                <td class="text-center fw-bold">
-                                    <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: PROGRAMAS ESPECIALES             -->
-                        <!-- ========================================= -->
-                        <thead class="table-danger">
-                            <tr>
-                                <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-compass-fill text-danger"></i> PROGRAMAS ESPECIALES (Aceleración, Brújula, Refuerzo, Integración)
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_programas_especiales %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if grados_programas_especiales %}
-                                {% for grado in grados_programas_especiales %}
-                                <tr>
-                                    <td class="text-center fw-bold bg-light">
-                                        {{ grado }}
-                                    </td>
-                                    {% for materia in materias_programas_especiales %}
-                                    <td class="text-center p-1">
-                                        <input
-                                            type="number"
-                                            name="horas[]"
-                                            value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                            min="0"
-                                            max="10"
-                                            class="form-control form-control-sm text-center"
-                                            data-grado="{{ grado }}"
-                                            data-materia-id="{{ materia.id }}"
-                                            onchange="actualizarTotal(this)"
-                                        >
-                                        <input type="hidden" name="grado[]" value="{{ grado }}">
-                                        <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                    </td>
-                                    {% endfor %}
-                                    <td class="text-center fw-bold">
-                                        <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center text-muted py-4">
-                                        <i class="bi bi-info-circle"></i>
-                                        No hay programas especiales configurados.
-                                        Agregue grados como "Aceleración 6°", "Brújula 7°", "Refuerzo 5°" en la sección superior.
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: BACHILLERATO                     -->
-                        <!-- ========================================= -->
-                        <thead class="table-primary">
-                            <tr>
-                                <td colspan="{{ materias_bachillerato|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-briefcase-fill text-primary"></i> BACHILLERATO
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_bachillerato %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for grado in ['6°', '7°', '8°', '9°'] %}
-                            {% if grado in grados %}
-                            <tr>
-                                <td class="text-center fw-bold bg-light">
-                                    {{ grado }}
-                                </td>
-                                {% for materia in materias_bachillerato %}
-                                <td class="text-center p-1">
-                                    <input
-                                        type="number"
-                                        name="horas[]"
-                                        value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                        min="0"
-                                        max="10"
-                                        class="form-control form-control-sm text-center"
-                                        data-grado="{{ grado }}"
-                                        data-materia-id="{{ materia.id }}"
-                                        onchange="actualizarTotal(this)"
-                                    >
-                                    <input type="hidden" name="grado[]" value="{{ grado }}">
-                                    <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                </td>
-                                {% endfor %}
-                                <td class="text-center fw-bold">
-                                    <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: MEDIA ACADÉMICA                  -->
-                        <!-- ========================================= -->
-                        <thead class="table-info">
-                            <tr>
-                                <td colspan="{{ materias_media|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-mortarboard-fill text-info"></i> MEDIA ACADÉMICA
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_media %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for grado in ['10°', '11°'] %}
-                            {% if grado in grados %}
-                            <tr>
-                                <td class="text-center fw-bold bg-light">
-                                    {{ grado }}
-                                </td>
-                                {% for materia in materias_media %}
-                                <td class="text-center p-1">
-                                    <input
-                                        type="number"
-                                        name="horas[]"
-                                        value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                        min="0"
-                                        max="10"
-                                        class="form-control form-control-sm text-center"
-                                        data-grado="{{ grado }}"
-                                        data-materia-id="{{ materia.id }}"
-                                        onchange="actualizarTotal(this)"
-                                    >
-                                    <input type="hidden" name="grado[]" value="{{ grado }}">
-                                    <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                </td>
-                                {% endfor %}
-                                <td class="text-center fw-bold">
-                                    <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% endfor %}
-                        </tbody>
-
-                        <!-- ========================================= -->
-                        <!-- SECCIÓN: OTRAS MODALIDADES                -->
-                        <!-- ========================================= -->
-                        <thead class="table-secondary">
-                            <tr>
-                                <td colspan="{{ materias_validacion|length + 2 }}" class="text-center fw-bold py-2">
-                                    <i class="bi bi-stars text-dark"></i> OTRAS MODALIDADES
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="text-center" style="width: 100px;">Grado</th>
-                                {% for materia in materias_validacion %}
-                                <th class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span>{{ materia.nombre }}</span>
-                                        <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}"
-                                           target="_blank"
-                                           class="btn btn-sm btn-outline-secondary p-0"
-                                           style="width: 22px; height: 22px; line-height: 20px;"
-                                           title="Editar materia">
-                                            <i class="bi bi-pencil" style="font-size: 10px;"></i>
-                                        </a>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th class="text-center" style="width: 100px;">Total Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if grados_otras_modalidades %}
-                                {% for grado in grados_otras_modalidades %}
-                                <tr>
-                                    <td class="text-center fw-bold bg-light">
-                                        {{ grado }}
-                                    </td>
-                                    {% for materia in materias_validacion %}
-                                    <td class="text-center p-1">
-                                        <input
-                                            type="number"
-                                            name="horas[]"
-                                            value="{{ plan_dict.get((grado, materia.id), 0) }}"
-                                            min="0"
-                                            max="10"
-                                            class="form-control form-control-sm text-center"
-                                            data-grado="{{ grado }}"
-                                            data-materia-id="{{ materia.id }}"
-                                            onchange="actualizarTotal(this)"
-                                        >
-                                        <input type="hidden" name="grado[]" value="{{ grado }}">
-                                        <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
-                                    </td>
-                                    {% endfor %}
-                                    <td class="text-center fw-bold">
-                                        <span class="badge bg-success total-grado" data-grado="{{ grado }}">0</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="{{ materias_validacion|length + 2 }}" class="text-center text-muted py-4">
-                                        <i class="bi bi-info-circle"></i>
-                                        No hay otras modalidades configuradas.
-                                        Agregue grados como "Bilingüe 5°", "Inmersión 3°" en la sección superior.
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-
-                    </table>
+        <!-- Agregar Nuevo Grado Personalizado -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body bg-light d-flex align-items-end gap-3">
+                <div class="flex-grow-1">
+                    <label class="form-label fw-semibold small text-uppercase text-muted">Nuevo Grado / Modalidad</label>
+                    <input type="text" name="nuevo_grado" class="form-control form-control-lg"
+                           placeholder="Ej: Aceleración 6°, Integración 1°, Bilingüe 5°...">
                 </div>
-            </div>
-
-            <div class="card-footer bg-white d-flex justify-content-end gap-2">
-                <button type="reset" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-save"></i> Guardar Plan de Estudios
+                <button type="submit" class="btn btn-success btn-lg px-4">
+                    <i class="bi bi-plus-circle"></i> Agregar Grado
                 </button>
             </div>
         </div>
-    </form>
 
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0 bg-white shadow-sm">
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN: PREESCOLAR                       -->
+                <!-- ========================================= -->
+                <thead class="table-warning">
+                    <tr>
+                        <td colspan="{{ materias_preescolar|length + 2 }}" class="text-center fw-bold py-2">
+                            <i class="bi bi-balloon-heart-fill text-danger"></i> PREESCOLAR
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-center bg-white" style="width: 150px;">Grado</th>
+                        {% for materia in materias_preescolar %}
+                        <th class="text-center bg-white" style="min-width: 120px;">{{ materia.nombre }}</th>
+                        {% endfor %}
+                        <th class="text-center bg-white" style="width: 80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grado in ['Pre-jardín', 'Jardín', 'Transición'] %}
+                    <tr>
+                        <td class="text-center fw-bold bg-light">{{ grado }}</td>
+                        {% for materia in materias_preescolar %}
+                        <td class="text-center p-1">
+                            <input type="number" name="horas[]"
+                                   value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                   min="0" max="10" class="form-control form-control-sm text-center border-0 bg-transparent">
+                            <input type="hidden" name="grado[]" value="{{ grado }}">
+                            <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                        </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold">
+                            <span class="badge rounded-pill bg-success">
+                                {{ plan_actual | selectattr('grado', 'equalto', grado) | map(attribute='horas_semanales') | sum }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN: PRIMARIA                         -->
+                <!-- ========================================= -->
+                <thead class="table-success">
+                    <tr>
+                        <td colspan="{{ materias_primaria|length + 2 }}" class="text-center fw-bold py-2">
+                            <i class="bi bi-book-fill text-success"></i> PRIMARIA
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-center bg-white" style="width: 150px;">Grado</th>
+                        {% for materia in materias_primaria %}
+                        <th class="text-center bg-white" style="min-width: 120px;">{{ materia.nombre }}</th>
+                        {% endfor %}
+                        <th class="text-center bg-white" style="width: 80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grado in ['1°', '2°', '3°', '4°', '5°'] %}
+                    <tr>
+                        <td class="text-center fw-bold bg-light">{{ grado }}</td>
+                        {% for materia in materias_primaria %}
+                        <td class="text-center p-1">
+                            <input type="number" name="horas[]"
+                                   value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                   min="0" max="10" class="form-control form-control-sm text-center border-0 bg-transparent">
+                            <input type="hidden" name="grado[]" value="{{ grado }}">
+                            <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                        </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold">
+                            <span class="badge rounded-pill bg-success">
+                                {{ plan_actual | selectattr('grado', 'equalto', grado) | map(attribute='horas_semanales') | sum }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN: PROGRAMAS ESPECIALES             -->
+                <!-- ========================================= -->
+                <thead class="table-danger">
+                    <tr>
+                        <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center fw-bold py-2">
+                            <i class="bi bi-compass-fill text-danger"></i> PROGRAMAS ESPECIALES
+                            <small class="fw-normal d-block mt-1">(Aceleración, Brújula, Refuerzo, Integración)</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-center bg-white" style="width: 150px;">Grado</th>
+                        {% for materia in materias_programas_especiales %}
+                        <th class="text-center bg-white" style="min-width: 120px;">
+                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                <span>{{ materia.nombre }}</span>
+                                <a href="{{ url_for('colegio.editar_materia', id=materia.id) }}" target="_blank"
+                                   class="btn btn-sm btn-outline-secondary p-0" style="width: 20px; height: 20px; line-height: 18px;">
+                                    <i class="bi bi-pencil" style="font-size: 9px;"></i>
+                                </a>
+                            </div>
+                        </th>
+                        {% endfor %}
+                        <th class="text-center bg-white" style="width: 80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if grados_programas_especiales %}
+                        <!-- CASO 1: Hay grupos creados -->
+                        {% for grado in grados_programas_especiales %}
+                        <tr>
+                            <td class="text-center fw-bold bg-light">
+                                {{ grado }}
+                                <button type="submit" name="eliminar_grado" value="{{ grado }}"
+                                        class="btn btn-sm btn-link text-danger p-0 ms-2" title="Eliminar grado"
+                                        onclick="return confirm('¿Eliminar este grado y todas sus asignaciones?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                            {% for materia in materias_programas_especiales %}
+                            <td class="text-center p-1">
+                                <input type="number" name="horas[]"
+                                       value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                       min="0" max="10" class="form-control form-control-sm text-center border-0 bg-transparent">
+                                <input type="hidden" name="grado[]" value="{{ grado }}">
+                                <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                            </td>
+                            {% endfor %}
+                            <td class="text-center fw-bold">
+                                <span class="badge rounded-pill bg-success">
+                                    {{ plan_actual | selectattr('grado', 'equalto', grado) | map(attribute='horas_semanales') | sum }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <!-- CASO 2: No hay grupos (Mensaje Proactivo) -->
+                        <tr>
+                            <td colspan="{{ materias_programas_especiales|length + 2 }}" class="text-center py-5 bg-light">
+                                <div class="text-muted">
+                                    <i class="bi bi-info-circle fs-1 d-block mb-3 opacity-50"></i>
+                                    <h5 class="fw-bold mb-2">No hay grupos creados para esta modalidad</h5>
+                                    <p class="mb-3">Vaya a <strong>Sedes > Grupos</strong> y cree un grupo personalizado<br>
+                                    (ej: "Aceleración A", "Brújula 3°") para activar esta sección.</p>
+                                    <a href="{{ url_for('colegio.lista_grupos') }}" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-plus-lg"></i> Ir a Crear Grupos
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN: BACHILLERATO                     -->
+                <!-- ========================================= -->
+                <thead class="table-primary">
+                    <tr>
+                        <td colspan="{{ materias_bachillerato|length + 2 }}" class="text-center fw-bold py-2">
+                            <i class="bi bi-briefcase-fill text-primary"></i> BACHILLERATO
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-center bg-white" style="width: 150px;">Grado</th>
+                        {% for materia in materias_bachillerato %}
+                        <th class="text-center bg-white" style="min-width: 120px;">{{ materia.nombre }}</th>
+                        {% endfor %}
+                        <th class="text-center bg-white" style="width: 80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grado in ['6°', '7°', '8°', '9°'] %}
+                    <tr>
+                        <td class="text-center fw-bold bg-light">{{ grado }}</td>
+                        {% for materia in materias_bachillerato %}
+                        <td class="text-center p-1">
+                            <input type="number" name="horas[]"
+                                   value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                   min="0" max="10" class="form-control form-control-sm text-center border-0 bg-transparent">
+                            <input type="hidden" name="grado[]" value="{{ grado }}">
+                            <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                        </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold">
+                            <span class="badge rounded-pill bg-success">
+                                {{ plan_actual | selectattr('grado', 'equalto', grado) | map(attribute='horas_semanales') | sum }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN: MEDIA ACADÉMICA                  -->
+                <!-- ========================================= -->
+                <thead class="table-info">
+                    <tr>
+                        <td colspan="{{ materias_media|length + 2 }}" class="text-center fw-bold py-2">
+                            <i class="bi bi-mortarboard-fill text-info"></i> MEDIA ACADÉMICA
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-center bg-white" style="width: 150px;">Grado</th>
+                        {% for materia in materias_media %}
+                        <th class="text-center bg-white" style="min-width: 120px;">{{ materia.nombre }}</th>
+                        {% endfor %}
+                        <th class="text-center bg-white" style="width: 80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grado in ['10°', '11°'] %}
+                    <tr>
+                        <td class="text-center fw-bold bg-light">{{ grado }}</td>
+                        {% for materia in materias_media %}
+                        <td class="text-center p-1">
+                            <input type="number" name="horas[]"
+                                   value="{{ plan_dict.get((grado, materia.id), 0) }}"
+                                   min="0" max="10" class="form-control form-control-sm text-center border-0 bg-transparent">
+                            <input type="hidden" name="grado[]" value="{{ grado }}">
+                            <input type="hidden" name="materia_id[]" value="{{ materia.id }}">
+                        </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold">
+                            <span class="badge rounded-pill bg-success">
+                                {{ plan_actual | selectattr('grado', 'equalto', grado) | map(attribute='horas_semanales') | sum }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Botones de Acción Global -->
+        <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
+            <button type="reset" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm">
+                <i class="bi bi-save"></i> Guardar Plan de Estudios
+            </button>
+        </div>
+    </form>
 </div>
 
-<script>
-// Actualizar total de horas por grado
-function actualizarTotal(input) {
-    const grado = input.getAttribute('data-grado');
-    const fila = input.closest('tr');
-    const inputs = fila.querySelectorAll('input[name="horas[]"]');
-
-    let total = 0;
-    inputs.forEach(inp => {
-        const valor = parseInt(inp.value) || 0;
-        total += valor;
-    });
-
-    const badge = fila.querySelector('.total-grado');
-    badge.textContent = total;
-
-    // Cambiar color según el total
-    if (total > 40) {
-        badge.className = 'badge bg-danger total-grado';
-    } else if (total > 30) {
-        badge.className = 'badge bg-warning text-dark total-grado';
-    } else {
-        badge.className = 'badge bg-success total-grado';
+<style>
+    /* Estilos profesionales para inputs numéricos */
+    .form-control-sm[type="number"] {
+        transition: all 0.2s ease;
     }
-}
-
-// Calcular totales al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input[name="horas[]"]').forEach(input => {
-        actualizarTotal(input);
-    });
-});
-</script>
-
+    .form-control-sm[type="number"]:focus {
+        background-color: #fff !important;
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+    }
+    .table thead th {
+        vertical-align: middle;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .badge.bg-success {
+        font-size: 0.8rem;
+        padding: 0.4em 0.8em;
+    }
+</style>
 {% endblock %}
