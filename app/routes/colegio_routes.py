@@ -1,9 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, session, jsonify, send_file
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 from sqlalchemy import func
-
 from app.models.coordinador import Coordinador
 from app.extensions import db
 from app.utils.permisos import requiere_permiso, tiene_permiso
@@ -31,8 +30,20 @@ from app.models.grupo_materia import GrupoMateria
 from app.models.materia import Materia
 from app.models.clase import Clase, DiaSemana
 from app.models.areas_gestion import AreaGestion
-
-
+from app.models.notification_log import NotificationLog
+from app.models.citacion_acudiente import CitacionAcudiente
+from app.models.acudiente import Acudiente
+from app.models.plan_estudios import PlanEstudios
+from app.models.nivel_materia import NivelMateria
+from app.models.jornada_bloque import JornadaBloque
+from app.services.colegio_usuarios_service import (
+    crear_usuario_operativo,
+    editar_usuario_operativo,
+    listar_usuarios_operativos,
+    ROLES_PERMITIDOS,
+)
+from app.utils.permisos_catalogo import CATALOGO, catalogo_por_grupo
+from app.models.permiso_usuario import PermisoUsuario
 
 colegio_bp = Blueprint(
     "colegio",
@@ -203,7 +214,8 @@ def seleccionar_sede(sede_id):
         flash(f'Sede seleccionada: {sede.nombre}', 'success')
     else:
         flash('Sede no válida', 'danger')
-    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
+    return redirect(
+        url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 # ==========================================================
@@ -240,7 +252,7 @@ def nueva_jornada(sede_id):
         jornada_existente = Jornada.query.filter(
             Jornada.colegio_id == current_user.colegio_id,
             Jornada.sede_id == sede.id,
-            db.func.lower(Jornada.nombre) == nombre.lower()
+            func.lower(Jornada.nombre) == nombre.lower()
         ).first()
 
         if jornada_existente:
@@ -339,8 +351,8 @@ def lista_grupos(sede_id, jornada_id):
         sede=sede,
         jornada=jornada,
         grupos=grupos,
-
     )
+
 
 @colegio_bp.route("/sedes/<int:sede_id>/jornadas/<int:jornada_id>/grupos/nuevo", methods=["GET", "POST"])
 @login_required
@@ -351,11 +363,19 @@ def nuevo_grupo(sede_id, jornada_id):
     valores por defecto. En POST lee sede_id y jornada_id del formulario
     para permitir crear el grupo en cualquier sede/jornada del colegio.
     """
-
     # ── Cargar todas las sedes del colegio (para el <select>) ─────────
     sedes = Sede.query.filter_by(
         colegio_id=current_user.colegio_id
     ).order_by(Sede.nombre).all()
+
+    # ── NUEVO: Cargar grados estándar + personalizados (Aceleración, etc.) ──
+    grados_db = [g[0] for g in db.session.query(PlanEstudios.grado).filter_by(
+        colegio_id=current_user.colegio_id, activo=True
+    ).distinct().all()]
+
+    grados_base = ['Pre-jardín', 'Jardín', 'Transición', '1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°', '10°',
+                   '11°']
+    todos_los_grados = sorted(list(set(grados_base + grados_db)))
 
     # ── Sede y jornada por defecto (para GET, o para re-render en error) ──
     sede = Sede.query.filter_by(
@@ -421,7 +441,7 @@ def nuevo_grupo(sede_id, jornada_id):
             return render_template(
                 "colegio/formulario_grupo.html",
                 sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
-                grupo=None
+                grupo=None, grados=todos_los_grados
             )
 
         # ── Validar que el docente no sea director de otro grupo ─────
@@ -437,7 +457,7 @@ def nuevo_grupo(sede_id, jornada_id):
                 return render_template(
                     "colegio/formulario_grupo.html",
                     sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
-                    grupo=None
+                    grupo=None, grados=todos_los_grados
                 )
 
         # ── Crear el grupo ────────────────────────────────────────────
@@ -469,7 +489,7 @@ def nuevo_grupo(sede_id, jornada_id):
     return render_template(
         "colegio/formulario_grupo.html",
         sede=sede, jornada=jornada, sedes=sedes, docentes=docentes,
-        grupo=None
+        grupo=None, grados=todos_los_grados
     )
 
 
@@ -516,7 +536,6 @@ def editar_grupo(sede_id, jornada_id, grupo_id):
         docentes=docentes,
         grupos_fusion=grupos_fusion,
         grupos_inactivos=grupos_inactivos,
-
     )
 
 
@@ -616,14 +635,16 @@ def lista_docentes():
     docentes = docentes_query.order_by(Docente.nombre).all()
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id, activo=True).order_by(Sede.nombre).all()
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
 
     return render_template(
         "colegio/docentes.html",
         docentes=docentes,
         sedes=sedes,
         sede_id=sede_id,
-
+        layout=layout
     )
+
 
 @colegio_bp.route("/docentes/nuevo", methods=["GET", "POST"])
 @login_required
@@ -732,7 +753,6 @@ def editar_docente(id):
                 docente.usuario.email = email
                 docente.usuario.sede_id = sede_id
 
-                # Si el documento cambió, actualizar la contraseña al nuevo documento
                 if documento and documento != docente.documento:
                     docente.usuario.password_hash = generate_password_hash(documento)
             else:
@@ -906,21 +926,6 @@ def eliminar_permiso(id):
     return redirect(url_for("colegio.lista_permisos"))
 
 
-# ==========================================================
-# COORDINADORES
-# ==========================================================
-@colegio_bp.route('/coordinadores')
-@login_required
-@requiere_permiso('secretaria.ver_coordinadores')
-def lista_coordinadores():
-    sede_id = request.args.get('sede_id', type=int)
-    consulta = Coordinador.query.filter_by(colegio_id=current_user.colegio_id)
-    if sede_id:
-        consulta = consulta.filter_by(sede_id=sede_id)
-    coordinadores = consulta.all()
-    sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
-    return render_template('coordinador/coordinadores.html', coordinadores=coordinadores, sedes=sedes, sede_actual_id=sede_id)
-
 @colegio_bp.route("/permisos/autorizar/<int:id>", methods=["POST"])
 @login_required
 def autorizar_permiso(id):
@@ -929,6 +934,7 @@ def autorizar_permiso(id):
     db.session.commit()
     flash("Permiso autorizado correctamente", "success")
     return redirect(url_for('colegio.lista_permisos'))
+
 
 @colegio_bp.route("/permisos/rechazar/<int:id>", methods=["POST"])
 @login_required
@@ -939,6 +945,13 @@ def rechazar_permiso(id):
     flash("Permiso rechazado", "warning")
     return redirect(url_for('colegio.lista_permisos'))
 
+
+# ==========================================================
+# COORDINADORES
+# ==========================================================
+@colegio_bp.route('/coordinadores')
+@login_required
+@requiere_permiso('secretaria.ver_coordinadores')
 def lista_coordinadores():
     sede_id = request.args.get('sede_id', type=int)
     consulta = Coordinador.query.filter_by(colegio_id=current_user.colegio_id)
@@ -956,7 +969,6 @@ def lista_coordinadores():
 def nuevo_coordinador():
     if request.method == "POST":
         try:
-            # Obtener datos del formulario
             nombre = request.form.get("nombre", "").strip()
             apellido = request.form.get("apellido", "").strip()
             documento = request.form.get("documento", "").strip()
@@ -965,39 +977,28 @@ def nuevo_coordinador():
             direccion = request.form.get("direccion", "").strip()
             sede_id = request.form.get("sede_id")
 
-            # Combinar nombre y apellido
             nombre_completo = f"{nombre} {apellido}".strip()
 
-            # Validaciones básicas
             if not nombre or not apellido or not documento or not email or not sede_id:
                 flash("Complete todos los campos obligatorios correctamente", "danger")
                 return redirect(url_for("colegio.nuevo_coordinador"))
 
-            # BLINDAJE: Forzar que la contraseña sea el documento
-            from werkzeug.security import generate_password_hash
             password_hash = generate_password_hash(documento)
 
-            # Verificar si el email ya existe
-            from app.models.usuario import Usuario
             if Usuario.query.filter_by(email=email).first():
                 flash("El correo electrónico ya está registrado.", "warning")
                 return redirect(url_for("colegio.nuevo_coordinador"))
 
-            # Crear usuario (✅ CORREGIDO: Se eliminó 'activo' porque no existe en el modelo Usuario)
             nuevo_usuario = Usuario(
                 email=email,
                 password_hash=password_hash,
                 rol="coordinador",
                 nombre=nombre_completo,
                 colegio_id=current_user.colegio_id
-                # Si tu modelo Usuario tiene 'is_active', descomenta la siguiente línea:
-                # is_active=True
             )
             db.session.add(nuevo_usuario)
             db.session.flush()
 
-            # Crear coordinador incluyendo dirección y apellido
-            from app.models.coordinador import Coordinador
             nuevo_coord = Coordinador(
                 usuario_id=nuevo_usuario.id,
                 colegio_id=current_user.colegio_id,
@@ -1018,12 +1019,8 @@ def nuevo_coordinador():
             db.session.rollback()
             flash(f"Error al crear coordinador: {str(e)}", "danger")
 
-    # GET: Mostrar formulario
-    from app.models.sede import Sede
     sedes = Sede.query.filter_by(colegio_id=current_user.colegio_id).all()
     return render_template("coordinador/formulario_coordinador.html", sedes=sedes)
-
-
 
 
 @colegio_bp.route('/coordinadores/<int:coordinador_id>/editar', methods=['GET', 'POST'])
@@ -1203,12 +1200,14 @@ def lista_acudientes():
     from app.models.acudiente import Acudiente
     acudientes = Acudiente.query.filter_by(colegio_id=current_user.colegio_id).order_by(Acudiente.nombre).all()
 
+    layout = "secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html"
 
     return render_template(
         "acudientes/acudientes.html",
         acudientes=acudientes,
-
+        layout=layout
     )
+
 
 @colegio_bp.route("/acudientes/nuevo", methods=["GET", "POST"])
 @login_required
@@ -1325,35 +1324,39 @@ def eliminar_acudiente(id):
 @login_required
 def observador():
     flash("El módulo del Observador del Alumno está en construcción.", "info")
-    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
+    return redirect(
+        url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/citaciones")
 @login_required
 def citaciones():
     flash("El módulo de Citaciones está en construcción.", "info")
-    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
+    return redirect(
+        url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/convivencia")
 @login_required
 def convivencia():
     flash("El módulo de Convivencia está en construcción.", "info")
-    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
+    return redirect(
+        url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/seguimiento")
 @login_required
 def seguimiento():
     flash("El módulo de Seguimiento Académico está en construcción.", "info")
-    return redirect(url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
+    return redirect(
+        url_for('secretaria.dashboard') if current_user.rol == 'secretaria' else url_for('colegio.dashboard'))
 
 
 @colegio_bp.route("/piar")
 @login_required
 def piar():
-    # Redirige al dashboard del módulo PIAR que ya creamos
     return redirect(url_for('piar.lista'))
+
 
 # ==========================================================
 # ÁREAS DE GESTIÓN
@@ -1538,11 +1541,9 @@ def eliminar_grupo(sede_id, jornada_id, grupo_id):
 @colegio_bp.route('/grupos/<int:grupo_id>/horario', methods=['GET', 'POST'])
 @login_required
 def horario_grupo(grupo_id):
-    from app.models.jornada_bloque import JornadaBloque
     grupo = Grupo.query.filter_by(id=grupo_id, colegio_id=current_user.colegio_id).first_or_404()
     jornada = grupo.jornada
 
-    # --- Lógica de bloques horarios (igual que antes) ---
     bloques_clase = JornadaBloque.query.filter_by(jornada_id=jornada.id, tipo='clase', activo=True).order_by(
         JornadaBloque.orden).all()
     bloques_hora = [{'inicio': b.hora_inicio.strftime('%H:%M'), 'fin': b.hora_fin.strftime('%H:%M'), 'nombre': b.nombre}
@@ -1574,9 +1575,7 @@ def horario_grupo(grupo_id):
 
     dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 
-    # --- PROCESAMIENTO DEL FORMULARIO ---
     if request.method == 'POST':
-        # 1. PASO 1: Recopilar TODO lo que el usuario envió (sin guardar nada en BD aún)
         datos_formulario = []
         for dia in dias:
             for bloque in bloques_hora:
@@ -1594,19 +1593,16 @@ def horario_grupo(grupo_id):
                             'gm': gm
                         })
 
-        # 2. PASO 2: VALIDAR TODO (si algo falla, redirigir sin guardar NADA)
         for item in datos_formulario:
             gm = item['gm']
             docente = gm.docente
             dia_actual = item['dia'].lower()
             hora_actual = item['hora']
 
-            # 2.1 Validar límite de 22 horas
             horas_asignadas = db.session.query(Clase).join(GrupoMateria,
                                                            Clase.grupo_materia_id == GrupoMateria.id).filter(
                 GrupoMateria.docente_id == docente.id, Clase.activo == True).count()
 
-            # Si es una clase nueva (no existía antes), sumará 1 hora más
             existe_previa = Clase.query.filter_by(
                 colegio_id=current_user.colegio_id,
                 dia=DiaSemana(dia_actual),
@@ -1620,7 +1616,6 @@ def horario_grupo(grupo_id):
                 flash(f"⚠️ El docente '{docente.nombre}' excede 22h semanales. No se guardó nada.", 'danger')
                 return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
 
-            # 2.2 Validar Cruce de Horario (con OTROS grupos)
             cruce = db.session.query(Clase).join(GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id).filter(
                 Clase.colegio_id == current_user.colegio_id,
                 Clase.dia == DiaSemana(dia_actual),
@@ -1637,7 +1632,6 @@ def horario_grupo(grupo_id):
                     'danger')
                 return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
 
-        # 3. PASO 3: Si llegamos aquí, TODO está validado. GUARDAR TODO.
         try:
             for item in datos_formulario:
                 gm = item['gm']
@@ -1672,7 +1666,6 @@ def horario_grupo(grupo_id):
 
         return redirect(url_for('colegio.horario_grupo', grupo_id=grupo.id))
 
-    # --- VARIABLES PARA EL RENDERIZADO (GET) ---
     clases_ocupadas = db.session.query(Clase).join(GrupoMateria, Clase.grupo_materia_id == GrupoMateria.id).filter(
         Clase.colegio_id == current_user.colegio_id,
         Clase.activo == True
@@ -1694,10 +1687,10 @@ def horario_grupo(grupo_id):
                            dias=dias,
                            bloques_hora=bloques_hora)
 
+
 @colegio_bp.route('/jornadas/<int:jornada_id>/configurar-bloques', methods=['GET', 'POST'])
 @login_required
 def configurar_bloques_jornada(jornada_id):
-    from app.models.jornada_bloque import JornadaBloque
     jornada = Jornada.query.filter_by(id=jornada_id, colegio_id=current_user.colegio_id).first_or_404()
     if request.method == 'POST':
         try:
@@ -1732,15 +1725,13 @@ def configurar_bloques_jornada(jornada_id):
 @colegio_bp.route('/plan-estudios', methods=['GET', 'POST'])
 @login_required
 def plan_estudios():
-    from app.models.plan_estudios import PlanEstudios
-    from app.models.nivel_materia import NivelMateria
-
     grado_a_nivel = {'Pre-jardín': 'Preescolar', 'Jardín': 'Preescolar', 'Transición': 'Preescolar', '1°': 'Primaria',
                      '2°': 'Primaria', '3°': 'Primaria', '4°': 'Primaria', '5°': 'Primaria', '6°': 'Bachillerato',
                      '7°': 'Bachillerato', '8°': 'Bachillerato', '9°': 'Bachillerato', '10°': 'Media', '11°': 'Media'}
     grados_estandar = ['Pre-jardín', 'Jardín', 'Transición', '1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°',
                        '10°', '11°']
 
+    # 1. Obtener grados personalizados activos
     grados_personalizados = [g[0] for g in db.session.query(PlanEstudios.grado).filter(
         PlanEstudios.colegio_id == current_user.colegio_id, ~PlanEstudios.grado.in_(grados_estandar),
         PlanEstudios.activo == True).distinct().order_by(PlanEstudios.grado).all()]
@@ -1750,38 +1741,73 @@ def plan_estudios():
     grados_otras_modalidades = [g for g in grados_personalizados if g not in grados_programas_especiales]
     grados = grados_estandar + grados_programas_especiales + grados_otras_modalidades
 
-    # Agrupamos las materias por grado usando el Plan de Estudios
+    # 2. Obtener plan actual (solo activos con horas > 0 para la tabla principal)
     plan_actual = PlanEstudios.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
-    
-    # Obtenemos todos los grados únicos que tienen plan de estudios
     grados_con_plan = sorted(list(set([p.grado for p in plan_actual])))
-    
+
+    # 3. Construir diccionario de materias por nivel/grado
     materias_por_nivel = {}
     for grado in grados_con_plan:
         materias_ids = [p.materia_id for p in plan_actual if p.grado == grado]
         materias = Materia.query.filter(Materia.id.in_(materias_ids)).order_by(Materia.nombre).all()
         materias_por_nivel[grado] = materias
-    
-    # Fallback: si no hay plan de estudios, mostrar todas las materias
-    if not materias_por_nivel:
-        todas = Materia.query.order_by(Materia.nombre).all()
-        materias_por_nivel = {'Sin Plan de Estudios': todas}
 
+    # 🆕 CORRECCIÓN CRÍTICA: Asignar materias a grados personalizados SIN horas activas
+    # Esto permite que "ACELERACIÓN I" muestre sus columnas aunque tenga 0 horas
+    def obtener_materias_de_configuracion(nombre_nivel):
+        nm_ids = db.session.query(NivelMateria.materia_id).filter_by(
+            nivel_educativo=nombre_nivel, activo=True
+        ).all()
+        materia_ids = [x[0] for x in nm_ids]
+        if not materia_ids:
+            return []
+        return Materia.query.filter(Materia.id.in_(materia_ids)).order_by(Materia.nombre).all()
 
-    # Fallback para niveles vacíos
+    materias_pe_config = obtener_materias_de_configuracion('Programas Especiales')
+    materias_mod_config = obtener_materias_de_configuracion('Modalidades')
+
+    for grado in grados_personalizados:
+        if grado not in materias_por_nivel or not materias_por_nivel[grado]:
+            grado_lower = grado.lower()
+            if any(p in grado_lower for p in palabras_especiales):
+                # Si es programa especial y no tiene plan activo, usar config de PE
+                materias_por_nivel[grado] = materias_pe_config if materias_pe_config else []
+            else:
+                # Si es otra modalidad, usar config de Modalidades
+                materias_por_nivel[grado] = materias_mod_config if materias_mod_config else []
+
+    # Fallback global si no hay nada
     todas_materias = Materia.query.order_by(Materia.nombre).all()
-    for nivel in materias_por_nivel:
+    if not materias_por_nivel:
+        materias_por_nivel = {'Sin Plan de Estudios': todas_materias}
+
+    # Asegurar que ningún nivel quede sin lista (evita errores en template)
+    for nivel in list(materias_por_nivel.keys()):
         if not materias_por_nivel[nivel]:
             materias_por_nivel[nivel] = todas_materias
 
-    plan_actual = PlanEstudios.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
+    # Diccionario para inputs del formulario (grado, materia_id) -> horas
     plan_dict = {(p.grado, p.materia_id): p.horas_semanales for p in plan_actual}
 
+    # --- LÓGICA POST (Guardar cambios) ---
     if request.method == 'POST':
         nuevo_grado = request.form.get('nuevo_grado', '').strip()
         if nuevo_grado:
             if not PlanEstudios.query.filter_by(colegio_id=current_user.colegio_id, grado=nuevo_grado).first():
-                flash(f'Grado "{nuevo_grado}" agregado.', 'success')
+                primera_materia = Materia.query.first()
+                if primera_materia:
+                    nuevo_plan = PlanEstudios(
+                        colegio_id=current_user.colegio_id,
+                        grado=nuevo_grado,
+                        materia_id=primera_materia.id,
+                        horas_semanales=0,
+                        activo=True
+                    )
+                    db.session.add(nuevo_plan)
+                    db.session.commit()
+                    flash(f'Grado "{nuevo_grado}" agregado.', 'success')
+                else:
+                    flash('Debes crear al menos una materia antes de agregar grados personalizados.', 'danger')
             else:
                 flash(f'El grado "{nuevo_grado}" ya existe.', 'warning')
             return redirect(url_for('colegio.plan_estudios'))
@@ -1795,54 +1821,68 @@ def plan_estudios():
 
         try:
             grados_form = request.form.getlist('grado[]')
-            materia_ids = request.form.getlist('materia_id[]')
-            horas = request.form.getlist('horas[]')
+            materia_ids_form = request.form.getlist('materia_id[]')
+            horas_form = request.form.getlist('horas[]')
+
             for i in range(len(grados_form)):
                 grado = grados_form[i]
-                materia_id = materia_ids[i]
-                horas_semanales = int(horas[i]) if horas[i] else 0
-                plan = PlanEstudios.query.filter_by(colegio_id=current_user.colegio_id, grado=grado,
-                                                    materia_id=materia_id).first()
-                if horas_semanales > 0:
+                mid = materia_ids_form[i]
+                h = int(horas_form[i]) if horas_form[i] else 0
+
+                plan = PlanEstudios.query.filter_by(
+                    colegio_id=current_user.colegio_id,
+                    grado=grado,
+                    materia_id=mid
+                ).first()
+
+                if h > 0:
                     if plan:
-                        plan.horas_semanales = horas_semanales
+                        plan.horas_semanales = h
                     else:
-                        db.session.add(
-                            PlanEstudios(colegio_id=current_user.colegio_id, grado=grado, materia_id=materia_id,
-                                         horas_semanales=horas_semanales, activo=True))
+                        db.session.add(PlanEstudios(
+                            colegio_id=current_user.colegio_id,
+                            grado=grado,
+                            materia_id=mid,
+                            horas_semanales=h,
+                            activo=True
+                        ))
                 else:
                     if plan:
                         db.session.delete(plan)
+
             db.session.commit()
-            flash('Plan de estudios actualizado', 'success')
+            flash('Plan de estudios actualizado correctamente.', 'success')
             return redirect(url_for('colegio.plan_estudios'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error: {str(e)}', 'danger')
+            flash(f'Error al guardar: {str(e)}', 'danger')
 
-    # OBTENER MATERIAS DESDE LA CONFIGURACIÓN DE NIVELES (NivelMateria)
-    # Esto asegura que el Plan de Estudios refleje EXACTAMENTE lo configurado en "Configurar Materias por Nivel"
-    
-    def obtener_materias_por_nivel(nombre_nivel):
+    # --- PREPARAR DATOS PARA TEMPLATE (Secciones estándar) ---
+    def obtener_materias_por_nivel_std(nombre_nivel):
         nm_ids = db.session.query(NivelMateria.materia_id).filter_by(
             nivel_educativo=nombre_nivel, activo=True
         ).all()
         materia_ids = [x[0] for x in nm_ids]
         if not materia_ids:
-            return []
+            return todas_materias  # Fallback a todas si no hay config
         return Materia.query.filter(Materia.id.in_(materia_ids)).order_by(Materia.nombre).all()
 
-    materias_preescolar = obtener_materias_por_nivel('Preescolar')
-    materias_primaria = obtener_materias_por_nivel('Primaria')
-    materias_bachillerato = obtener_materias_por_nivel('Bachillerato')
-    materias_media = obtener_materias_por_nivel('Media')
-    
-    # Para "Otras Modalidades", usamos todas las materias que no estén en los niveles estándar
+    materias_preescolar = obtener_materias_por_nivel_std('Preescolar')
+    materias_primaria = obtener_materias_por_nivel_std('Primaria')
+    materias_bachillerato = obtener_materias_por_nivel_std('Bachillerato')
+    materias_media = obtener_materias_por_nivel_std('Media')
+
+    # 🆕 CORRECCIÓN CRÍTICA: Obtener materias para PROGRAMAS ESPECIALES
+    materias_programas_especiales = obtener_materias_por_nivel_std('Programas Especiales')
+
+    # Materias para validación (las que NO están en niveles estándar)
     ids_excluidos = set()
     for lvl in ['Preescolar', 'Primaria', 'Bachillerato', 'Media']:
-        ids_excluidos.update([x[0] for x in db.session.query(NivelMateria.materia_id).filter_by(nivel_educativo=lvl, activo=True).all()])
-    
-    materias_validacion = Materia.query.filter(~Materia.id.in_(ids_excluidos)).order_by(Materia.nombre).all() if ids_excluidos else Materia.query.order_by(Materia.nombre).all()
+        ids_excluidos.update(
+            [x[0] for x in db.session.query(NivelMateria.materia_id).filter_by(nivel_educativo=lvl, activo=True).all()])
+
+    materias_validacion = Materia.query.filter(~Materia.id.in_(ids_excluidos)).order_by(
+        Materia.nombre).all() if ids_excluidos else todas_materias
 
     return render_template('colegio/plan_estudios.html',
                            materias=todas_materias,
@@ -1857,15 +1897,14 @@ def plan_estudios():
                            materias_primaria=materias_primaria,
                            materias_bachillerato=materias_bachillerato,
                            materias_media=materias_media,
-                           materias_validacion=materias_validacion)
-
+                           materias_validacion=materias_validacion,
+                           materias_programas_especiales=materias_programas_especiales)  # 🆕 AGREGADO AQUÍ
 
 @colegio_bp.route('/materias')
 @login_required
 @requiere_permiso('secretaria.ver_materias')
 def lista_materias():
     return render_template('colegio/materias.html', materias=Materia.query.order_by(Materia.nombre).all())
-
 
 
 @colegio_bp.route('/materias/nueva', methods=['GET', 'POST'])
@@ -1909,7 +1948,6 @@ def editar_materia(id):
 @login_required
 def eliminar_materia(id):
     materia = Materia.query.get_or_404(id)
-    from app.models.plan_estudios import PlanEstudios
     if PlanEstudios.query.filter_by(materia_id=id).first() or GrupoMateria.query.filter_by(materia_id=id).first():
         flash('No se puede eliminar: está en uso', 'danger')
         return redirect(url_for('colegio.lista_materias'))
@@ -1920,33 +1958,80 @@ def eliminar_materia(id):
     return redirect(url_for('colegio.lista_materias'))
 
 
+
 @colegio_bp.route('/configurar-materias-por-nivel', methods=['GET', 'POST'])
 @login_required
 def configurar_materias_nivel():
-    from app.models.nivel_materia import NivelMateria
     if request.method == 'POST':
         try:
             nivel = request.form.get('nivel')
-            campo_materias = f'materia_ids_{nivel.lower().replace(" ", "_").replace("é", "e")}'
+            campo_materias = f'materia_ids_{nivel.lower().replace(" ", "_").replace("é", "e").replace("í", "i")}'
             materia_ids = request.form.getlist(campo_materias)
+
+            # Eliminar asignaciones anteriores de este nivel
             NivelMateria.query.filter_by(nivel_educativo=nivel).delete()
+
+            # Crear nuevas asignaciones
             for idx, mid in enumerate(materia_ids):
                 if mid:
-                    db.session.add(NivelMateria(nivel_educativo=nivel, materia_id=int(mid), orden=idx, activo=True))
+                    db.session.add(NivelMateria(
+                        nivel_educativo=nivel,
+                        materia_id=int(mid),
+                        orden=idx,
+                        activo=True
+                    ))
+
+            # 🆕 CORRECCIÓN CRÍTICA: Si es "Programas Especiales", sincronizar con plan_estudios
+            if nivel == 'Programas Especiales':
+                # Obtener todos los grados personalizados que sean programas especiales
+                palabras_especiales = ['aceleración', 'brújula', 'refuerzo', 'integración', 'especial']
+                grados_existentes = db.session.query(PlanEstudios.grado).filter(
+                    PlanEstudios.colegio_id == current_user.colegio_id,
+                    ~PlanEstudios.grado.in_(
+                        ['Pre-jardín', 'Jardín', 'Transición', '1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°',
+                         '10°', '11°'])
+                ).distinct().all()
+
+                grados_especiales = [g[0] for g in grados_existentes
+                                     if any(p in g[0].lower() for p in palabras_especiales)]
+
+                # Para cada grado especial, asegurar que tenga registros en plan_estudios
+                for grado_nombre in grados_especiales:
+                    for mid in materia_ids:
+                        if mid:
+                            existe = PlanEstudios.query.filter_by(
+                                colegio_id=current_user.colegio_id,
+                                grado=grado_nombre,
+                                materia_id=int(mid)
+                            ).first()
+
+                            if not existe:
+                                db.session.add(PlanEstudios(
+                                    colegio_id=current_user.colegio_id,
+                                    grado=grado_nombre,
+                                    materia_id=int(mid),
+                                    horas_semanales=0,
+                                    activo=True
+                                ))
+
             db.session.commit()
-            flash(f'Materias del nivel "{nivel}" actualizadas', 'success')
+            flash(f'Materias del nivel "{nivel}" actualizadas correctamente.', 'success')
             return redirect(url_for('colegio.configurar_materias_nivel'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error: {str(e)}', 'danger')
+            flash(f'Error al guardar: {str(e)}', 'danger')
 
-    niveles = ['Preescolar', 'Primaria', 'Bachillerato', 'Media', 'Modalidades']
+    niveles = ['Preescolar', 'Primaria', 'Bachillerato', 'Media', 'Modalidades', 'Programas Especiales']
     todas_materias = Materia.query.order_by(Materia.nombre).all()
     materias_por_nivel = {}
+
     for nivel in niveles:
         nm_list = NivelMateria.query.filter_by(nivel_educativo=nivel, activo=True).order_by(NivelMateria.orden).all()
         materias_por_nivel[nivel] = [nm.materia for nm in nm_list]
-    return render_template('colegio/configurar_materias_nivel.html', niveles=niveles, todas_materias=todas_materias,
+
+    return render_template('colegio/configurar_materias_nivel.html',
+                           niveles=niveles,
+                           todas_materias=todas_materias,
                            materias_por_nivel=materias_por_nivel)
 
 
@@ -1962,6 +2047,7 @@ def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None)
     from app.models.grupo_materia import GrupoMateria
     from app.models.plan_estudios import PlanEstudios
     from sqlalchemy import func
+    import re
 
     colegio_id = current_user.colegio_id
 
@@ -1977,27 +2063,19 @@ def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None)
 
     grupos = grupos_query.order_by(Grupo.grado, Grupo.nombre).all()
 
-    # 2. Detectar nivel automáticamente basado en materias del Plan
+    # 2. Detectar nivel automáticamente basado en el NÚMERO del grado o palabras clave
     def detectar_nivel(grado_raw):
-        """
-        Detecta el nivel educativo basado en el NÚMERO del grado.
-        Es mucho más robusto que depender de las materias del plan de estudios.
-
-        - Preescolar/Jardín/Transición → PREESCOLAR
-        - 1° a 5° → PRIMARIA
-        - 6° a 9° → BACHILLERATO
-        - 10° y 11° → MEDIA ACADÉMICA
-        - Sin número reconocible → OTRAS MODALIDADES
-        """
         grado_limpio = grado_raw.replace('°', '').replace('º', '').strip().lower()
 
-        # 1. Detectar palabras clave del nivel
-        if any(kw in grado_limpio for kw in
-               ['jardín', 'jardin', 'transición', 'transicion', 'preescolar', 'kinder', 'párvulo', 'parvulo']):
+        # 1. Detectar Programas Especiales
+        if any(kw in grado_limpio for kw in ['aceleración', 'aceleracion', 'brújula', 'brujula', 'refuerzo', 'integración', 'integracion', 'especial']):
+            return 'PROGRAMAS ESPECIALES'
+
+        # 2. Detectar Preescolar
+        if any(kw in grado_limpio for kw in ['jardín', 'jardin', 'transición', 'transicion', 'preescolar', 'kinder', 'párvulo', 'parvulo', 'pre-jardin', 'prejardin']):
             return 'PREESCOLAR'
 
-        # 2. Extraer el número del grado (ej: "1a" → 1, "11b" → 11)
-        import re
+        # 3. Extraer el número
         match = re.match(r'^(\d+)', grado_limpio)
         if not match:
             return 'OTRAS MODALIDADES'
@@ -2012,6 +2090,7 @@ def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None)
             return 'MEDIA ACADÉMICA'
         else:
             return 'OTRAS MODALIDADES'
+
     # 3. Agrupar grupos por nivel detectado
     grupos_por_nivel = {}
     for g in grupos:
@@ -2061,7 +2140,6 @@ def _cargar_datos_carga_academica(sede_id=None, jornada_id=None, grado_url=None)
         GrupoMateria.activo == True
     ).all() if grupo_ids else []
 
-    # Diccionario rápido: {(grupo_id, materia_id): docente_id}
     asignaciones_dict = {(a.grupo_id, a.materia_id): a.docente_id for a in asignaciones}
 
     sedes = Sede.query.filter_by(colegio_id=colegio_id, activo=True).order_by(Sede.nombre).all()
@@ -2102,10 +2180,6 @@ def gestion_carga_academica():
 @login_required
 def guardar_carga_academica():
     """Guarda asignaciones con validaciones robustas y RENDERIZA directamente tras éxito"""
-    from app.models.grupo_materia import GrupoMateria
-    from app.models.plan_estudios import PlanEstudios
-    from sqlalchemy import func
-
     try:
         # Obtener todos los grupos activos del colegio
         grupos = Grupo.query.filter_by(colegio_id=current_user.colegio_id, activo=True).all()
@@ -2144,7 +2218,6 @@ def guardar_carga_academica():
             msg = "; ".join(
                 [f"Grado {g}: Plan={d['plan']}h, Asignadas={d['asignadas']}h" for g, d in errores_grado.items()])
             flash(f"⚠️ Error: Horas exceden el Plan de Estudios. Detalles: {msg}", 'danger')
-            # En caso de error SÍ hacemos redirect para limpiar form
             return redirect(url_for('colegio.gestion_carga_academica'))
 
         # 3. VALIDAR MÁXIMO 22H POR DOCENTE
@@ -2213,7 +2286,6 @@ def guardar_carga_academica():
         # No usamos redirect, sino que recargamos los datos y pintamos la página
         data = _cargar_datos_carga_academica()
         return render_template('colegio/carga_academica.html', **data)
-
 
     except Exception as e:
         db.session.rollback()
@@ -2304,7 +2376,6 @@ def eliminar_periodo(id):
     return redirect(url_for('colegio.configurar_periodos'))
 
 
-
 # ==========================================================
 # GESTIÓN DE PERIODOS ACADÉMICOS (EXCLUSIVO: HABILITACIÓN DE EDICIÓN)
 # El Rector SOLO abre/cierra ventanas de edición. NO crea periodos.
@@ -2343,7 +2414,6 @@ def administrar_periodos():
     return render_template("colegio/administrar_periodos.html", periodos=periodos, configs=configs)
 
 
-
 @colegio_bp.route("/api/periodo/toggle-edicion", methods=["POST"])
 @login_required
 def toggle_edicion_periodo():
@@ -2374,8 +2444,6 @@ def toggle_edicion_periodo():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
-
 
 
 # ════════════════════════════════════════════════════════════════
@@ -2410,17 +2478,10 @@ def api_docentes_por_sede(sede_id):
 
     return jsonify(data)
 
+
 # ════════════════════════════════════════════════════════════════
 # USUARIOS OPERATIVOS: SECRETARIAS Y PORTEROS
 # ════════════════════════════════════════════════════════════════
-
-from app.services.colegio_usuarios_service import (
-    crear_usuario_operativo,
-    editar_usuario_operativo,
-    listar_usuarios_operativos,
-    ROLES_PERMITIDOS,
-)
-
 
 @colegio_bp.route("/usuarios-operativos")
 @login_required
@@ -2468,7 +2529,6 @@ def lista_usuarios_operativos_ruta():
         is_active=True,
     ).count()
 
-
     return render_template(
         "colegio/usuarios_operativos.html",
         usuarios=usuarios,
@@ -2478,7 +2538,6 @@ def lista_usuarios_operativos_ruta():
         total_profesional_piar=total_profesional_piar,
         total_psicologos=total_psicologos,
         limite_sin_costo=3,
-
     )
 
 
@@ -2569,8 +2628,9 @@ def nuevo_usuario_operativo_ruta():
         titulo="Nuevo Usuario Operativo",
         rol_default=rol_default,
         sedes=sedes,
-        layout=layout
+        layout=layout if 'layout' in locals() else None
     )
+
 
 @colegio_bp.route("/usuarios-operativos/<int:usuario_id>/cambiar-estado", methods=["POST"])
 @login_required
@@ -2607,6 +2667,7 @@ def cambiar_estado_usuario_operativo_ruta(usuario_id):
         flash(f"Error: {str(e)}", "danger")
 
     return redirect(url_for("colegio.lista_usuarios_operativos_ruta"))
+
 
 @colegio_bp.route("/usuarios-operativos/<int:usuario_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -2679,10 +2740,6 @@ def editar_usuario_operativo_ruta(usuario_id):
 # PERMISOS FINOS DE USUARIO (solo admin del colegio)
 # ════════════════════════════════════════════════════════════════
 
-from app.utils.permisos_catalogo import CATALOGO, catalogo_por_grupo
-from app.models.permiso_usuario import PermisoUsuario
-
-
 @colegio_bp.route("/usuarios-operativos/<int:usuario_id>/permisos", methods=["GET", "POST"])
 @login_required
 def editar_permisos_usuario_ruta(usuario_id):
@@ -2737,11 +2794,8 @@ def editar_permisos_usuario_ruta(usuario_id):
         "colegio/formulario_permisos_usuario.html",
         usuario=usuario,
         permisos_actuales=permisos_actuales,
-        catalogo_por_grupo=catalogo_por_grupo() # 👈 CORRECCIÓN: Nombre exacto que espera el HTML
+        catalogo_por_grupo=catalogo_por_grupo()
     )
-
-
-from flask import send_file
 
 
 @colegio_bp.route("/permisos/imprimir/<int:id>")

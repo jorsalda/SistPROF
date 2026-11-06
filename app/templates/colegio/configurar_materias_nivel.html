@@ -177,7 +177,7 @@ Configurar Materias por Nivel
                                 </td>
                             </tr>
 
-                            <!-- MEDIA -->
+                            <!-- MEDIA ACADÉMICA -->
                             <tr class="table-info">
                                 <td colspan="3" class="text-center fw-bold py-2">
                                     <i class="bi bi-mortarboard-fill text-info"></i> MEDIA ACADÉMICA
@@ -215,10 +215,10 @@ Configurar Materias por Nivel
                                 </td>
                             </tr>
 
-                            <!-- MODALIDADES ESPECIALES -->
+                            <!-- MODALIDADES -->
                             <tr class="table-secondary">
                                 <td colspan="3" class="text-center fw-bold py-2">
-                                    <i class="bi bi-stars text-dark"></i> MODALIDADES ESPECIALES
+                                    <i class="bi bi-stars text-dark"></i> MODALIDADES
                                 </td>
                             </tr>
                             <tr>
@@ -252,6 +252,45 @@ Configurar Materias por Nivel
                                     </button>
                                 </td>
                             </tr>
+
+                            <!-- PROGRAMAS ESPECIALES (NUEVO) -->
+                            <tr class="table-danger">
+                                <td colspan="3" class="text-center fw-bold py-2">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger"></i> PROGRAMAS ESPECIALES
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold bg-light">
+                                    <i class="bi bi-exclamation-triangle text-danger"></i> Programas Especiales
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        {% for materia in todas_materias %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    name="materia_ids_programas_especiales"
+                                                    value="{{ materia.id }}"
+                                                    id="programas_especiales_materia_{{ materia.id }}"
+                                                    {% if materia in materias_por_nivel.get('Programas Especiales', []) %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label" for="programas_especiales_materia_{{ materia.id }}">
+                                                    {{ materia.nombre }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="submit" name="nivel" value="Programas Especiales" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </td>
+                            </tr>
+
                         </tbody>
                     </table>
                 </div>

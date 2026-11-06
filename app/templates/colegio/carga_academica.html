@@ -67,6 +67,7 @@
     .header-primaria    { background-color: #d4edda !important; color: #155724 !important; }
     .header-bachillerato{ background-color: #cce5ff !important; color: #004085 !important; }
     .header-media       { background-color: #d1ecf1 !important; color: #0c5460 !important; }
+    .header-especiales  { background-color: #f8d7da !important; color: #721c24 !important; }
     .header-otras       { background-color: #e2e3e5 !important; color: #383d41 !important; }
 </style>
 
@@ -78,9 +79,6 @@
             <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>Gestión de Carga Académica</h2>
             <p class="text-muted mb-0">Asigne materias a grupos y distribuya la carga docente</p>
         </div>
-        <!-- <a href="#" class="btn btn-outline-primary disabled">
-    <i class="bi bi-bar-chart me-2"></i>Ver Resumen (Próximamente)
-</a> -->
     </div>
 
     <!-- Filtros -->
@@ -148,6 +146,8 @@
                 <span class="badge header-bachillerato px-3 py-2 fs-6"><i class="bi bi-book-fill me-1"></i>{{ nivel }}</span>
             {% elif nivel == 'MEDIA ACADÉMICA' %}
                 <span class="badge header-media px-3 py-2 fs-6"><i class="bi bi-star-fill me-1"></i>{{ nivel }}</span>
+            {% elif nivel == 'PROGRAMAS ESPECIALES' %}
+                <span class="badge header-especiales px-3 py-2 fs-6"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ nivel }}</span>
             {% else %}
                 <span class="badge header-otras px-3 py-2 fs-6"><i class="bi bi-gear-fill me-1"></i>{{ nivel }}</span>
             {% endif %}

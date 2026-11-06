@@ -134,17 +134,24 @@
                     <i class="bi bi-chevron-down ms-auto" style="font-size: 0.7em;"></i>
                 </a>
                 <ul class="submenu" style="display: none; padding-left: 1.5rem;">
+                     <li class="menu-item">
+                        <a href="{{ url_for('colegio.lista_materias') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
+                            <i class="bi bi-book"></i> Materias
+                        </a>
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.configurar_materias_nivel') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.configurar_materias_nivel' %}active{% endif %}">
+                            <i class="bi bi-sliders"></i> Configurar Materias por Nivel
+                        </a>
+                    </li>
                     <li class="menu-item">
                         <a href="{{ url_for('colegio.plan_estudios') }}"
                            class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
                             <i class="bi bi-grid-3x3-gap"></i> Plan de Estudios
                         </a>
                     </li>
-                    <li class="menu-item">
-                        <a href="{{ url_for('colegio.lista_materias') }}"
-                           class="menu-link {% if request.endpoint == 'colegio.lista_materias' %}active{% endif %}">
-                            <i class="bi bi-book"></i> Materias
-                        </a>
+
                     </li>
 
                     <li class="menu-item">
@@ -153,12 +160,7 @@
                             <i class="bi bi-journal-bookmark"></i> Carga Académica
                         </a>
                     </li>
-                    <li class="menu-item">
-                        <a href="{{ url_for('colegio.configurar_materias_nivel') }}"
-                           class="menu-link {% if request.endpoint == 'colegio.configurar_materias_nivel' %}active{% endif %}">
-                            <i class="bi bi-sliders"></i> Configurar Materias por Nivel
-                        </a>
-                    </li>
+
                 </ul>
             </li>
 
