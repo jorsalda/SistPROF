@@ -583,6 +583,61 @@ Se agregó un `try/except` alrededor de la consulta en `ver_planilla`:
 - Coordinar con TEMA-001 (reconciliación Supabase vs local).
 
 
+
+---
+
+## TEMA-029: Dropdown de grados depende del Plan de Estudios (error de diseño)
+
+**Prioridad:** Alta
+**Estado:** Pendiente de corrección
+**Fecha de registro:** 2026-11-06
+**Origen:** Chat Módulo Novedades y Asistencia
+
+### Contexto
+En el formulario "Nuevo Grupo" (/dashboard/sedes/<id>/jornadas/<id>/grupos/nuevo),
+el dropdown de "Grado" NO muestra todos los grados posibles, solo los que
+tienen materias configuradas en el Plan de Estudios del colegio.
+
+**Sintoma observado:**
+- Local: el dropdown muestra "ACELERACION I" (porque tiene materias asignadas).
+- Produccion: el dropdown NO muestra "ACELERACION I" (porque el colegio
+  "JUAN CARVAJAL" tiene "ACELERACION" en el Plan de Estudios pero sin materias
+  ni horas configuradas).
+- Ademas: inconsistencia de nombres ("ACELERACION" vs "ACELERACION I").
+
+### Por que es un error de diseno
+El dropdown deberia ser una lista fija y consistente de grados posibles
+(estandar + modalidades), independiente de la configuracion del Plan de Estudios.
+Si un colegio quiere crear un grupo de "ACELERACION I" pero aun no ha configurado
+sus materias, el dropdown deberia permitirlo igual.
+
+### Consecuencia actual
+- El colegio no puede crear grupos de modalidades (Aceleracion, Brujula,
+  Refuerzo, Integracion, etc.) hasta que configure manualmente el Plan de Estudios.
+- El comportamiento varia entre local y produccion sin razon aparente.
+- El admin puede interpretar que "el deploy no funciono" (cuando si funciono).
+
+### Plan de correccion (por definir)
+1. Identificar de donde se alimenta hoy el dropdown (plan_estudios? lista estatica?).
+2. Definir la lista canonica de grados posibles:
+   - Preescolar: Pre-jardin, Jardin, Transicion.
+   - Primaria: 1 a 5.
+   - Bachillerato: 6 a 9.
+   - Media: 10, 11.
+   - Programas Especiales: Aceleracion I, Aceleracion II, Brujula, Refuerzo,
+     Integracion (definir cuales).
+   - Otras modalidades: Bilingue 5, Inmersion 3, etc.
+3. Hacer que el dropdown se alimente de esa lista (no del Plan de Estudios).
+4. Validar que al crear el grupo, si el grado no tiene materias configuradas,
+   se cree igual (con advertencia opcional, no bloqueante).
+5. Alinear local y produccion con la misma lista.
+6. Documentar la lista en docs/.
+
+### Reglas
+- NO tocar el Plan de Estudios sin autorizacion.
+- NO crear nuevos grados sin aprobacion explicita.
+- Coordinar con TEMA-001 (reconciliacion Supabase).
+
 # TEMAS CERRADOS
 
 <!--
