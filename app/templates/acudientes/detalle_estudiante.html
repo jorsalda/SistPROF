@@ -1,0 +1,52 @@
+{% extends "acudientes/acudiente_base.html" %}
+
+{% block header_title %}Detalle del Estudiante{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="bi bi-person-badge"></i> {{ estudiante.nombre }} {{ estudiante.apellido }}</h2>
+        <a href="{{ url_for('acudiente.mis_estudiantes') }}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Información Básica -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">Información</div>
+                <div class="card-body">
+                    <p><strong>Grado:</strong> {{ estudiante.grado }} {{ estudiante.grupo }}</p>
+                    <p><strong>Jornada:</strong> {{ estudiante.jornada }}</p>
+                    <p><strong>Promedio General:</strong> {{ promedio_general }}</p>
+                    <p><strong>Asistencia:</strong> {{ asistencia_stats.porcentaje }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calificaciones -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white">Calificaciones</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Materia</th><th>Promedio</th><th>Desempeño</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for cal in calificaciones %}
+                            <tr>
+                                <td>{{ cal.materia }}</td>
+                                <td>{{ cal.calificacion }}</td>
+                                <td>{{ cal.desempeno }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center py-3 text-muted">Sin calificaciones registradas.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

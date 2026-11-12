@@ -9,6 +9,8 @@ class JustificacionAcudiente(db.Model):
 
     descripcion = db.Column(db.Text, nullable=False)
 
+    justificacion = db.Column(db.Text, nullable=True)
+
     fecha = db.Column(
         db.DateTime,
         default=datetime.utcnow,

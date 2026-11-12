@@ -30,7 +30,8 @@
 
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">Materia *</label>
-                    <select name="seleccion" id="materia_select" class="form-select" required onchange="this.form.submit()">
+                    <!-- ✅ CORRECCIÓN: Se quitó el onchange="this.form.submit()" -->
+                    <select name="seleccion" id="materia_select" class="form-select" required>
                         <option value="">Seleccione...</option>
                         {% for op in opciones_materias %}
                         <option value="{{ op.id }}-{{ op.grupo_id }}"
@@ -224,6 +225,13 @@ document.addEventListener('DOMContentLoaded', function() {
             grupoId = parseInt(parts[1]);
         }
 
+        if (!materiaId || !grupoId) {
+            alert('❌ Por favor, selecciona una materia válida.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
         // ✅ DETECTAR SI ES EDICIÓN O CREACIÓN
         const competenciaId = document.getElementById('competencia_id_edicion').value;
         const esEdicion = competenciaId !== '';
@@ -257,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 result = await response.json();
             } catch (jsonErr) {
-                throw new Error(`Respuesta inválida (${response.status})`);
+                throw new Error(`Respuesta inválida del servidor (${response.status})`);
             }
 
             if (!response.ok) throw new Error(result.error || `Error (${response.status})`);

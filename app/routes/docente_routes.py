@@ -10,7 +10,8 @@ import re
 import os  # ✅ NUEVO
 import uuid  # ✅ NUEVO
 from werkzeug.utils import secure_filename  # ✅ NUEVO
-from sqlalchemy import or_
+from sqlalchemy import or_, text  # ✅ IMPORTANTE: text para SQL crudo
+from sqlalchemy import func, desc
 # Imports de Modelos Existentes
 from app.models.pregunta import Pregunta
 from app.models.materia import Materia
@@ -33,6 +34,7 @@ from app.models.periodo_academico import PeriodoAcademico
 from app.models.configuracion_periodo import ConfiguracionPeriodo
 from app.models.nota_componente import NotaComponenteEstudiante
 from app.services.ia_service import generar_analisis_pedagogico, logger
+from app.models.colegio import Colegio  # ✅ IMPORTANTE: Colegio para la configuración
 
 # ✅ BLUEPRINT DEFINIDO DESPUÉS DE TODOS LOS IMPORTS
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
@@ -243,7 +245,7 @@ def nuevo_permiso_docente():
 
             permiso = Permiso(
                 docente_id=docente.id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
-                tipo=tipo, observacion=observacion if observacion else None, 
+                tipo=tipo, observacion=observacion if observacion else None,
                 colegio_id=docente.colegio_id, estado='pendiente'
             )
             db.session.add(permiso)
@@ -616,11 +618,15 @@ def crear_desde_banco():
             import traceback
             traceback.print_exc()
 
+    from app.models.tipo_examen import TipoExamen
+    tipos_examen = TipoExamen.query.filter_by(activo=True).all()
+
     return render_template(
         "examenes/crear_examen.html",
         docente=docente,
         materias=materias,
-        grupos=grupos_docente,  # ✅ Enviamos los grupos a la plantilla
+        grupos=grupos_docente,
+        tipos_examen=tipos_examen,  # ✅ Agregado para llenar el desplegable
         preguntas_banco=preguntas_banco
     )
 
@@ -1031,10 +1037,6 @@ def ver_planilla_selector():
 @docente_bp.route("/planilla/<int:grupo_id>/<int:materia_id>", methods=["GET", "POST"])
 @login_required
 def ver_planilla(grupo_id, materia_id):
-    """
-    GET: Muestra la planilla de calificaciones (1 columna por competencia).
-    POST: Guarda las notas y niveles de desempeño.
-    """
     if current_user.rol not in ['docente', 'coordinador']:
         abort(403)
 
@@ -1061,6 +1063,12 @@ def ver_planilla(grupo_id, materia_id):
 
     periodo_id = periodo.id
 
+    from app.models.colegio import Colegio
+    colegio = Colegio.query.get(docente.colegio_id)
+    activa_recuperacion = colegio.activa_recuperacion if colegio else False
+    nota_minima_recuperacion = float(
+        colegio.nota_minima_recuperacion) if colegio and colegio.nota_minima_recuperacion else 3.0
+
     try:
         config_eval = db.session.execute(text("""
             SELECT tipo_captura FROM configuracion_evaluacion 
@@ -1071,9 +1079,6 @@ def ver_planilla(grupo_id, materia_id):
         db.session.rollback()
         tipo_captura = 'NUMERICA'
 
-    # ========================================================================
-    # POST: GUARDAR NOTAS Y NIVELES
-    # ========================================================================
     if request.method == "POST":
         try:
             db.session.execute(
@@ -1087,11 +1092,13 @@ def ver_planilla(grupo_id, materia_id):
                 componentes = data.get('componentes', {})
                 ponderaciones = data.get('ponderaciones', {})
                 niveles = data.get('niveles', {})
+                recuperaciones = data.get('recuperaciones', {})
             else:
                 notas = {}
                 componentes = {}
                 ponderaciones = {}
                 niveles = {}
+                recuperaciones = {}
                 for key, val in request.form.items():
                     if key.startswith('nota_'):
                         parts = key.split('_')
@@ -1117,12 +1124,18 @@ def ver_planilla(grupo_id, materia_id):
                             if est_id not in niveles:
                                 niveles[est_id] = {}
                             niveles[est_id][comp_id] = val
+                    elif key.startswith('recuperacion_'):
+                        parts = key.split('_')
+                        if len(parts) == 3:
+                            est_id = parts[1]
+                            if est_id not in recuperaciones:
+                                recuperaciones[est_id] = {}
+                            recuperaciones[est_id]['valor'] = val
 
             for est_id, competencias in notas.items():
                 for comp_id, valor in competencias.items():
                     if valor is None or str(valor).strip() == '':
                         continue
-
                     nota_val = float(valor)
                     if nota_val < 0 or nota_val > 5:
                         msg = f"Nota fuera de rango (0-5): {nota_val}"
@@ -1164,20 +1177,16 @@ def ver_planilla(grupo_id, materia_id):
                 for comp_id, nivel in comps.items():
                     if not nivel or str(nivel).strip() == '':
                         continue
-
                     indicador = IndicadorLogro.query.filter_by(
                         competencia_materia_id=int(comp_id)
                     ).order_by(IndicadorLogro.id).first()
-
                     if not indicador:
                         continue
-
                     ev = EvaluacionEstudiante.query.filter_by(
                         estudiante_id=int(est_id),
                         indicador_id=indicador.id,
                         periodo_id=periodo_id
                     ).first()
-
                     if ev:
                         ev.nivel_desempeño = nivel
                     else:
@@ -1192,7 +1201,6 @@ def ver_planilla(grupo_id, materia_id):
                 for tipo, valor in comps.items():
                     if valor is None or str(valor).strip() == '':
                         continue
-
                     nota_val = float(valor)
                     if nota_val < 0 or nota_val > 5:
                         msg = f"Componente fuera de rango (0-5): {nota_val}"
@@ -1220,6 +1228,33 @@ def ver_planilla(grupo_id, materia_id):
                             calificacion=nota_val,
                             registrada_por=current_user.id
                         ))
+
+            for est_id, data_rec in recuperaciones.items():
+                valor_rec = data_rec.get('valor')
+                if valor_rec is None or str(valor_rec).strip() == '':
+                    continue
+
+                nota_val = float(valor_rec)
+
+                nc = NotaComponenteEstudiante.query.filter_by(
+                    estudiante_id=int(est_id),
+                    grupo_materia_id=asignacion.id,
+                    periodo_academico_id=periodo_id,
+                    tipo_componente='recuperacion'
+                ).first()
+
+                if nc:
+                    nc.calificacion = nota_val
+                    nc.registrada_por = current_user.id
+                else:
+                    db.session.add(NotaComponenteEstudiante(
+                        estudiante_id=int(est_id),
+                        grupo_materia_id=asignacion.id,
+                        periodo_academico_id=periodo_id,
+                        tipo_componente='recuperacion',
+                        calificacion=nota_val,
+                        registrada_por=current_user.id
+                    ))
 
             if ponderaciones:
                 for comp_id, nuevo_pct in ponderaciones.items():
@@ -1249,9 +1284,6 @@ def ver_planilla(grupo_id, materia_id):
             flash(f"Error al guardar: {error_msg}", "danger")
             return redirect(url_for('docente.ver_planilla', grupo_id=grupo_id, materia_id=materia_id))
 
-    # ========================================================================
-    # GET: RENDERIZAR PLANILLA CON CÁLCULO 75/25
-    # ========================================================================
     puede_editar = True
     try:
         result = db.session.execute(text("""
@@ -1267,10 +1299,13 @@ def ver_planilla(grupo_id, materia_id):
     except Exception:
         pass
 
+    # ✅ AQUÍ ESTÁ EL ARREGLO: Ordenar por código (C1, C2... C10) en lugar de por ID
     competencias_raw = CompetenciaEstudiante.query.filter_by(
         materia_id=materia_id,
         grupo_id=grupo_id
-    ).order_by(CompetenciaEstudiante.codigo).all()
+    ).order_by(
+        func.cast(func.substring(CompetenciaEstudiante.codigo, 2), db.Integer).asc()
+    ).all()
 
     comp_ids = [c.id for c in competencias_raw]
     primer_indicador_por_comp = {}
@@ -1307,10 +1342,8 @@ def ver_planilla(grupo_id, materia_id):
     for ev in evaluaciones:
         if ev.estudiante_id not in evals_por_indicador:
             evals_por_indicador[ev.estudiante_id] = {}
-
         descripcion_real = ev.indicador.descripcion_nivel if ev.indicador and ev.indicador.descripcion_nivel else (
             ev.indicador.descripcion if ev.indicador else "Sin descripción")
-
         evals_por_indicador[ev.estudiante_id][ev.indicador_id] = {
             "calificacion": float(ev.calificacion) if ev.calificacion is not None else None,
             "nivel_desempeño": ev.nivel_desempeño,
@@ -1322,19 +1355,14 @@ def ver_planilla(grupo_id, materia_id):
     for est_id in estudiantes_ids:
         evaluaciones_por_competencia[est_id] = {}
         for comp in competencias_raw:
-            # 1. Buscar la evaluación del estudiante para esta competencia
             primer_ind_id = primer_indicador_por_comp.get(comp.id)
             eval_data = None
-
             if primer_ind_id and primer_ind_id in evals_por_indicador.get(est_id, {}):
                 eval_data = evals_por_indicador[est_id][primer_ind_id]
 
-            # 2. Obtener la descripción correcta (según el nivel de la nota)
             descripcion_final = "Sin descripción"
-
             if eval_data and eval_data.get("calificacion") is not None:
                 nota = float(eval_data["calificacion"])
-                # Determinamos el nivel según la nota
                 if nota >= 4.7:
                     nivel_buscado = "Superior"
                 elif nota >= 4.0:
@@ -1343,14 +1371,11 @@ def ver_planilla(grupo_id, materia_id):
                     nivel_buscado = "Basico"
                 else:
                     nivel_buscado = "Bajo"
-
-                # Buscar el indicador que coincida con ese nivel
                 for ind in IndicadorLogro.query.filter_by(competencia_materia_id=comp.id).all():
                     if ind.nivel == nivel_buscado:
                         descripcion_final = ind.descripcion_nivel or ind.descripcion or "Sin descripción"
                         break
 
-            # 3. Asignar al diccionario
             if eval_data:
                 evaluaciones_por_competencia[est_id][comp.id] = {
                     "calificacion": eval_data.get("calificacion"),
@@ -1359,7 +1384,6 @@ def ver_planilla(grupo_id, materia_id):
                     "descripcion_indicador": descripcion_final
                 }
             else:
-                # Si no hay evaluación, buscar la descripción del primer indicador (b200)
                 ind_b200 = IndicadorLogro.query.filter_by(
                     competencia_materia_id=comp.id,
                     nivel="Bajo"
@@ -1399,6 +1423,7 @@ def ver_planilla(grupo_id, materia_id):
 
         nota_auto = comps_est.get("autoevaluacion")
         nota_examen = comps_est.get("examen_final")
+        nota_recuperacion = comps_est.get("recuperacion")
 
         val_auto_calc = float(nota_auto) if nota_auto is not None else 0.0
         val_examen_calc = float(nota_examen) if nota_examen is not None else 0.0
@@ -1416,10 +1441,8 @@ def ver_planilla(grupo_id, materia_id):
             comp_id = comp["id"]
             pct_comp = comp["porcentaje"]
             suma_pcts_docente += pct_comp
-
             eval_data = evals_est.get(comp_id, {})
             nota_comp = eval_data.get("calificacion")
-
             if nota_comp is not None:
                 val_comp = float(nota_comp)
                 aporte_competencias += val_comp * (pct_comp / 100)
@@ -1435,6 +1458,7 @@ def ver_planilla(grupo_id, materia_id):
             "evaluaciones": evaluaciones_por_competencia.get(est.id, {}),
             "autoeval": nota_auto,
             "examen": nota_examen,
+            "nota_recuperacion": nota_recuperacion,
             "definitiva_calculada": definitiva,
             "suma_pcts_comps": suma_pcts_docente
         })
@@ -1449,7 +1473,9 @@ def ver_planilla(grupo_id, materia_id):
         pct_autoeval=PCT_AUTOEVAL,
         pct_examen=PCT_EXAMEN,
         puede_editar=puede_editar,
-        tipo_captura=tipo_captura
+        tipo_captura=tipo_captura,
+        activa_recuperacion=activa_recuperacion,
+        nota_minima_recuperacion=nota_minima_recuperacion
     )
 
 # ==========================================================
@@ -1552,16 +1578,16 @@ def editar_competencia(competencia_id):
 def datos_competencia(competencia_id):
     if current_user.rol != 'docente':
         abort(403)
-    
+
     comp = CompetenciaEstudiante.query.get_or_404(competencia_id)
     indicadores = IndicadorLogro.query.filter_by(competencia_materia_id=comp.id).order_by(IndicadorLogro.orden).all()
-    
+
     data = {
         "id": comp.id,
         "descripcion_madre": comp.descripcion,
         "indicadores": {}
     }
-    
+
     for ind in indicadores:
         key = ind.codigo.lower() if ind.codigo else ""
         # Mapear códigos a llaves
@@ -1569,9 +1595,9 @@ def datos_competencia(competencia_id):
         elif 'b300' in key or ind.nivel == 'Basico': key = 'basico'
         elif 'a400' in key or ind.nivel == 'Alto': key = 'alto'
         elif 's500' in key or ind.nivel == 'Superior': key = 'superior'
-        
+
         data["indicadores"][key] = ind.descripcion_nivel or ind.descripcion or ""
-    
+
     return jsonify(data)
 
 
@@ -1673,3 +1699,394 @@ def nueva_pregunta_banco():
         materias=materias,
         docente=docente
     )
+
+
+@docente_bp.route("/api/ia/plan-recuperacion", methods=["POST"])
+@login_required
+def plan_recuperacion_ia():
+    """Genera un plan de recuperación basado en los indicadores de logro con nota baja."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    data = request.get_json()
+    est_id = data.get('estudiante_id')
+    mat_id = data.get('materia_id')
+    per_id = data.get('periodo_id')
+
+    if not all([est_id, mat_id, per_id]):
+        return jsonify({"success": False, "error": "Faltan parámetros requeridos"}), 400
+
+    try:
+        # 1. Buscar los indicadores de logro donde el estudiante tiene nota baja (< 3.0)
+        from app.models.indicador_logro import IndicadorLogro
+        from app.models.evaluacion_estudiante import EvaluacionEstudiante
+        from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+
+        evaluaciones_bajas = db.session.query(EvaluacionEstudiante, IndicadorLogro). \
+            join(IndicadorLogro, EvaluacionEstudiante.indicador_id == IndicadorLogro.id). \
+            join(CompetenciaEstudiante, IndicadorLogro.competencia_materia_id == CompetenciaEstudiante.id). \
+            filter(
+            EvaluacionEstudiante.estudiante_id == est_id,
+            EvaluacionEstudiante.periodo_id == per_id,
+            CompetenciaEstudiante.materia_id == mat_id,
+            EvaluacionEstudiante.calificacion < 3.0
+        ).all()
+
+        if not evaluaciones_bajas:
+            return jsonify({
+                "success": True,
+                "fortalezas": ["El estudiante no tiene notas bajas en esta materia."],
+                "debilidades": [],
+                "plan_apoyo": "No se requiere plan de recuperación."
+            })
+
+        # 2. Construir el contexto para la IA (Buscando la relación de forma segura)
+        contexto_notas = []
+        for ev, ind in evaluaciones_bajas:
+            # Buscamos la competencia usando la relación correcta (puede ser 'competencia' o 'competencia_materia_rel')
+            competencia = getattr(ind, 'competencia_materia', None)
+            if not competencia:
+                # Si no se llama así, intentamos con el nombre de la clase en minúsculas
+                competencia = getattr(ind, 'competencia', None)
+
+            contexto_notas.append({
+                "competencia": competencia.nombre if competencia else "Competencia General",
+                "codigo": competencia.codigo if competencia else "N/A",
+                "indicador": ind.descripcion or "Sin descripción",
+                "nota": float(ev.calificacion) if ev.calificacion else 0.0
+            })
+
+        # 3. Llamar al servicio de IA
+        from app.services.ia_service import generar_analisis_pedagogico
+        resultado_ia = generar_analisis_pedagogico(contexto_notas)
+
+        return jsonify({
+            "success": True,
+            "fortalezas": resultado_ia.get('fortalezas', []),
+            "debilidades": resultado_ia.get('debilidades', []),
+            "plan_apoyo": resultado_ia.get('plan_apoyo', '')
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# 1. RUTA PARA OBTENER INDICADORES BAJOS (MANUAL)
+@docente_bp.route("/api/plan-refuerzo", methods=["POST"])
+@login_required
+def plan_refuerzo():
+    """Obtiene los indicadores de logro con nota baja para el plan de refuerzo."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    data = request.get_json()
+    est_id = data.get('estudiante_id')
+    mat_id = data.get('materia_id')
+    per_id = data.get('periodo_id')
+
+    if not all([est_id, mat_id, per_id]):
+        return jsonify({"success": False, "error": "Faltan parámetros"}), 400
+
+    try:
+        from app.models.indicador_logro import IndicadorLogro
+        from app.models.evaluacion_estudiante import EvaluacionEstudiante
+        from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+        from app.models.estudiante import Estudiante
+
+        # ✅ OBTENER GRUPO_ID INTERNAMENTE DESDE EL ESTUDIANTE (SIN DEPENDER DEL FRONTEND)
+        estudiante = Estudiante.query.get(est_id)
+        if not estudiante or not estudiante.grupo_id:
+            return jsonify({"success": False, "error": "Estudiante o grupo no encontrado"}), 404
+
+        grupo_id = estudiante.grupo_id
+
+        # 1. OBTENER COMPETENCIAS ORDENADAS POR CÓDIGO (IGUAL QUE LA PLANILLA)
+        competencias_raw = CompetenciaEstudiante.query.filter_by(
+            materia_id=mat_id,
+            grupo_id=grupo_id
+        ).order_by(CompetenciaEstudiante.codigo.asc()).all()
+
+        debilidades = []
+
+        # 2. RECORRER CADA COMPETENCIA EN ORDEN Y BUSCAR SU INDICADOR BAJO
+        for comp in competencias_raw:
+            # Buscar el indicador específico de nivel 'Bajo' para esta competencia
+            ind_bajo = IndicadorLogro.query.filter_by(
+                competencia_materia_id=comp.id,
+                nivel='Bajo'
+            ).first()
+
+            if not ind_bajo:
+                continue
+
+            # Buscar la evaluación del estudiante para ESE indicador específico
+            ev = EvaluacionEstudiante.query.filter_by(
+                estudiante_id=est_id,
+                indicador_id=ind_bajo.id,
+                periodo_id=per_id
+            ).first()
+
+            # Solo agregar si existe evaluación y la nota es menor a 3.0
+            if ev and ev.calificacion is not None and float(ev.calificacion) < 3.0:
+                debilidades.append({
+                    "competencia_codigo": comp.codigo or f"C{comp.id}",
+                    "competencia_nombre": comp.nombre,
+                    "indicador_descripcion": ind_bajo.descripcion_nivel or ind_bajo.descripcion or "Sin descripción",
+                    "nota": float(ev.calificacion)
+                })
+
+        return jsonify({"success": True, "debilidades": debilidades})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# 2. RUTA PARA GUARDAR EL PLAN MANUAL
+
+
+@docente_bp.route("/guardar-plan-refuerzo-form/<int:estudiante_id>/<int:materia_id>/<int:periodo_id>", methods=["POST"])
+@login_required
+def guardar_plan_refuerzo_form(estudiante_id, materia_id, periodo_id):
+    """Guarda el plan de refuerzo manual como una evaluación tipo 'Refuerzo' en la tabla examenes."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    actividades = request.form.get("actividades", "").strip()
+
+    if not actividades:
+        flash("Debes escribir las actividades del plan de refuerzo.", "warning")
+        return redirect(url_for('docente.formulario_plan_refuerzo', estudiante_id=estudiante_id, materia_id=materia_id,
+                                periodo_id=periodo_id))
+
+    try:
+        from app.models.docente import Docente
+        from app.models.examen import Examen
+        from app.models.tipo_examen import TipoExamen
+
+        docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+
+        # 1. Obtener el tipo "Refuerzo" (o crearlo si no existe)
+        tipo_refuerzo = TipoExamen.query.filter_by(nombre='Refuerzo').first()
+        if not tipo_refuerzo:
+            tipo_refuerzo = TipoExamen(nombre='Refuerzo', activo=True)
+            db.session.add(tipo_refuerzo)
+            db.session.flush()
+
+        # 2. Procesar MÚLTIPLES archivos (si se subieron)
+        archivos = request.files.getlist('archivo_refuerzo')
+        rutas_archivos = []
+
+        for archivo in archivos:
+            if archivo and archivo.filename:
+                extension = os.path.splitext(secure_filename(archivo.filename))[1]
+                nombre_unico = f"refuerzo_{uuid.uuid4().hex}{extension}"
+                upload_folder = os.path.join(current_app.static_folder, 'uploads', 'refuerzos')
+                if not os.path.exists(upload_folder):
+                    os.makedirs(upload_folder)
+                ruta_archivo = os.path.join(upload_folder, nombre_unico)
+                archivo.save(ruta_archivo)
+                rutas_archivos.append(f"/static/uploads/refuerzos/{nombre_unico}")
+
+        # Convertir la lista de rutas a un JSON string para guardar en la BD
+        ruta_archivo_json = json.dumps(rutas_archivos) if rutas_archivos else None
+
+        # 3. Crear el examen (refuerzo) e incluir el TAG [EST:ID] en el título
+        titulo_refuerzo = f"Plan de Refuerzo [EST:{estudiante_id}] - {actividades[:30]}..."
+
+        nuevo_refuerzo = Examen(
+            titulo=titulo_refuerzo,
+            nombre=titulo_refuerzo,
+            descripcion=actividades,
+            materia_id=materia_id,
+            colegio_id=current_user.colegio_id,
+            docente_id=docente.id,
+            tipo_examen_id=tipo_refuerzo.id,
+            fecha_creacion=datetime.now(),
+            activo=True,
+            eliminado=False,
+            archivo_json=ruta_archivo_json
+        )
+        db.session.add(nuevo_refuerzo)
+        db.session.commit()
+
+        flash("✅ Plan de refuerzo guardado correctamente.", "success")
+
+        estudiante = Estudiante.query.get(estudiante_id)
+        return redirect(url_for('docente.ver_planilla', grupo_id=estudiante.grupo_id, materia_id=materia_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al guardar: {str(e)}", "danger")
+        return redirect(url_for('docente.formulario_plan_refuerzo', estudiante_id=estudiante_id, materia_id=materia_id,
+                                periodo_id=periodo_id))
+
+
+@docente_bp.route("/plan-refuerzo/<int:estudiante_id>/<int:materia_id>/<int:periodo_id>")
+@login_required
+def formulario_plan_refuerzo(estudiante_id, materia_id, periodo_id):
+    if current_user.rol != 'docente':
+        abort(403)
+
+    docente = Docente.query.filter_by(usuario_id=current_user.id).first()
+    if not docente:
+        flash("Perfil de docente no encontrado.", "danger")
+        return redirect(url_for("docente.dashboard"))
+
+    estudiante = Estudiante.query.get_or_404(estudiante_id)
+    materia = Materia.query.get_or_404(materia_id)
+    periodo = PeriodoAcademico.query.get_or_404(periodo_id)
+
+    from app.models.indicador_logro import IndicadorLogro
+    from app.models.evaluacion_estudiante import EvaluacionEstudiante
+    from app.models.CompetenciaEstudiante import CompetenciaEstudiante
+    from app.models.examen import Examen
+    from app.models.tipo_examen import TipoExamen
+    import json
+
+    # 1. Competencias y notas (Lógica que ya funcionaba)
+    competencias_materia = CompetenciaEstudiante.query.filter_by(
+        materia_id=materia_id, grupo_id=estudiante.grupo_id
+    ).order_by(CompetenciaEstudiante.id.asc()).all()
+
+    comp_ids = [c.id for c in competencias_materia]
+    primer_indicador_por_comp = {}
+    if comp_ids:
+        todos_indicadores = IndicadorLogro.query.filter(
+            IndicadorLogro.competencia_materia_id.in_(comp_ids)
+        ).order_by(IndicadorLogro.competencia_materia_id, IndicadorLogro.id).all()
+        for ind in todos_indicadores:
+            if ind.competencia_materia_id not in primer_indicador_por_comp:
+                primer_indicador_por_comp[ind.competencia_materia_id] = ind.id
+
+    evaluaciones = EvaluacionEstudiante.query.filter(
+        EvaluacionEstudiante.estudiante_id == estudiante_id,
+        EvaluacionEstudiante.periodo_id == periodo_id
+    ).all()
+
+    evals_por_indicador = {}
+    for ev in evaluaciones:
+        evals_por_indicador[ev.indicador_id] = {
+            "calificacion": float(ev.calificacion) if ev.calificacion is not None else None,
+            "nivel_desempeño": ev.nivel_desempeño
+        }
+
+    debilidades = []
+    for comp in competencias_materia:
+        primer_ind_id = primer_indicador_por_comp.get(comp.id)
+        eval_data = evals_por_indicador.get(primer_ind_id) if primer_ind_id else None
+
+        if eval_data and eval_data.get("calificacion") is not None:
+            nota = eval_data["calificacion"]
+            if nota < 3.0:
+                comp_code = comp.codigo or f"C{comp.id}"
+                etiqueta = f"{comp_code}-Bajo"
+                ind_bajo = IndicadorLogro.query.filter_by(competencia_materia_id=comp.id, nivel='Bajo').first()
+                descripcion = ind_bajo.descripcion_nivel if ind_bajo else "No alcanza los conceptos básicos."
+                debilidades.append({
+                    "codigo": etiqueta, "descripcion": descripcion, "nota": nota
+                })
+
+    # 2. Buscar archivos y el ÚLTIMO TEXTO guardado
+    tipo_refuerzo = TipoExamen.query.filter_by(nombre='Refuerzo').first()
+    archivos_subidos = []
+    actividades_actuales = ""
+
+    if tipo_refuerzo:
+        # Buscamos ordenados por fecha descendente para traer el último
+        refuerzos = Examen.query.filter(
+            Examen.docente_id == docente.id,
+            Examen.materia_id == materia_id,
+            Examen.tipo_examen_id == tipo_refuerzo.id,
+            Examen.activo == True,
+            Examen.titulo.like(f"%[EST:{estudiante_id}]%")
+        ).order_by(Examen.fecha_creacion.desc()).all()
+
+        # Recorremos todos los refuerzos para juntar TODOS los archivos
+        for r in refuerzos:
+            if not actividades_actuales and r.descripcion:
+                actividades_actuales = r.descripcion  # Tomamos la descripción del más reciente
+
+            if r.archivo_json:
+                try:
+                    rutas = json.loads(r.archivo_json)
+                    for ruta in rutas:
+                        archivos_subidos.append({
+                            "ruta": ruta,
+                            "nombre": ruta.split('/')[-1],
+                            "fecha": r.fecha_creacion.strftime('%d/%m/%Y %H:%M') if r.fecha_creacion else 'Sin fecha'
+                        })
+                except:
+                    pass
+
+    return render_template(
+        "docentes/formulario_refuerzo.html",
+        estudiante=estudiante,
+        materia=materia,
+        periodo=periodo,
+        debilidades=debilidades,
+        archivos_subidos=archivos_subidos,
+        actividades_actuales=actividades_actuales  # ✅ Enviamos el texto al HTML
+    )
+
+
+# ==========================================
+# RUTAS PARA EL BANCO DE PREGUNTAS (VER / ELIMINAR)
+# ==========================================
+
+@docente_bp.route("/api/pregunta/<int:pregunta_id>", methods=["GET"])
+@login_required
+def api_ver_pregunta(pregunta_id):
+    """Devuelve los datos de una pregunta en formato JSON para el modal."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    from app.models.pregunta import Pregunta
+    pregunta = Pregunta.query.get_or_404(pregunta_id)
+
+    # Verificación de seguridad: que la pregunta sea del colegio del docente
+    if pregunta.colegio_id != current_user.colegio_id:
+        abort(403)
+
+    # Extraer opciones (asumiendo que se guardan en el JSON 'opciones')
+    opciones = pregunta.opciones or {}
+
+    return jsonify({
+        "id": pregunta.id,
+        "texto": pregunta.texto,
+        "materia": pregunta.materia.nombre if pregunta.materia else "Sin materia",
+        "tema": pregunta.tema or "Sin tema",
+        "dificultad": pregunta.dificultad or "Media",
+        "contexto_texto": pregunta.contexto.get('texto') if pregunta.contexto else None,
+        "opcion_a": opciones.get('A', ''),
+        "opcion_b": opciones.get('B', ''),
+        "opcion_c": opciones.get('C', ''),
+        "opcion_d": opciones.get('D', ''),
+        "respuesta_correcta": pregunta.respuesta_correcta,
+        "explicacion": pregunta.explicacion or ""
+    })
+
+
+@docente_bp.route("/api/pregunta/<int:pregunta_id>/eliminar", methods=["POST"])
+@login_required
+def api_eliminar_pregunta(pregunta_id):
+    """Elimina (o desactiva) una pregunta del banco."""
+    if current_user.rol != 'docente':
+        abort(403)
+
+    from app.models.pregunta import Pregunta
+    pregunta = Pregunta.query.get_or_404(pregunta_id)
+
+    # Verificación de seguridad
+    if pregunta.colegio_id != current_user.colegio_id:
+        return jsonify({"success": False, "error": "No tienes permiso para eliminar esta pregunta."}), 403
+
+    try:
+        # En lugar de borrar físicamente (que puede romper exámenes), la desactivamos
+        pregunta.activo = False
+        db.session.commit()
+        return jsonify({"success": True, "message": "Pregunta eliminada correctamente del banco."})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500

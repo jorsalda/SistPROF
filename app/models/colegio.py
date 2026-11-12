@@ -13,6 +13,10 @@ class Colegio(db.Model):
     en_prueba = db.Column(db.Boolean, default=True)
     fecha_expiracion = db.Column(db.DateTime, nullable=True)
 
+    # ✅ NUEVAS COLUMNAS PARA RECUPERACIÓN
+    activa_recuperacion = db.Column(db.Boolean, default=False, nullable=False)
+    nota_minima_recuperacion = db.Column(db.Numeric(4, 2), default=3.0, nullable=True)
+
     # ========== RELACIONES ==========
 
     # Usuarios
@@ -54,8 +58,8 @@ class Colegio(db.Model):
         lazy=True
     )
 
-    # ⭐ NUEVO: Clases del colegio (nombre único para evitar conflicto)
-    clases_colegio = db.relationship(  # ← Nombre único
+    # ⭐ Clases del colegio
+    clases_colegio = db.relationship(
         "Clase",
         foreign_keys="Clase.colegio_id",
         back_populates="colegio",

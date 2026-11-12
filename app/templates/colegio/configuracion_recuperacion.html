@@ -1,0 +1,62 @@
+{% extends "colegio/colegio_base.html" %}
+
+{% block colegio_page_title %}Configuración de Recuperación{% endblock %}
+
+{% block colegio_content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="bi bi-gear-fill text-primary"></i>
+            Configuración de Recuperación
+        </h2>
+        <a href="{{ url_for('colegio.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Dashboard
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Parámetros de Recuperación</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('colegio.configuracion_recuperacion') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <div class="mb-4 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="activa_recuperacion" name="activa_recuperacion"
+                                   {% if colegio.activa_recuperacion == True %}checked{% endif %}>
+                            <label class="form-check-label fw-bold" for="activa_recuperacion">
+                                Activar Módulo de Recuperación
+                            </label>
+                            <div class="form-text">
+                                Si se activa, los docentes podrán habilitar la casilla de recuperación para estudiantes con notas bajas.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="nota_minima_recuperacion" class="form-label fw-bold">
+                                Nota Mínima de Aprobación
+                            </label>
+                            <input type="number" step="0.1" min="0" max="5" class="form-control"
+                                   id="nota_minima_recuperacion" name="nota_minima_recuperacion"
+                                   value="{{ colegio.nota_minima_recuperacion or 3.0 }}" required>
+                            <div class="form-text">
+                                Si la nota definitiva del estudiante es menor a este valor, se habilitará la casilla de recuperación.
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Guardar Configuración
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

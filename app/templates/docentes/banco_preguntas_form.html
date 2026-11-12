@@ -14,8 +14,38 @@
             <form method="POST" action="{{ url_for('docente.nueva_pregunta_banco') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="row g-3">
-                    <!-- TEXTO DE LA PREGUNTA -->
+                <!-- ✅ 1. CONTEXTO (PRIMERO, COMO DEBE SER) -->
+                <div class="row g-3 mb-4 p-3 bg-light rounded border">
+                    <div class="col-12">
+                        <h6 class="text-primary fw-bold mb-2"><i class="bi bi-paperclip me-2"></i>Contexto (Opcional)</h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Tipo de Contexto</label>
+                        <select name="tipo_contexto" id="tipo_contexto" class="form-select form-select-sm">
+                            <option value="texto">Texto (No requiere archivo)</option>
+                            <option value="imagen">Imagen</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+
+                    <!-- Campo de Texto para Contexto (Faltaba en tu versión anterior) -->
+                    <div class="col-md-8" id="div_texto_contexto">
+                        <label class="form-label fw-semibold small">Contenido del Contexto</label>
+                        <textarea name="contexto_texto" class="form-control form-control-sm" rows="2"
+                                  placeholder="Escribe aquí la lectura, caso o enunciado base..."></textarea>
+                    </div>
+
+                    <!-- Campo de Archivo (Oculto por defecto) -->
+                    <div class="col-md-8 d-none" id="div_archivo_contexto">
+                        <label class="form-label fw-semibold small">Subir Archivo</label>
+                        <input type="file" name="archivo_contexto" id="archivo_contexto" class="form-control form-control-sm" accept="image/*,video/mp4">
+                        <small class="text-muted">Tamaño máximo: 16 MB.</small>
+                    </div>
+                </div>
+
+                <!-- ✅ 2. TEXTO DE LA PREGUNTA Y MATERIA (SEGUNDO) -->
+                <div class="row g-3 mb-4">
                     <div class="col-md-8">
                         <label class="form-label fw-semibold">Texto de la Pregunta *</label>
                         <textarea name="texto" class="form-control" rows="3" required
@@ -30,26 +60,31 @@
                             {% endfor %}
                         </select>
                     </div>
+                </div>
 
-                    <!-- OPCIONES -->
+                <!-- ✅ 3. OPCIONES A, B, C, D (TERCERO) -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12"><h6 class="text-muted fw-bold small">OPCIONES DE RESPUESTA</h6></div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Opción A</label>
-                        <input type="text" name="opcion_a" class="form-control" placeholder="Opción A">
+                        <label class="form-label fw-semibold small">Opción A</label>
+                        <input type="text" name="opcion_a" class="form-control" placeholder="Opción A" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Opción B</label>
-                        <input type="text" name="opcion_b" class="form-control" placeholder="Opción B">
+                        <label class="form-label fw-semibold small">Opción B</label>
+                        <input type="text" name="opcion_b" class="form-control" placeholder="Opción B" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Opción C</label>
-                        <input type="text" name="opcion_c" class="form-control" placeholder="Opción C">
+                        <label class="form-label fw-semibold small">Opción C</label>
+                        <input type="text" name="opcion_c" class="form-control" placeholder="Opción C" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Opción D</label>
-                        <input type="text" name="opcion_d" class="form-control" placeholder="Opción D">
+                        <label class="form-label fw-semibold small">Opción D</label>
+                        <input type="text" name="opcion_d" class="form-control" placeholder="Opción D" required>
                     </div>
+                </div>
 
-                    <!-- RESPUESTA Y DIFICULTAD -->
+                <!-- ✅ 4. CONFIGURACIÓN FINAL (CUARTO) -->
+                <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Respuesta Correcta *</label>
                         <select name="respuesta_correcta" class="form-select" required>
@@ -72,39 +107,21 @@
                         <label class="form-label fw-semibold">Tema (Opcional)</label>
                         <input type="text" name="tema" class="form-control" placeholder="Ej: Ecuaciones lineales">
                     </div>
+                </div>
 
-                    <!-- ✅ CONTEXTO CON SUBIDA DE ARCHIVO -->
-                    <div class="col-12"><hr class="my-2"></div>
-                    <div class="col-12">
-                        <h6 class="text-muted"><i class="bi bi-paperclip me-2"></i>Contexto (Opcional)</h6>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Tipo de Contexto</label>
-                        <select name="tipo_contexto" id="tipo_contexto" class="form-select">
-                            <option value="texto">Texto (No requiere archivo)</option>
-                            <option value="imagen">Imagen</option>
-                            <option value="video">Video</option>
-                        </select>
-                    </div>
-                    <div class="col-md-8" id="div_archivo_contexto" style="display:none;">
-                        <label class="form-label fw-semibold">Subir Archivo (Imagen o Video)</label>
-                        <input type="file" name="archivo_contexto" id="archivo_contexto" class="form-control" accept="image/*,video/mp4">
-                        <small class="text-muted">Tamaño máximo: 16 MB.</small>
-                    </div>
+                <!-- EXPLICACIÓN -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Explicación (Opcional)</label>
+                    <textarea name="explicacion" class="form-control" rows="2"
+                              placeholder="Explicación de por qué la respuesta es correcta..."></textarea>
+                </div>
 
-                    <!-- EXPLICACIÓN -->
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Explicación (Opcional)</label>
-                        <textarea name="explicacion" class="form-control" rows="2"
-                                  placeholder="Explicación de por qué la respuesta es correcta..."></textarea>
-                    </div>
-
-                    <div class="col-12 text-end mt-3">
-                        <a href="{{ url_for('docente.banco_preguntas') }}" class="btn btn-secondary px-4">Cancelar</a>
-                        <button type="submit" class="btn btn-success px-4">
-                            <i class="bi bi-save me-1"></i> Guardar Pregunta
-                        </button>
-                    </div>
+                <!-- BOTONES -->
+                <div class="text-end mt-4 pt-3 border-top">
+                    <a href="{{ url_for('docente.banco_preguntas') }}" class="btn btn-secondary px-4 me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-save me-1"></i> Guardar Pregunta
+                    </button>
                 </div>
             </form>
         </div>
@@ -112,23 +129,31 @@
 </div>
 
 <script>
-    // Mostrar/ocultar el input de archivo según el tipo de contexto
+    // Lógica corregida para manejar Texto vs Archivo
     document.getElementById('tipo_contexto').addEventListener('change', function() {
         const tipo = this.value;
+        const divTexto = document.getElementById('div_texto_contexto');
         const divArchivo = document.getElementById('div_archivo_contexto');
         const inputArchivo = document.getElementById('archivo_contexto');
 
-        if (tipo === 'imagen' || tipo === 'video') {
-            divArchivo.style.display = 'block';
-            if (tipo === 'imagen') {
-                inputArchivo.accept = 'image/*';
-            } else {
-                inputArchivo.accept = 'video/mp4,video/webm';
-            }
+        if (tipo === 'texto') {
+            divTexto.classList.remove('d-none');
+            divArchivo.classList.add('d-none');
+            inputArchivo.value = ''; // Limpiar archivo si cambia a texto
         } else {
-            divArchivo.style.display = 'none';
-            inputArchivo.value = '';
+            divTexto.classList.add('d-none');
+            divArchivo.classList.remove('d-none');
+
+            // Ajustar accept según tipo
+            if (tipo === 'imagen') inputArchivo.accept = 'image/*';
+            else if (tipo === 'video') inputArchivo.accept = 'video/mp4,video/webm';
         }
+    });
+
+    // Inicializar estado al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        const evento = new Event('change');
+        document.getElementById('tipo_contexto').dispatchEvent(evento);
     });
 </script>
 {% endblock %}

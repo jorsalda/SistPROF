@@ -33,7 +33,6 @@
         </div>
 
         <!-- Menú -->
-                <!-- Menú -->
         <ul class="sidebar-menu">
 
             <!-- Dashboard -->
@@ -46,7 +45,8 @@
             </li>
 
                 <!-- Mis Estudiantes -->
-            <li class="menu-item">
+
+                        <li class="menu-item">
                 <a href="{{ url_for('docente.mis_estudiantes') }}"
                    class="menu-link {% if request.endpoint == 'docente.mis_estudiantes' %}active{% endif %}">
                     <i class="bi bi-people"></i>
@@ -126,6 +126,15 @@
                    class="menu-link {% if request.endpoint == 'docente.citaciones' %}active{% endif %}">
                     <i class="bi bi-calendar-event-fill"></i>
                     Citaciones
+                </a>
+            </li>
+
+            <!-- ✅ Alertas de Convivencia (NUEVO) -->
+            <li class="menu-item">
+                <a href="{{ url_for('alertas.index') }}"
+                   class="menu-link {% if request.endpoint == 'alertas.index' %}active{% endif %}">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Alertas de Convivencia
                 </a>
             </li>
 

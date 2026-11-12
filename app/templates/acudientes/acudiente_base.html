@@ -18,48 +18,63 @@
         </div>
 
         <ul class="sidebar-menu">
+            <!-- Dashboard -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.dashboard') }}" class="menu-link {% if request.endpoint == 'acudiente.dashboard' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
 
+            <!-- Mis Hijos -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.mis_estudiantes') }}" class="menu-link {% if request.endpoint == 'acudiente.mis_estudiantes' %}active{% endif %}">
                     <i class="bi bi-people"></i> Mis Hijos
                 </a>
             </li>
 
+            <!-- Calificaciones -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.calificaciones') }}" class="menu-link {% if request.endpoint == 'acudiente.calificaciones' %}active{% endif %}">
                     <i class="bi bi-star-fill"></i> Calificaciones
                 </a>
             </li>
 
+            <!-- Asistencia -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.asistencia') }}" class="menu-link {% if request.endpoint == 'acudiente.asistencia' %}active{% endif %}">
                     <i class="bi bi-calendar-check"></i> Asistencia
                 </a>
             </li>
 
+            <!-- Exámenes -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.examenes') }}" class="menu-link {% if request.endpoint == 'acudiente.examenes' %}active{% endif %}">
                     <i class="bi bi-pencil-square"></i> Exámenes
                 </a>
             </li>
 
+            <!-- Novedades -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.novedades') }}" class="menu-link {% if request.endpoint == 'acudiente.novedades' %}active{% endif %}">
                     <i class="bi bi-bell-fill"></i> Novedades
                 </a>
             </li>
 
+            <!-- Citaciones -->
             <li class="menu-item">
                 <a href="{{ url_for('acudiente.citaciones') }}" class="menu-link {% if request.endpoint == 'acudiente.citaciones' %}active{% endif %}">
                     <i class="bi bi-envelope-fill"></i> Citaciones
                 </a>
             </li>
 
+            <!-- Alertas de Convivencia -->
+            <li class="menu-item">
+                <a href="{{ url_for('alertas.index') }}" class="menu-link {% if request.endpoint == 'alertas.index' %}active{% endif %}">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Alertas
+                </a>
+            </li>
+
+            <!-- Botón Cerrar Sesión -->
             <li class="menu-item logout-item">
                 <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
                     <i class="bi bi-box-arrow-right"></i> Cerrar Sesión

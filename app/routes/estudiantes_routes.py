@@ -1345,3 +1345,54 @@ def examenes_disponibles():
         examenes_respondidos=examenes_respondidos_ids,
         resultados=resultados_previos
     )
+
+
+@estudiante_bp.route('/mis-refuerzos')
+@login_required
+def mis_refuerzos():
+    """Vista para que el estudiante vea los planes de refuerzo asignados y descargue sus archivos."""
+    if current_user.rol != 'estudiante':
+        abort(403)
+
+    estudiante = Estudiante.query.filter_by(usuario_id=current_user.id).first()
+    if not estudiante:
+        abort(403)
+
+    from app.models.examen import Examen
+    from app.models.tipo_examen import TipoExamen
+    import json
+
+    # Buscar el tipo de examen "Refuerzo"
+    tipo_refuerzo = TipoExamen.query.filter_by(nombre='Refuerzo').first()
+    archivos_refuerzo = []
+
+    if tipo_refuerzo:
+        # Buscar todos los refuerzos que contengan el nombre del estudiante en el título
+        refuerzos = Examen.query.filter(
+            Examen.colegio_id == estudiante.colegio_id,
+            Examen.tipo_examen_id == tipo_refuerzo.id,
+            Examen.activo == True,
+            Examen.titulo.like(f"%{estudiante.nombre}%")
+        ).all()
+
+        for r in refuerzos:
+            if r.archivo_json:
+                try:
+                    rutas = json.loads(r.archivo_json)
+                    for ruta in rutas:
+                        nombre_arch = ruta.split('/')[-1]
+                        archivos_refuerzo.append({
+                            "id": r.id,
+                            "ruta": ruta,
+                            "nombre": nombre_arch,
+                            "fecha_subida": r.fecha_creacion.strftime('%d/%m/%Y %H:%M') if r.fecha_creacion else 'Sin fecha',
+                            "actividades": r.descripcion
+                        })
+                except:
+                    pass
+
+    return render_template(
+        'estudiantes/mis_refuerzos.html',
+        estudiante=estudiante,
+        archivos_refuerzo=archivos_refuerzo
+    )

@@ -1,0 +1,47 @@
+{% extends "acudientes/acudiente_base.html" %}
+
+{% block header_title %}Calificaciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="fw-bold mb-4"><i class="bi bi-star-fill text-warning"></i> Calificaciones</h2>
+
+    {% for est in estudiantes %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{{ est.nombre }} {{ est.apellido }} - {{ est.grado }} {{ est.grupo }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Materia</th>
+                        <th class="text-center">Promedio</th>
+                        <th class="text-center">Desempeño</th>
+                        <th class="pe-4">Observación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cal in est.calificaciones %}
+                    <tr>
+                        <td class="ps-4 fw-bold">{{ cal.materia }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if cal.calificacion >= 3.9 %}bg-success{% elif cal.calificacion >= 3.0 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-6">
+                                {{ cal.calificacion }}
+                            </span>
+                        </td>
+                        <td class="text-center">{{ cal.desempeno }}</td>
+                        <td class="pe-4 text-muted">{{ cal.observacion or 'Sin observaciones' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No hay calificaciones registradas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

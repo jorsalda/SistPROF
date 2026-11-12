@@ -78,11 +78,10 @@
                                 title="{{ comp.nombre if comp.nombre else '' }}"
                                 data-comp-id="{{ comp.id }}"
                                 data-porcentaje="{{ comp.porcentaje|default(0) }}">
-                                <span class="fw-bold text-dark" style="font-size: 1.1rem;">C{{ loop.index }}</span>
+                                <!-- ✅ AQUÍ ESTÁ EL ARREGLO: Usar el código real (C1, C2, C10) -->
+                                <span class="fw-bold text-dark" style="font-size: 1.1rem;">{{ comp.codigo }}</span>
                                 <br>
-                                <!-- VISTA (Texto) -->
                                 <small class="pct-label pct-view" style="font-size: 0.75rem;">{{ comp.porcentaje|default(0) }}%</small>
-                                <!-- EDICIÓN (Input oculto por defecto) -->
                                 <input type="number"
                                        class="pct-input d-none"
                                        style="width: 60px; font-size: 0.75rem; text-align: center; padding: 2px; border: 1px solid #ccc; border-radius: 4px;"
@@ -107,7 +106,8 @@
                             <!-- NIVELES DE DESEMPEÑO -->
                             {% for comp in estructura %}
                             <th class="h-nivel col-nivel-header text-center" data-comp-id="{{ comp.id }}">
-                                <span class="fw-bold text-primary" style="font-size: 1rem;">C{{ loop.index }}</span>
+                                <!-- ✅ AQUÍ TAMBIÉN: Usar el código real -->
+                                <span class="fw-bold text-primary" style="font-size: 1rem;">{{ comp.codigo }}</span>
                                 <br>
                                 <small class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Nivel</small>
                             </th>
@@ -118,9 +118,16 @@
                                 <i class="bi bi-calculator"></i> Definitiva
                             </th>
 
-                            <!-- BOTÓN IA -->
-                            <th class="col-final h-final">
-                                <i class="bi bi-robot"></i> IA
+                            <!-- RECUPERACIÓN -->
+                            {% if activa_recuperacion %}
+                            <th class="h-rec text-center bg-warning text-dark" style="min-width: 100px;">
+                                <i class="bi bi-arrow-repeat"></i> Recup.
+                            </th>
+                            {% endif %}
+
+                            <!-- ACCIONES (IA Y MANUAL) -->
+                            <th class="col-final h-final text-center" style="min-width: 150px;">
+                                <i class="bi bi-tools"></i> Acciones
                             </th>
                         </tr>
                     </thead>
@@ -194,7 +201,7 @@
                                 {% set nivel_guardado = eval_data.nivel_desempeño %}
 
                                 <td class="td-nivel col-nivel-cell text-center" data-comp-id="{{ comp.id }}"
-    data-descripcion-indicador="{{ est.evaluaciones[comp.id].descripcion_indicador if est.evaluaciones and comp.id in est.evaluaciones and est.evaluaciones[comp.id] and est.evaluaciones[comp.id].descripcion_indicador else 'Sin descripción' }}">
+                                    data-descripcion-indicador="{{ est.evaluaciones[comp.id].descripcion_indicador if est.evaluaciones and comp.id in est.evaluaciones and est.evaluaciones[comp.id] and est.evaluaciones[comp.id].descripcion_indicador else 'Sin descripción' }}">
                                     <div class="nivel-container" id="nivel-{{ est.id }}-{{ comp.id }}">
                                         {% if nivel_guardado %}
                                             <span class="badge-nivel">{{ nivel_guardado }}</span>
@@ -214,18 +221,49 @@
                                 <input type="text"
                                        class="pl-input definitiva"
                                        id="definitiva-{{ est.id }}"
-                                       value="—"
+                                       value="{{ est.definitiva_calculada }}"
                                        readonly>
                             </td>
 
-                            <!-- BOTÓN IA -->
-                            <td class="col-final">
-                                <button type="button"
-                                        class="btn btn-outline-primary btn-ia"
-                                        title="Analizar con IA"
-                                        onclick="analizarIA('{{ est.id }}', '{{ est.nombre }}')">
-                                    <i class="bi bi-robot"></i> IA
-                                </button>
+                            <!-- RECUPERACIÓN -->
+                            {% if activa_recuperacion %}
+                            <td class="text-center td-rec">
+                                {% if est.definitiva_calculada is not none and est.definitiva_calculada < nota_minima_recuperacion %}
+                                    <div class="d-flex justify-content-center align-items-center gap-1">
+                                        <input type="number"
+                                               name="recuperacion_{{ est.id }}_0"
+                                               class="pl-input rec-input"
+                                               step="0.1" min="0" max="5"
+                                               placeholder="Nota"
+                                               value="{{ est.nota_recuperacion or '' }}"
+                                               style="width: 55px; text-align: center;">
+                                        <button type="button" class="btn btn-sm btn-danger btn-guardar-rec"
+                                                onclick="guardarRecuperacionIndividual('{{ est.id }}')"
+                                                title="Guardar Nota de Recuperación"
+                                                style="padding: 2px 6px; font-size: 0.8rem;">
+                                            <i class="bi bi-save"></i>
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+
+                            <!-- ACCIONES (BOTONES) -->
+                            <td class="col-final text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                            title="Plan de Refuerzo con IA (Mantenimiento)"
+                                            onclick="alert('El servicio de IA está en mantenimiento.')">
+                                        <i class="bi bi-robot"></i>
+                                    </button>
+                                   <button type="button" class="btn btn-outline-success btn-sm"
+        title="Plan de Refuerzo Manual"
+        onclick="window.location.href='{{ url_for('docente.formulario_plan_refuerzo', estudiante_id=est.id, materia_id=materia.id, periodo_id=periodo.id) }}'">
+    <i class="bi bi-pencil-square"></i> Manual
+</button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -236,7 +274,7 @@
             <div class="pl-footer">
                 <span class="hint">
                     <i class="bi bi-info-circle"></i>
-                    Rojo = nota &lt; 3.0 · Verde = nota &ge; 4.5 · Niveles automáticos según nota
+                    Rojo = nota &lt; {{ nota_minima_recuperacion if activa_recuperacion else 3.0 }} · Verde = nota &ge; 4.5 · Niveles automáticos según nota
                 </span>
 
                 <div class="d-flex gap-2">
@@ -253,41 +291,19 @@
     </div>
 </div>
 
-<!-- Modal IA -->
-<div class="modal fade" id="modalIA" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-robot me-2"></i>Análisis IA</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="contenidoIA">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2">Analizando desempeño...</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" class="btn btn-success" onclick="guardarPlanIA()">
-                    <i class="bi bi-save me-1"></i> Guardar plan
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     window.PLANILLA_CONFIG = {
         materiaId: {{ materia.id }},
         periodoId: {{ periodo.id if periodo else 0 }},
         tipoCaptura: "{{ tipo_captura }}",
+        notaMinima: {{ nota_minima_recuperacion if activa_recuperacion else 3.0 }},
 
         competencias: [
             {% for comp in estructura %}
             {
                 id: {{ comp.id }},
-                codigo: '{{ comp.codigo | default("C" ~ loop.index) }}',
+                // ✅ AQUÍ TAMBIÉN: Quitar el loop.index y usar el código real
+                codigo: '{{ comp.codigo }}',
                 porcentaje: {{ comp.porcentaje | default(0) }},
                 primerIndicadorId: {{ comp.primer_indicador_id if comp.primer_indicador_id else 'null' }}
             }{% if not loop.last %},{% endif %}
@@ -304,7 +320,7 @@
     const PCT_EXAMEN = 20.0;
 
     // =============================================
-    // LÓGICA DE PONDERACIONES (NUEVO)
+    // LÓGICA DE PONDERACIONES
     // =============================================
 
     function toggleEdicionPonderaciones(activar) {
@@ -324,7 +340,6 @@
             badgeSuma.classList.remove('d-none');
             actualizarBadgeSuma();
         } else {
-            // Cancelar: restaurar valores originales
             inputsPct.forEach(inp => {
                 const th = inp.closest('th');
                 inp.value = th.dataset.porcentaje;
@@ -477,17 +492,17 @@
 
         if (!containerNivel) return;
 
-        let nivelTexto, codigoGenerado;
-        if (valor >= 4.7) { nivelTexto = 'Superior'; codigoGenerado = 'S500'; }
-        else if (valor >= 4.0) { nivelTexto = 'Alto'; codigoGenerado = 'A400'; }
-        else if (valor >= 3.0) { nivelTexto = 'Basico'; codigoGenerado = 'B300'; }
-        else { nivelTexto = 'Bajo'; codigoGenerado = 'b200'; }
+        let nivelTexto;
+        if (valor >= 4.7) { nivelTexto = 'Superior'; }
+        else if (valor >= 4.0) { nivelTexto = 'Alto'; }
+        else if (valor >= 3.0) { nivelTexto = 'Básico'; }
+        else { nivelTexto = 'Bajo'; }
 
         const compIndex = Array.from(fila.querySelectorAll('.td-nota')).findIndex(td => td.dataset.compId === compId) + 1;
-        const codigoCompleto = `C${compIndex}-${codigoGenerado}`;
+        const etiquetaCompleta = `C${compIndex}-${nivelTexto}`;
         const descripcion = celdaNivel.getAttribute('data-descripcion-indicador') || 'Sin descripción';
 
-        containerNivel.innerHTML = `<span class="badge-nivel" style="font-weight:bold; color:#2c3e50;" data-bs-toggle="tooltip" title="${codigoCompleto}: ${descripcion}">${codigoCompleto}</span>`;
+        containerNivel.innerHTML = `<span class="badge-nivel" style="font-weight:bold; color:#2c3e50;" data-bs-toggle="tooltip" title="${etiquetaCompleta}: ${descripcion}">${etiquetaCompleta}</span>`;
 
         var tooltipTrigger = containerNivel.querySelector('.badge-nivel');
         if (tooltipTrigger) new bootstrap.Tooltip(tooltipTrigger);
@@ -529,6 +544,54 @@
     });
 
     // =============================================
+    // GUARDAR RECUPERACIÓN INDIVIDUAL (SIN MODAL)
+    // =============================================
+    async function guardarRecuperacionIndividual(estudianteId) {
+        const fila = document.querySelector(`tr[data-estudiante-id="${estudianteId}"]`);
+        if (!fila) return;
+
+        const inputRec = fila.querySelector('.rec-input');
+        if (!inputRec || inputRec.value === '') {
+            alert('Por favor, ingresa una nota de recuperación.');
+            return;
+        }
+
+        const btn = fila.querySelector('.btn-guardar-rec');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        btn.disabled = true;
+
+        const payload = {
+            notas: {},
+            componentes: {},
+            niveles: {},
+            recuperaciones: {}
+        };
+        payload.recuperaciones[estudianteId] = { 'valor': inputRec.value };
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.CSRF_TOKEN || '' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Nota de recuperación guardada correctamente.');
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + (result.error || 'Error desconocido'));
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('Error de conexión: ' + err.message);
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+    }
+
+    // =============================================
     // GUARDADO MASIVO DE NOTAS
     // =============================================
     async function guardarNotas() {
@@ -538,7 +601,7 @@
         btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
         btn.disabled = true;
 
-        const payload = { notas: {}, componentes: {}, niveles: {} };
+        const payload = { notas: {}, componentes: {}, niveles: {}, recuperaciones: {} };
 
         document.querySelectorAll('.input-nota[data-competencia-id]').forEach(input => {
             if (input.value !== '' && input.value !== null) {
@@ -567,6 +630,17 @@
                     const compId = match[2];
                     if (!payload.niveles[estId]) payload.niveles[estId] = {};
                     payload.niveles[estId][compId] = input.value;
+                }
+            }
+        });
+
+        document.querySelectorAll('input[name^="recuperacion_"]').forEach(input => {
+            if (input.value !== '' && input.value !== null) {
+                const match = input.name.match(/^recuperacion_(\d+)_\d+$/);
+                if (match) {
+                    const estId = match[1];
+                    if (!payload.recuperaciones[estId]) payload.recuperaciones[estId] = {};
+                    payload.recuperaciones[estId]['valor'] = input.value;
                 }
             }
         });

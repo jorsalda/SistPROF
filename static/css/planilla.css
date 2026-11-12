@@ -251,16 +251,16 @@ thead .col-final {
     z-index: 6;
 }
 
-/* COLUMNAS DE NIVEL: ultra compactas */
+/* ✅ COLUMNAS DE NIVEL: AJUSTADAS PARA "C1-Superior" */
 .h-nivel,
 .col-nivel-header {
     background: #e8f5e9 !important;
     color: #2e7d32 !important;
     font-size: 9px !important;
     font-weight: 700 !important;
-    min-width: 55px !important;
-    max-width: 60px !important;
-    padding: 2px 1px !important;
+    min-width: 80px !important;
+    max-width: 90px !important;
+    padding: 2px 4px !important;
     border-left: 1px solid #81c784 !important;
     text-align: center !important;
 }
@@ -269,8 +269,8 @@ thead .col-final {
 .col-nivel-cell {
     background: #f1f8e9 !important;
     padding: 1px 2px !important;
-    min-width: 55px !important;
-    max-width: 60px !important;
+    min-width: 80px !important;
+    max-width: 90px !important;
     text-align: center !important;
 }
 
@@ -283,6 +283,11 @@ thead .col-final {
     background: #fff;
     color: #2e7d32;
     border: 1px solid #81c784;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 /* Colores de nota */

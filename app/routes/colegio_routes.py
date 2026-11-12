@@ -2760,3 +2760,34 @@ def imprimir_permiso_admin(id):
         as_attachment=False,
         download_name=f'permiso_{permiso.id}.pdf'
     )
+
+
+@colegio_bp.route('/configuracion-recuperacion', methods=['GET', 'POST'])
+@login_required
+def configuracion_recuperacion():
+    """Configuración de recuperación por colegio (Multi-tenant)"""
+    if current_user.rol not in ['admin_colegio', 'superadmin']:
+        abort(403)
+
+    colegio = Colegio.query.get_or_404(current_user.colegio_id)
+
+    if request.method == 'POST':
+        try:
+            activa = request.form.get('activa_recuperacion') == 'on'
+            nota_minima = float(request.form.get('nota_minima_recuperacion', 3.0))
+
+            colegio.activa_recuperacion = activa
+            colegio.nota_minima_recuperacion = nota_minima
+            db.session.commit()
+
+            # ✅ Refrescamos el objeto para que la vista lea el nuevo valor
+            db.session.refresh(colegio)
+
+            flash('Configuración de recuperación actualizada correctamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar la configuración: {str(e)}', 'danger')
+
+        return redirect(url_for('colegio.configuracion_recuperacion'))
+
+    return render_template('colegio/configuracion_recuperacion.html', colegio=colegio)

@@ -120,7 +120,7 @@
                 </ul>
             </li>
 
-                        <li class="menu-item">
+            <li class="menu-item">
                 <a href="{{ url_for('colegio.lista_docentes') }}"
                    class="menu-link {% if request.endpoint == 'colegio.lista_docentes' %}active{% endif %}">
                     <i class="bi bi-people"></i> Docentes
@@ -150,8 +150,6 @@
                            class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
                             <i class="bi bi-grid-3x3-gap"></i> Plan de Estudios
                         </a>
-                    </li>
-
                     </li>
 
                     <li class="menu-item">
@@ -219,12 +217,26 @@
                 </a>
             </li>
 
-            <!-- Convivencia -->
-            <li class="menu-item">
-                <a href="{{ url_for('colegio.convivencia') }}"
-                   class="menu-link {% if request.endpoint == 'colegio.convivencia' %}active{% endif %}">
+            <!-- Convivencia (CON SUBMENÚ DE ALERTAS) -->
+            <li class="menu-item has-submenu">
+                <a href="#convivenciaSubmenu" class="menu-link submenu-toggle" data-bs-toggle="collapse" aria-expanded="{% if request.endpoint in ['colegio.convivencia', 'alertas.index'] %}true{% else %}false{% endif %}">
                     <i class="bi bi-heart-fill"></i> Convivencia
+                    <i class="bi bi-chevron-down ms-auto"></i>
                 </a>
+                <ul class="collapse sub-menu {% if request.endpoint in ['colegio.convivencia', 'alertas.index'] %}show{% endif %}" id="convivenciaSubmenu">
+                    <li class="menu-item">
+                        <a href="{{ url_for('colegio.convivencia') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.convivencia' %}active{% endif %}">
+                            <i class="bi bi-journal-check me-1"></i> Observaciones
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('alertas.index') }}"
+                           class="menu-link {% if request.endpoint == 'alertas.index' %}active{% endif %}">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Alertas
+                        </a>
+                    </li>
+                </ul>
             </li>
 
             <!-- Seguimiento Académico -->
@@ -280,7 +292,12 @@
                             <i class="bi bi-bar-chart-steps me-1"></i> Escala de Evaluación
                         </a>
                     </li>
-                                        <!-- Tipos de Evaluación -->
+                                        <li class="menu-item">
+                        <a href="{{ url_for('colegio.configuracion_recuperacion') }}"
+                           class="menu-link {% if request.endpoint == 'colegio.configuracion_recuperacion' %}active{% endif %}">
+                            <i class="bi bi-arrow-repeat me-1"></i> Configurar Recuperación
+                        </a>
+                    </li>
                     <li class="menu-item">
                         <a href="#" class="menu-link">
                             <i class="bi bi-list-check me-1"></i> Tipos de Evaluación
@@ -337,7 +354,7 @@
                 <i class="bi bi-person-circle"></i>
                 {{ current_user.email }}
             </div>
-        
+
                 <!-- 🔔 CAMPANITA DE NOTIFICACIONES -->
                 <div class="dropdown me-3">
                     <a href="#" class="position-relative text-dark" data-bs-toggle="dropdown" aria-expanded="false">

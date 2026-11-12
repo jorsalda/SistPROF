@@ -56,6 +56,18 @@
                                 <label class="form-label fw-bold small">Título del Examen <span class="text-danger">*</span></label>
                                 <input type="text" name="titulo_examen" class="form-control form-control-sm" placeholder="Ej: Parcial 1 - Geometría Analítica" required>
                             </div>
+
+                            <!-- ✅ NUEVO SELECTOR DE TIPO DE EVALUACIÓN -->
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold small">Tipo de Evaluación <span class="text-danger">*</span></label>
+                                <select name="tipo_examen_id" class="form-select form-select-sm" required>
+                                    <option value="">-- Selecciona --</option>
+                                    {% for tipo in tipos_examen %}
+                                        <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="form-label fw-bold small">Materia <span class="text-danger">*</span></label>
                                 <select name="materia_id" class="form-select form-select-sm" required>
@@ -65,9 +77,9 @@
                                     {% endfor %}
                                 </select>
                             </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="form-label fw-bold small">Grado <span class="text-danger">*</span></label>
-                                <!-- ✅ CORREGIDO: Select dinámico con los grupos del docente -->
                                 <select name="grado" class="form-select form-select-sm" required>
                                     <option value="">-- Selecciona --</option>
                                     {% for grupo in grupos %}

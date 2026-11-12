@@ -91,6 +91,10 @@ def create_app():
         from .routes.membresia_routes import membresia_bp
         from .routes.permiso_routes import permiso_bp
         from app.routes.portero_routes import portero_bp
+
+        # ✅ NUEVO: Importación del blueprint de alertas
+        from .routes.alertas import bp as alertas_bp
+
     except ImportError as e:
         logger.error(f"❌ ERROR CRÍTICO AL IMPORTAR BLUEPRINTS: {e}")
         raise
@@ -111,6 +115,10 @@ def create_app():
     app.register_blueprint(portero_bp)
     app.register_blueprint(piar_bp)
     app.register_blueprint(psicologo_bp)
+
+    # ✅ NUEVO: Registro del blueprint de alertas
+    app.register_blueprint(alertas_bp)
+
     # -------------------------------------------------------------------------
     # 5. CSRF
     # -------------------------------------------------------------------------
@@ -188,7 +196,8 @@ def create_app():
     def inject_layout():
         from flask_login import current_user
         if current_user.is_authenticated:
-            return dict(layout="secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html")
+            return dict(
+                layout="secretaria/secretaria_base.html" if current_user.rol == 'secretaria' else "colegio/colegio_base.html")
         return dict(layout="colegio/colegio_base.html")
 
     return app

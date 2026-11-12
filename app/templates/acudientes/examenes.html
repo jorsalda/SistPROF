@@ -1,0 +1,55 @@
+{% extends "acudientes/acudiente_base.html" %}
+
+{% block header_title %}Exámenes{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="fw-bold mb-4"><i class="bi bi-pencil-square text-primary"></i> Exámenes</h2>
+
+    {% for est in estudiantes %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{{ est.nombre }} {{ est.apellido }} - {{ est.grado }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Examen</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Nota</th>
+                        <th class="text-center">Porcentaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ex in est.examenes %}
+                    <tr>
+                        <td class="ps-4 fw-bold">{{ ex.titulo }}</td>
+                        <td>{{ ex.fecha }}</td>
+                        <td class="text-center">
+                            {% if ex.resultado and ex.resultado.nota_numerica > 0 %}
+                                <span class="badge bg-info text-dark">{{ ex.resultado.nota_numerica }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Sin nota</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if ex.resultado and ex.resultado.porcentaje > 0 %}
+                                {{ ex.resultado.porcentaje }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No hay exámenes registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

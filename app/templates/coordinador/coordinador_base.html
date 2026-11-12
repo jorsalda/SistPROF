@@ -30,10 +30,10 @@
             </li>
 
             <li class="menu-item">
-    <a href="{{ url_for('colegio.plan_estudios') }}" class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
-        <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
-    </a>
-</li>
+                <a href="{{ url_for('colegio.plan_estudios') }}" class="menu-link {% if request.endpoint == 'colegio.plan_estudios' %}active{% endif %}">
+                    <i class="bi bi-journal-bookmark-fill"></i> Plan de Estudios
+                </a>
+            </li>
 
             <li class="menu-item">
                 <a href="{{ url_for('coordinador.lista_docentes') }}" class="menu-link {% if request.endpoint == 'coordinador.lista_docentes' %}active{% endif %}">
@@ -65,11 +65,27 @@
                     <i class="bi bi-calendar-event-fill"></i> Citaciones
                 </a>
             </li>
-            <li class="menu-item">
-                <a href="{{ url_for('coordinador.convivencia') }}" class="menu-link {% if request.endpoint == 'coordinador.convivencia' %}active{% endif %}">
+
+            <!-- Convivencia (CON SUBMENÚ DE ALERTAS) -->
+            <li class="menu-item has-submenu">
+                <a href="#convivenciaSubmenu" class="menu-link" data-bs-toggle="collapse" aria-expanded="{% if request.endpoint in ['coordinador.convivencia', 'alertas.index'] %}true{% else %}false{% endif %}">
                     <i class="bi bi-heart-fill"></i> Convivencia
+                    <i class="bi bi-chevron-down ms-auto"></i>
                 </a>
+                <ul class="collapse sub-menu {% if request.endpoint in ['coordinador.convivencia', 'alertas.index'] %}show{% endif %}" id="convivenciaSubmenu">
+                    <li class="menu-item">
+                        <a href="{{ url_for('coordinador.convivencia') }}" class="menu-link {% if request.endpoint == 'coordinador.convivencia' %}active{% endif %}">
+                            <i class="bi bi-journal-check me-1"></i> Observaciones
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{{ url_for('alertas.index') }}" class="menu-link {% if request.endpoint == 'alertas.index' %}active{% endif %}">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Alertas
+                        </a>
+                    </li>
+                </ul>
             </li>
+
             <li class="menu-item">
                 <a href="{{ url_for('coordinador.seguimiento') }}" class="menu-link {% if request.endpoint == 'coordinador.seguimiento' %}active{% endif %}">
                     <i class="bi bi-graph-up-arrow"></i> Seguimiento Académico
@@ -86,8 +102,7 @@
                 </a>
             </li>
 
-            <!-- Botón Cerrar Sesión AHORA DENTRO DEL UL -->
-                        <!-- Botón Cerrar Sesión -->
+            <!-- Botón Cerrar Sesión -->
             <li class="menu-item logout-item">
                 <button onclick="window.location.href='{{ url_for('auth.logout') }}'" class="logout-btn">
                     <i class="bi bi-box-arrow-right"></i> Cerrar Sesión

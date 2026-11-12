@@ -1,0 +1,51 @@
+{% extends "acudientes/acudiente_base.html" %}
+
+{% block header_title %}Novedades{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="fw-bold mb-4"><i class="bi bi-bell-fill text-warning"></i> Novedades</h2>
+
+    {% for est in estudiantes %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">{{ est.nombre }} {{ est.apellido }} - {{ est.grado }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Fecha</th>
+                        <th>Tipo</th>
+                        <th>Informe</th>
+                        <th class="pe-4">Gravedad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for n in est.novedades %}
+                    <tr>
+                        <td class="ps-4">{{ n.fecha }} <br><small class="text-muted">{{ n.hora }}</small></td>
+                        <td><span class="badge bg-secondary">{{ n.tipo_novedad }}</span></td>
+                        <td>{{ n.informe }}</td>
+                        <td class="pe-4">
+                            {% if n.gravedad == 'Tipo 3' %}
+                                <span class="badge bg-danger">Tipo 3</span>
+                            {% elif n.gravedad == 'Tipo 2' %}
+                                <span class="badge bg-warning text-dark">Tipo 2</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">Tipo 1</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No hay novedades registradas para este estudiante.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
