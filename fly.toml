@@ -3,6 +3,8 @@ primary_region = "bog"
 
 [build]
   builder = "paketobuildpacks/builder:base"
+  [build.args]
+    BP_CPYTHON_VERSION = "3.12.*"
 
 [env]
   PORT = "8080"
