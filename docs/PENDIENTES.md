@@ -638,6 +638,31 @@ sus materias, el dropdown deberia permitirlo igual.
 - NO crear nuevos grados sin aprobacion explicita.
 - Coordinar con TEMA-001 (reconciliacion Supabase).
 
+
+---
+
+## TEMA-030: Migrar almacenamiento de imágenes (Contexto) a Supabase Storage
+
+**Prioridad:** Alta
+**Estado:** En progreso
+**Fecha de registro:** 2026-11-13
+**Origen:** Chat Migración / Almacenamiento
+
+### Contexto
+Actualmente las imágenes de contexto de las preguntas de los exámenes se guardan en la carpeta `static/uploads/contexto/`. En Fly.io, esta carpeta no es persistente (se borra en cada deploy) lo que rompe las imágenes en producción.
+
+### Solución acordada
+Usar Supabase Storage (plan gratuito: 1GB, archivos hasta 50MB) para almacenar las imágenes. El backend de Flask subirá el archivo a un bucket público y guardará la URL resultante en la base de datos.
+
+### Plan de tratamiento
+1. Crear el Bucket `contexto` en Supabase (público).
+2. Agregar la librería `supabase-py` a los requerimientos.
+3. Modificar el código de subida de archivos para enviar a Supabase Storage.
+4. Hacer deploy.
+5. (Futuro) Crear función de limpieza de archivos huérfanos.
+
+### Reglas
+- Mantener compatibilidad con las imágenes existentes en local.
 # TEMAS CERRADOS
 
 <!--

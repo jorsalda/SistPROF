@@ -35,7 +35,8 @@ from app.models.configuracion_periodo import ConfiguracionPeriodo
 from app.models.nota_componente import NotaComponenteEstudiante
 from app.services.ia_service import generar_analisis_pedagogico, logger
 from app.models.colegio import Colegio  # ✅ IMPORTANTE: Colegio para la configuración
-
+import uuid
+from supabase import create_client, Client
 # ✅ BLUEPRINT DEFINIDO DESPUÉS DE TODOS LOS IMPORTS
 docente_bp = Blueprint("docente", __name__, url_prefix="/docentes")
 
@@ -1653,19 +1654,33 @@ def nueva_pregunta_banco():
 
             contexto = None
             if tipo_contexto in ['imagen', 'video'] and archivo_contexto and archivo_contexto.filename:
+                # 1. Preparar el archivo y nombre único
                 extension = os.path.splitext(secure_filename(archivo_contexto.filename))[1]
                 nombre_unico = f"{uuid.uuid4().hex}{extension}"
 
-                upload_folder = os.path.join(current_app.static_folder, 'uploads', 'contexto')
-                if not os.path.exists(upload_folder):
-                    os.makedirs(upload_folder)
+                # 2. Conectar a Supabase usando las variables de entorno
+                supabase_url = os.environ.get("SUPABASE_URL")
+                supabase_key = os.environ.get("SUPABASE_KEY")
 
-                ruta_archivo = os.path.join(upload_folder, nombre_unico)
-                archivo_contexto.save(ruta_archivo)
+                if not supabase_url or not supabase_key:
+                    raise Exception("Faltan las credenciales de Supabase en el archivo .env")
+
+                supabase: Client = create_client(supabase_url, supabase_key)
+
+                # 3. Leer el archivo en memoria y subirlo al bucket 'contexto'
+                contenido_archivo = archivo_contexto.read()
+                supabase.storage.from_("contexto").upload(
+                    path=nombre_unico,
+                    file=contenido_archivo,
+                    file_options={"content-type": archivo_contexto.mimetype}
+                )
+
+                # 4. Obtener la URL pública de Supabase
+                url_publica = supabase.storage.from_("contexto").get_public_url(nombre_unico)
 
                 contexto = {
                     "tipo": tipo_contexto,
-                    "src": f"/static/uploads/contexto/{nombre_unico}"
+                    "src": url_publica
                 }
 
             nueva_pregunta = Pregunta(
